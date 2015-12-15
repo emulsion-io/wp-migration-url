@@ -23,16 +23,16 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 		// Old url et new URL sans ? a la fin, avec sous dossier si existant
 
 		# Changer l'URL du site
-		$req1 = $bdd->prepare('UPDATE wp_options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
+		$req1 = $bdd->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
 
 		# Changer l'URL des GUID
-		$req2 = $bdd->prepare('UPDATE wp_posts SET guid = REPLACE (guid, :oldurl, :newurl);');
+		$req2 = $bdd->prepare('UPDATE '.$table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
 
 		# Changer l'URL des médias dans les articles et pages
-		$req3 = $bdd->prepare('UPDATE wp_posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
+		$req3 = $bdd->prepare('UPDATE '.$table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
 
 		# Changer l'URL des données meta
-		$req4 = $bdd->prepare('UPDATE wp_postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
+		$req4 = $bdd->prepare('UPDATE '.$table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
 
 		$req1->execute(array(
 		    'oldurl' => $oldurl,
