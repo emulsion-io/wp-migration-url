@@ -2,25 +2,31 @@
 
 $retour = FALSE;
 
+include ('wp-config.php');
+
+try
+{
+    $bdd = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8', DB_USER, DB_PASSWORD);
+}
+catch(Exception $e)
+{
+        die('Erreur : '.$e->getMessage());
+}
+
+$req0 = $bdd->prepare('SELECT option_value FROM '.$table_prefix.'options WHERE option_name = \'siteurl\';');
+$req0->execute();
+$site_url = $req0->fetch();
+
 if(isset($_POST['old']) && isset($_POST['new'])) {
 
 	if(!empty($_POST['old']) && !empty($_POST['new'])) {
 
-		include ('wp-config.php');
 
 		$oldurl = $_POST['old'];
 		$newurl = $_POST['new'];
 
-		try
-		{
-		    $bdd = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8', DB_USER, DB_PASSWORD);
-		}
-		catch(Exception $e)
-		{
-		        die('Erreur : '.$e->getMessage());
-		}
 
-		// Old url et new URL sans ? a la fin, avec sous dossier si existant
+		// Old url et new URL sans / a la fin, avec sous dossier si existant
 
 		# Changer l'URL du site
 		$req1 = $bdd->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
@@ -119,11 +125,11 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 				<form method="post">
 					<div class="form-group">
 						<label for="old">Ancienne URL</label>
-						<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL">
+						<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="http://<?php echo $_SERVER['HTTP_HOST']; ?>">
 					</div>
 					<div class="form-group">
 						<label for="new">Nouvelle URL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL">
+						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
 					</div>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Mettre a jour</button>
