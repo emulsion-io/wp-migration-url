@@ -24,12 +24,8 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 
 	if(!empty($_POST['old']) && !empty($_POST['new'])) {
 
-
 		$oldurl = $_POST['old'];
 		$newurl = $_POST['new'];
-
-
-		// Old url et new URL sans / a la fin, avec sous dossier si existant
 
 		# Changer l'URL du site
 		$req1 = $bdd->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
@@ -336,6 +332,9 @@ if(isset($_POST['importer'])) {
 
 <?php 
 
+/*
+ * http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php
+ */
 function Zip($source, $destination)
 {
     if (!extension_loaded('zip') || !file_exists($source)) {
