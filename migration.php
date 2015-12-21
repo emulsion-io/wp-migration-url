@@ -4,21 +4,36 @@ $retour 			= FALSE;
 $retour_export 		= FALSE;
 $retour_import 		= FALSE;
 $retour_htaccess 	= FALSE;
+$retour_dl 			= FALSE;
 
-include ('wp-config.php');
+$config['wp_lang']		= 'fr_FR';
+$config['wp_api']		= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$config['wp_lang'];
+$config['wp_dir_core']	= 'core/';
 
-try
-{
-    $bdd = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8', DB_USER, DB_PASSWORD);
+if(is_file('wp-config.php')){
+
+	include ('wp-config.php');
+
+	try
+	{
+	    $bdd = new PDO('mysql:host='.DB_HOST.';dbname='.DB_NAME.';charset=utf8', DB_USER, DB_PASSWORD);
+	}
+	catch(Exception $e)
+	{
+	        die('Erreur : '.$e->getMessage());
+	}
+
+	$req0 = $bdd->prepare('SELECT option_value FROM '.$table_prefix.'options WHERE option_name = \'siteurl\';');
+	$req0->execute();
+	$site_url = $req0->fetch();
+
+	$wp_existe = TRUE;
+
+} else {
+	$site_url['option_value'] = '';
+
+	$wp_existe = FALSE;
 }
-catch(Exception $e)
-{
-        die('Erreur : '.$e->getMessage());
-}
-
-$req0 = $bdd->prepare('SELECT option_value FROM '.$table_prefix.'options WHERE option_name = \'siteurl\';');
-$req0->execute();
-$site_url = $req0->fetch();
 
 if(isset($_POST['old']) && isset($_POST['new'])) {
 
@@ -69,16 +84,30 @@ if(isset($_POST['htaccess'])) {
 
 		$path = dirname($_SERVER['REQUEST_URI']);
 
-		/*
-		<IfModule mod_rewrite.c>
-		RewriteEngine On
-		RewriteBase /projets/mont-saleve2015/
-		RewriteRule ^index\.php$ - [L]
-		RewriteCond %{REQUEST_FILENAME} !-f
-		RewriteCond %{REQUEST_FILENAME} !-d
-		RewriteRule . /projets/mont-saleve2015/index.php [L]
-		</IfModule>
-		*/
+		$ht  = '<IfModule mod_rewrite.c>'."\r\n";
+		$ht .= 'RewriteEngine On'."\r\n";
+		$ht .= 'RewriteBase '.$path.''."\r\n";
+		$ht .= 'RewriteRule ^index\.php$ - [L]'."\r\n";
+		$ht .= 'RewriteCond %{REQUEST_FILENAME} !-f'."\r\n";
+		$ht .= 'RewriteCond %{REQUEST_FILENAME} !-d'."\r\n";
+		$ht .= 'RewriteRule . '.rtrim($path, '/').'/index.php [L]'."\r\n";
+		$ht .= '</IfModule>'."\r\n";
+
+		$ht .= '<files wp-config.php>'."\r\n";
+		$ht .= '	order allow,deny'."\r\n";
+		$ht .= '	deny from all'."\r\n";
+		$ht .= '</files> '."\r\n";
+
+		$ht .= '<Files .htaccess>'."\r\n";
+		$ht .= '	order allow,deny '."\r\n";
+		$ht .= '	deny from all '."\r\n";
+		$ht .= '</Files>'."\r\n";
+
+		$ht .= 'Options All -Indexes'."\r\n";
+
+		file_put_contents( 'htaccess', $ht );
+
+		$retour_htaccess = TRUE;
 	}
 }
 
@@ -92,7 +121,19 @@ if(isset($_POST['exporter'])) {
 		//-- Zip Files
 		Zip('./', "dumpFILES.zip");
 
+		unlink( './export.sql' ); 
+
 		$retour_export = TRUE;
+	}
+}
+
+if(isset($_POST['dl'])) {
+
+	if(!empty($_POST['dl'])) {
+
+		wp_download();
+
+		$retour_dl = TRUE;
 	}
 }
 
@@ -102,7 +143,7 @@ if(isset($_POST['importer'])) {
 
 	    $zip = new ZipArchive;
 	    $zip->open('dumpFILES.zip');
-	    $zip->extractTo('./');
+	    $zip->extractTo('.');
 	    $zip->close();
 
 		$retour_import = TRUE;
@@ -117,7 +158,7 @@ if(isset($_POST['importer'])) {
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 
-      <title>Migration Urls Wordpress Easy</title>
+      <title>Migration Wordpress Easy</title>
 
       <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
 
@@ -137,8 +178,8 @@ if(isset($_POST['importer'])) {
          <header class="row">
             <div class="col-md-12">
 				<div class="jumbotron">
-				  <h1>Migration Urls Wordpress Easy</h1>
-				  <p>...</p>
+				  <h1>Migration Wordpress Easy</h1>
+				  <p>La boite a outils pour Wordpress</p>
 				</div>
 
             </div>
@@ -157,8 +198,9 @@ if(isset($_POST['importer'])) {
 			</div>
 		</article>
 
-         <article class="row">
-           <div class="col-md-12">
+		<?php if($wp_existe == TRUE): ?>
+        <article class="row">
+            <div class="col-md-12">
                 <h2>Ecriture des nouvelles Urls</h2>
 				<div class="panel panel-info">
 					<div class="panel-heading"> 
@@ -192,7 +234,9 @@ if(isset($_POST['importer'])) {
 				</form>
             </div>
         </article>
+    	<?php endif; ?>
 
+		<?php if($wp_existe == TRUE): ?>
         <article class="row">
            	<div class="col-md-12">
            	    <h2>Creation d'une archive avec les fichiers de Wordpress et le SQL</h2>
@@ -240,17 +284,18 @@ if(isset($_POST['importer'])) {
 
             </div>
         </article>
+        <?php endif; ?>
 
         <article class="row">
            	<div class="col-md-12">
-           	    <h2>Extraction des fichiers de Wordpress</h2>
+           	    <h2>Extraction de votre export Wordpress</h2>
 				<div class="panel panel-info">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Ce que fait cet assistant</h3> 
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Permet d'extraire le fichier dumpé precedement</li>
+					    	<li>Permet d'extraire le fichier exporté precedement</li>
 					    	<li>Copier/Coller le fichier Zip sans le renommer</li>
 					    </ul>
 					</div>
@@ -287,6 +332,41 @@ if(isset($_POST['importer'])) {
 
             </div>
         </article>
+		
+		<?php if($wp_existe == FALSE): ?>
+        <article class="row">
+           	<div class="col-md-12">
+           	    <h2>Telecharger un Wordpress officiel depuis le site WP</h2>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>Telecharge et extrait le Wordpress derniere version en date</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_dl == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">
+            			L'extraction des fichiers a ete effectue avec succes.
+            			<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
+            		</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="dl" name="dl" placeholder="" value="test">
+					</div>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Telecharger et Extraire un wordpress</button>
+					</div>
+				</form>
+            </div>
+        </article>  
+        <?php endif; ?> 
 
         <article class="row">
            	<div class="col-md-12">
@@ -306,7 +386,7 @@ if(isset($_POST['importer'])) {
 
             <div class="col-md-12">
                 <?php if($retour_htaccess == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">L'extraction des fichiers a ete effectue avec succes.</div>
+            		<div class="alert alert-success" role="alert">Le fichier a ete ecrit avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
 					<div class="form-group">
@@ -378,6 +458,64 @@ function Zip($source, $destination)
     }
 
     return $zip->close();
+}
+
+function rrmdir($dir) {
+   if (is_dir($dir)) {
+     $objects = scandir($dir);
+     foreach ($objects as $object) {
+       if ($object != "." && $object != "..") {
+         if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
+       }
+     }
+     reset($objects);
+     rmdir($dir);
+   }
+} 
+
+function wp_download(){
+
+	global $config;
+
+	// Get WordPress data
+	$wp = json_decode( file_get_contents( $config['wp_api'] ) )->offers[0];
+
+	mkdir($config['wp_dir_core'], 0775);
+
+	file_put_contents( $config['wp_dir_core'] . 'wordpress-' . $wp->version . '-' .  $config['wp_lang'] . '.zip', file_get_contents( $wp->download ) );
+
+	$zip = new ZipArchive;
+
+	// We verify if we can use the archive
+	if ( $zip->open( $config['wp_dir_core'] . 'wordpress-' . $wp->version . '-' . $config['wp_lang']  . '.zip' ) === true ) {
+
+		// Let's unzip
+		$zip->extractTo( '.' );
+		$zip->close();
+
+		chmod( 'wordpress' , 0775 );
+
+		// We scan the folder
+		$files = scandir( 'wordpress' );
+
+		// We remove the "." and ".." from the current folder and its parent
+		$files = array_diff( $files, array( '.', '..' ) );
+
+		// We move the files and folders
+		foreach ( $files as $file ) {
+			rename(  'wordpress/' . $file, './' . $file );
+		}
+
+		rmdir( 'wordpress' );
+		rrmdir( 'core' );
+		unlink( './license.txt' ); 
+		unlink( './readme.html' );
+		unlink( './wp-content/plugins/hello.php' );
+
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 ?>
