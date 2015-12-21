@@ -125,11 +125,11 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 				<form method="post">
 					<div class="form-group">
 						<label for="old">Ancienne URL</label>
-						<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="http://<?php echo $_SERVER['HTTP_HOST']; ?>">
+						<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
 					</div>
 					<div class="form-group">
 						<label for="new">Nouvelle URL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
+						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">
 					</div>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Mettre a jour</button>
