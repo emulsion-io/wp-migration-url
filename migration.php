@@ -34,12 +34,12 @@ if(is_file('wp-config.php')){
 	// Recupere les informations sur le WP courant
 	$site_url = $migration->wp_get_info();
 	// Annonce 
-	$wp_existe = TRUE;
+	$wp_exist = TRUE;
 
 } else {
 	$site_url['option_value'] = '';
 
-	$wp_existe = FALSE;
+	$wp_exist = FALSE;
 }
 
 if(isset($_POST['old']) && isset($_POST['new'])) {
@@ -49,37 +49,7 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 		$oldurl = $_POST['old'];
 		$newurl = $_POST['new'];
 
-		# Changer l'URL du site
-		$req1 = $bdd->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
-
-		# Changer l'URL des GUID
-		$req2 = $bdd->prepare('UPDATE '.$table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
-
-		# Changer l'URL des médias dans les articles et pages
-		$req3 = $bdd->prepare('UPDATE '.$table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
-
-		# Changer l'URL des données meta
-		$req4 = $bdd->prepare('UPDATE '.$table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
-
-		$req1->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
-		));
-
-		$req2->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
-		));
-
-		$req3->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
-		));
-
-		$req4->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
-		));
+		$migration->wp_url($oldurl, $newurl);
 
 		$retour = TRUE;
 	}
@@ -102,9 +72,8 @@ if(isset($_POST['exporter'])) {
 
 	if(!empty($_POST['exporter'])) {
 
-		$migration->wp_export_file();
+		$retour_export = $migration->wp_export_file();
 
-		$retour_export = TRUE;
 	}
 }
 
@@ -201,6 +170,19 @@ if(isset($_POST['dl'])) {
 				</div>
 			</div>
 		</article>
+
+         <article class="row">
+            <div class="col-md-12">
+				<div class="panel panel-warning">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Droit sur le dosier courant</h3> 
+					</div>
+					<div class="panel-body">
+					<?php echo substr(sprintf('%o', fileperms('.')), -4); ?>
+					</div>
+				</div>
+			</div>
+		</article>		
 		<?php 
 			/**
 			 * Processus de migration automatique d'un Wordpress
@@ -328,8 +310,7 @@ if(isset($_POST['dl'])) {
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Extrait la base données si possible ( depend des serveurs )</li>
-					    	<li>Creer un Zip de tout le repertoire courant avec le SQL dedans</li>
+					    	<li>Creer un Zip de tout le repertoire courant</li>
 					    </ul>
 					</div>
 				</div>
@@ -346,9 +327,22 @@ if(isset($_POST['dl'])) {
 					<div class="form-group">
 						<input type="hidden" class="form-control" id="exporter" name="exporter" placeholder="" value="test">
 					</div>
+					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Creer le Zip des fichiers</button>
 					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>
+					<?php endif; ?>
 				</form>
 
 				<?php if(is_file('migration_file.zip') && $retour_export == FALSE) : ?>
@@ -391,11 +385,24 @@ if(isset($_POST['dl'])) {
             	<?php endif; ?>
 				<form method="post">
 					<div class="form-group">
-						<input type="hidden" class="form-control" id="exporter" name="exporter" placeholder="" value="test">
+						<input type="hidden" class="form-control" id="exporter_sql" name="exporter_sql" placeholder="" value="test">
 					</div>
+					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Lancer le dump SQL</button>
 					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>
+					<?php endif; ?>
 				</form>
 
 				<?php if(is_file('migration_bdd.sql') && $retour_export_sql == FALSE) : ?>
@@ -624,11 +631,12 @@ Class Wp_Migration {
 	 * Assigne les variable du Wordpress courant a la class
 	 */
 	public function set_var_wp($options) {
-		$this->_dbhost = $options[0];
-		$this->_dbname = $options[1];
-		$this->_dbuser = $options[2];
-		$this->_dbpassword = $options[3];
-		$this->_table_prefix = $options[4];
+
+		$this->_dbhost 			= $options[0];
+		$this->_dbname 			= $options[1];
+		$this->_dbuser 			= $options[2];
+		$this->_dbpassword 		= $options[3];
+		$this->_table_prefix 	= $options[4];
 	}
 
 	/**
@@ -711,6 +719,43 @@ Class Wp_Migration {
 		return FALSE;
 	}
 
+	public function wp_url($oldurl, $newurl) {
+
+		$this->bdd();
+
+		# Changer l'URL du site
+		$req1 = $_bdd->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
+
+		# Changer l'URL des GUID
+		$req2 = $_bdd->prepare('UPDATE '.$table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
+
+		# Changer l'URL des médias dans les articles et pages
+		$req3 = $_bdd->prepare('UPDATE '.$table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
+
+		# Changer l'URL des données meta
+		$req4 = $_bdd->prepare('UPDATE '.$table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
+
+		$req1->execute(array(
+		    'oldurl' => $oldurl,
+		    'newurl' => $newurl
+		));
+
+		$req2->execute(array(
+		    'oldurl' => $oldurl,
+		    'newurl' => $newurl
+		));
+
+		$req3->execute(array(
+		    'oldurl' => $oldurl,
+		    'newurl' => $newurl
+		));
+
+		$req4->execute(array(
+		    'oldurl' => $oldurl,
+		    'newurl' => $newurl
+		));
+	}
+
 	public function wp_htaccess() {
 
 		$path = dirname($_SERVER['REQUEST_URI']);
@@ -750,6 +795,8 @@ Class Wp_Migration {
 	public function wp_export_file() {
 		
 		$this->Zip('./', "migration_file.zip");
+
+		return TRUE;
 
 	}
 
@@ -802,14 +849,23 @@ Class Wp_Migration {
 	 */
 	public function wp_sql_clean_revision() {
 
-		$sql = 'DELETE FROM wp_posts WHERE post_type = "revision"';
+		$this->bdd();
+
+		$sql = $_bdd->prepare('DELETE FROM '.$this->_table_prefix.'posts WHERE post_type = "revision"');
+		$sql->execute();
+
 	}
 
 	/**
 	 * Supprime tous les commentaires non approuvés
 	 */
 	public function wp_sql_clean_spam() {
-		$sql = 'DELETE from wp_comments WHERE comment_approved = 0';
+
+		$this->bdd();
+
+		$sql = $_bdd->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
+		$sql->execute();
+
 	}
 
 	/**
