@@ -1,9 +1,16 @@
 <?php
 
 /**
+ * @author Fabrice Simonet
+ * @link http://viky.fr
+ */
+
+/**
  * Variable de status d'execution du script
  */
 $retour 				= FALSE;
+$retour_migration		= FALSE;
+$retour_migration_api	= FALSE;
 $retour_export 			= FALSE;
 $retour_import 			= FALSE;
 $retour_export_sql		= FALSE;
@@ -118,6 +125,14 @@ if(isset($_POST['dl'])) {
 	}
 }
 
+if(isset($_POST['configfile'])) {
+	if(!empty($_POST['configfile'])) {
+
+		$migration->wp_configfile();
+
+	}
+}
+
 if(isset($_POST['clean_revision'])) {
 	if(!empty($_POST['clean_revision'])) {
 
@@ -135,6 +150,51 @@ if(isset($_POST['clean_spam'])) {
 		$retour_clean_spam = TRUE;
 	}
 }
+
+if(isset($_POST['migration'])) {
+	if(!empty($_POST['migration'])) {
+
+		$opts = array(
+			'www_url' => $_POST['www_url'],
+			'ftp_url' => $_POST['ftp_url'],
+			'user_ftp' => $_POST['user_ftp'],
+			'ftp_pass' => $_POST['ftp_pass'],
+			'ftp_folder' => $_POST['ftp_folder'],
+			'serveur_sql' => $_POST['serveur_sql'],
+			'user_sql' => $_POST['user_sql'],
+			'pass_sql' => $_POST['pass_sql']
+		);
+
+		// Exporte le SQL
+		$migration->wp_export_sql();
+
+		// Exporte Les fichiers dans le Zip avec le SQL
+		$migration->wp_export_file();
+
+		// Envoie les fichiers sur le serveur FTP distant
+		$migration->wp_ftp_migration($opts);
+
+		$retour_migration = TRUE;
+	}
+}
+
+if(isset($_POST['api_call'])) {
+	if(!empty($_POST['api_call'])) {
+/*
+$_GET['dbname']
+$_GET['dbname']
+$_GET['dbpassword']
+$_GET['dbhost']
+
+		$migration->();
+*/
+		// Lance l'execution 
+		$migration->wp_migration($opts);
+
+		$retour_migration_api = TRUE;
+	}
+}
+
 
 ?>
 
@@ -230,6 +290,7 @@ if(isset($_POST['clean_spam'])) {
             		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
             	<?php endif; ?>
 				<form method="post">
+					<input type="hidden" class="form-control" id="migration" name="migration" placeholder="" value="test">
 					<h3>Url http du futur site</h3>
 					<div class="form-group">
 						<label for="www_url">Url http du serveur</label>
@@ -256,16 +317,16 @@ if(isset($_POST['clean_spam'])) {
 					<h3>Information de la base de données du serveur cible</h3>
 
 					<div class="form-group">
-						<label for="new">Serveur MySQL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="localhost" value="">
+						<label for="serveur_sql">Serveur MySQL</label>
+						<input type="text" class="form-control" id="serveur_sql" name="serveur_sql" placeholder="localhost" value="">
 					</div>
 					<div class="form-group">
-						<label for="new">Utilisateur MySQL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="" value="">
+						<label for="user_sql">Utilisateur MySQL</label>
+						<input type="text" class="form-control" id="user_sql" name="user_sql" placeholder="" value="">
 					</div>
 					<div class="form-group">
-						<label for="new">Mot de passe MySQL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="" value="">
+						<label for="pass_sql">Mot de passe MySQL</label>
+						<input type="text" class="form-control" id="pass_sql" name="pass_sql" placeholder="" value="">
 					</div>					
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Lancer la migration</button>
@@ -344,9 +405,22 @@ if(isset($_POST['clean_spam'])) {
 						<label for="new">Nouvelle URL</label>
 						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">
 					</div>
+					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Mettre a jour</button>
 					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>					
+					<?php endif; ?>
 				</form>
             </div>
         </article>
@@ -684,6 +758,19 @@ if(isset($_POST['clean_spam'])) {
             </div>
         </article>
 
+        <article class="row">
+            <div class="col-md-12">
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="configfile" name="configfile" placeholder="" value="test">
+					</div>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">test</button>
+					</div>
+				</form>
+            </div>
+        </article>       
+
         <footer class="row">
             <div class="col-md-12"></div>
         </footer>
@@ -759,14 +846,18 @@ Class Wp_Migration {
 
 	public function wp_ftp_migration($opts){
 
+		//$opts['ftp_folder']
+
 		$file = 'migration_file.zip';
 		$remote_file = 'migration_file.zip';
 
-		$conn = ftp_connect($ftp_server);
+		$conn = ftp_connect($opts['ftp_url']);
 
-		$login_result = ftp_login($conn_id, $ftp_user_name, $ftp_user_pass);
+		$login_result = ftp_login($conn_id, $opts['user_ftp'], $opts['ftp_pass']);
 
 		// Charge un fichier
+		ftp_put($conn_id, 'migration.php', 'migration.php', FTP_ASCII);
+
 		if (ftp_put($conn_id, $remote_file, $file, FTP_ASCII)) {
 			return TRUE;
 		} else {
@@ -822,6 +913,33 @@ Class Wp_Migration {
 		}
 
 		return FALSE;
+	}
+
+	public function wp_migration($opts) {
+
+
+		$postdata = http_build_query(
+		    array(
+		        'api_call' 		=> 'migration',
+				'dbname' 		=> $opts['dbname'],
+				'dbname' 		=> $opts['dbname'],
+				'dbpassword' 	=> $opts['dbpassword'],
+				'dbhost' 		=> $opts['dbhost'],
+				'site' 			=> $opts['site']
+		    )
+		);
+
+		$opts = array('http' =>
+		    array(
+		        'method'  => 'POST',
+		        'header'  => 'Content-type: application/x-www-form-urlencoded',
+		        'content' => $postdata
+		    )
+		);
+
+		$context  = stream_context_create($opts);
+
+		$result = file_get_contents($opts['site'].'/migration.php', false, $context);
 	}
 
 	public function wp_url($oldurl, $newurl) {
@@ -891,6 +1009,33 @@ Class Wp_Migration {
 		}
 
 		file_put_contents( '.htaccess', $ht );
+
+	}
+
+	public function wp_configfile($opts) {
+		
+		$filename = 'config.php';
+
+		$content = file_get_contents($filename);
+
+		$content = preg_replace ("/define\('DB_NAME', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbname']."');", $content);
+		$content = preg_replace ("/define\('DB_USER', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbname']."');", $content);
+		$content = preg_replace ("/define\('DB_PASSWORD', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbpassword']."');", $content);
+		$content = preg_replace ("/define\('DB_HOST', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbhost']."');", $content);
+
+		file_put_contents($filename , $content );
+
+		// ajouter une ligne a la ligne -8
+		$methode = "define('FS_METHOD', 'direct');\n";
+		$lines = file($filename);
+		$num_lines = count($lines);
+
+		if ($num_lines > 9) {
+		    array_splice($lines, $num_lines - 9, 0, array($methode));
+		    file_put_contents($filename, implode('', $lines));
+		} else {
+		    file_put_contents($filename, PHP_EOL . $methode, FILE_APPEND);
+		}
 
 	}
 
