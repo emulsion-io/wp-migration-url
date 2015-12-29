@@ -261,10 +261,16 @@ if(isset($_POST['api_call'])) {
             <div class="col-md-12">
 				<div class="panel panel-warning">
 					<div class="panel-heading"> 
-						<h3 class="panel-title">Droit sur le dosier courant</h3> 
+						<h3 class="panel-title">Info Serveur</h3> 
 					</div>
 					<div class="panel-body">
-					<?php echo substr(sprintf('%o', fileperms('.')), -4); ?>
+						<ul>
+							<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
+							<li>
+								Fonction exec() : 
+								<?php echo (function_exists('exec'))? "exec is enabled" : "exec is disabled"; ?>
+							</li>
+						</ul>
 					</div>
 				</div>
 			</div>
@@ -1033,7 +1039,7 @@ Class Wp_Migration {
 		file_put_contents($filename , $content );
 
 		// ajouter une ligne a la ligne -8
-		$methode = "define('FS_METHOD', 'direct');\n";
+		$methode = "define('FS_METHOD', 'direct');\ndefine('WPLANG', 'fr_FR');\n";
 		$lines = file($filename);
 		$num_lines = count($lines);
 
@@ -1058,6 +1064,8 @@ Class Wp_Migration {
 	}
 
 	public function wp_export_sql() {
+
+		//function_exists('exec')
 
 		$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > migration_bdd.sql';
 
@@ -1086,6 +1094,8 @@ Class Wp_Migration {
 	}
 
 	public function wp_import_sql() {
+
+		//function_exists('exec')
 
 		$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql';
 		
