@@ -125,14 +125,6 @@ if(isset($_POST['dl'])) {
 	}
 }
 
-if(isset($_POST['configfile'])) {
-	if(!empty($_POST['configfile'])) {
-
-		$migration->wp_configfile();
-
-	}
-}
-
 if(isset($_POST['clean_revision'])) {
 	if(!empty($_POST['clean_revision'])) {
 
@@ -775,19 +767,6 @@ if(isset($_POST['api_call'])) {
 				</form>
             </div>
         </article>
-
-        <article class="row">
-            <div class="col-md-12">
-				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="configfile" name="configfile" placeholder="" value="test">
-					</div>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">test</button>
-					</div>
-				</form>
-            </div>
-        </article>       
 
         <footer class="row">
             <div class="col-md-12"></div>
