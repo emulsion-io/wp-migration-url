@@ -258,10 +258,12 @@ if(isset($_POST['api_call'])) {
 					<div class="panel-body">
 						<ul>
 							<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
-							<li>
-								Fonction exec() : 
-								<?php echo (function_exists('exec'))? "exec is enabled" : "exec is disabled"; ?>
-							</li>
+							<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
+							<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
+							<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " is enabled" : " is disabled"; ?></li>
+							<li>Fonction popen() <?php echo (function_exists('popen'))? " is enabled" : " is disabled"; ?></li>
+							<li>Fonction passthru() <?php echo (function_exists('passthru'))? " is enabled" : " is disabled"; ?></li>
+							<li>Fonction proc_open() <?php echo (function_exists('proc_open'))? " is enabled" : " is disabled"; ?></li>
 						</ul>
 					</div>
 				</div>
@@ -1044,21 +1046,24 @@ Class Wp_Migration {
 
 	public function wp_export_sql() {
 
-		//function_exists('exec')
-
-		$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > migration_bdd.sql';
-
-		exec($command, $output = array(), $worked);
-		switch($worked){
-			case 0:
-				return TRUE;
-			break;
-			case 1:
-				return FALSE;
-			break;
-			case 2:
-				return FALSE;
-			break;
+		if(function_exists('exec')){
+			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > migration_bdd.sql';
+			exec($command, $output = array(), $worked);
+			switch($worked){
+				case 0:
+					return TRUE;
+				break;
+				case 1:
+					return FALSE;
+				break;
+				case 2:
+					return FALSE;
+				break;
+			}
+		} elseif(function_exists('system')){
+			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > migration_bdd.sql");
+		} else {
+	
 		}
 	}
 
@@ -1074,19 +1079,21 @@ Class Wp_Migration {
 
 	public function wp_import_sql() {
 
-		//function_exists('exec')
+		if(function_exists('exec')){
+			$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql';
+			exec($command, $output = array(), $worked);
+			switch($worked){
+				case 0:
+					return TRUE;
+				break;
+				case 1:
+					return FALSE;
+				break;
+			}
+		} elseif(function_exists('system')){
+			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql');
+		} else {
 
-		$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql';
-		
-		exec($command, $output = array(), $worked);
-
-		switch($worked){
-			case 0:
-				return TRUE;
-			break;
-			case 1:
-				return FALSE;
-			break;
 		}
 	}
 
