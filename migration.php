@@ -3,13 +3,15 @@
 /**
  * Variable de status d'execution du script
  */
-$retour 			= FALSE;
-$retour_export 		= FALSE;
-$retour_import 		= FALSE;
-$retour_export_sql	= FALSE;
-$retour_import_sql	= FALSE;
-$retour_htaccess 	= FALSE;
-$retour_dl 			= FALSE;
+$retour 				= FALSE;
+$retour_export 			= FALSE;
+$retour_import 			= FALSE;
+$retour_export_sql		= FALSE;
+$retour_import_sql		= FALSE;
+$retour_htaccess 		= FALSE;
+$retour_dl 				= FALSE;
+$retour_clean_revision 	= FALSE;
+$retour_clean_spam 		= FALSE;
 
 $migration = new Wp_Migration();
 
@@ -43,7 +45,6 @@ if(is_file('wp-config.php')){
 }
 
 if(isset($_POST['old']) && isset($_POST['new'])) {
-
 	if(!empty($_POST['old']) && !empty($_POST['new'])) {
 
 		$oldurl = $_POST['old'];
@@ -59,7 +60,6 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
  * Creer un fichier htaccess
  */
 if(isset($_POST['htaccess'])) {
-
 	if(!empty($_POST['htaccess'])) {
 
 		$migration->wp_htaccess();
@@ -69,7 +69,6 @@ if(isset($_POST['htaccess'])) {
 }
 
 if(isset($_POST['exporter'])) {
-
 	if(!empty($_POST['exporter'])) {
 
 		$retour_export = $migration->wp_export_file();
@@ -78,7 +77,6 @@ if(isset($_POST['exporter'])) {
 }
 
 if(isset($_POST['exporter_sql'])) {
-
 	if(!empty($_POST['exporter_sql'])) {
 
 		$migration->wp_export_sql();
@@ -91,7 +89,6 @@ if(isset($_POST['exporter_sql'])) {
  * Extrait les fichiers du zip
  */
 if(isset($_POST['importer'])) {
-
 	if(!empty($_POST['importer'])) {
 
 		$migration->wp_import_file();
@@ -101,7 +98,6 @@ if(isset($_POST['importer'])) {
 }
 
 if(isset($_POST['importer_sql'])) {
-
 	if(!empty($_POST['importer_sql'])) {
 
 		$migration->wp_import_sql();
@@ -114,7 +110,6 @@ if(isset($_POST['importer_sql'])) {
  * Telecharge et extrait les fichiers d'un WP frais
  */
 if(isset($_POST['dl'])) {
-
 	if(!empty($_POST['dl'])) {
 
 		$migration->wp_download();
@@ -122,6 +117,25 @@ if(isset($_POST['dl'])) {
 		$retour_dl = TRUE;
 	}
 }
+
+if(isset($_POST['clean_revision'])) {
+	if(!empty($_POST['clean_revision'])) {
+
+		$migration->wp_sql_clean_revision();
+
+		$retour_clean_revision = TRUE;
+	}
+}
+
+if(isset($_POST['clean_spam'])) {
+	if(!empty($_POST['clean_spam'])) {
+
+		$migration->wp_sql_clean_spam();
+
+		$retour_clean_spam = TRUE;
+	}
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -216,6 +230,11 @@ if(isset($_POST['dl'])) {
             		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
             	<?php endif; ?>
 				<form method="post">
+					<h3>Url http du futur site</h3>
+					<div class="form-group">
+						<label for="www_url">Url http du serveur</label>
+						<input type="text" class="form-control" id="www_url" name="www_url" placeholder="" value="">
+					</div>
 					<h3>Information du FTP cible</h3>
 					<div class="form-group">
 						<label for="ftp_url">Url du serveur FTP</label>
@@ -262,6 +281,39 @@ if(isset($_POST['dl'])) {
 			 * Liste des outils idepandant du processus d'installation automatique.
 			 */
 		?>
+
+        <article class="row">
+           	<div class="col-md-12">
+           	    <h3>Telecharge, extrait et install un Wordpress officiel depuis le site wordpress.com</h3>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>Telecharge, extrait et install un Wordpress derniere version en date</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_dl == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">
+            			L'extraction des fichiers a ete effectue avec succes.
+            			<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
+            		</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="dl" name="dl" placeholder="" value="test">
+					</div>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Telecharger et Extraire un wordpress</button>
+					</div>
+				</form>
+            </div>
+        </article>  
 
         <article class="row">
             <div class="col-md-12">
@@ -517,39 +569,6 @@ if(isset($_POST['dl'])) {
 
         <article class="row">
            	<div class="col-md-12">
-           	    <h3>Telecharge, extrait et install un Wordpress officiel depuis le site wordpress.com</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Telecharge, extrait et install un Wordpress derniere version en date</li>
-					    </ul>
-					</div>
-				</div>
-			</div>
-
-            <div class="col-md-12">
-                <?php if($retour_dl == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">
-            			L'extraction des fichiers a ete effectue avec succes.
-            			<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
-            		</div>
-            	<?php endif; ?>
-				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="dl" name="dl" placeholder="" value="test">
-					</div>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Telecharger et Extraire un wordpress</button>
-					</div>
-				</form>
-            </div>
-        </article>  
-
-        <article class="row">
-           	<div class="col-md-12">
            	    <h2>Creer le fichier HTACCESS wordpress</h2>
 				<div class="panel panel-info">
 					<div class="panel-heading"> 
@@ -575,6 +594,92 @@ if(isset($_POST['dl'])) {
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Creer le fichier HTaccess</button>
 					</div>
+				</form>
+            </div>
+        </article>
+
+        <article class="row">
+           	<div class="col-md-12">
+           	    <h2>Efface toutes les revisions de votre wordpress</h2>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>Efface les revisions des articles et pages et de tous les contenus</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_clean_revision == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">Les revisions ont ete supprimées avec succes.</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="clean_revision" name="clean_revision" placeholder="" value="test">
+					</div>
+					<?php if($wp_exist == TRUE) : ?>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Effacer les revisions</button>
+					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>					
+					<?php endif; ?>
+				</form>
+            </div>
+        </article>
+
+        <article class="row">
+           	<div class="col-md-12">
+           	    <h2>Efface tous les commentaires non validés</h2>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>Efface tous les commentaires non validés</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_clean_spam == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">Les commentaires ont ete supprimés avec succes.</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="clean_spam" name="clean_spam" placeholder="" value="test">
+					</div>
+					<?php if($wp_exist == TRUE) : ?>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Effacer les commentaires non validés</button>
+					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>
+					<?php endif; ?>	
 				</form>
             </div>
         </article>
