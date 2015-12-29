@@ -154,7 +154,7 @@ if(isset($_POST['clean_spam'])) {
 if(isset($_POST['migration'])) {
 	if(!empty($_POST['migration'])) {
 
-		$opts = array(
+		$opts_migration = array(
 			'www_url' => $_POST['www_url'],
 			'ftp_url' => $_POST['ftp_url'],
 			'user_ftp' => $_POST['user_ftp'],
@@ -172,26 +172,38 @@ if(isset($_POST['migration'])) {
 		$migration->wp_export_file();
 
 		// Envoie les fichiers sur le serveur FTP distant
-		$migration->wp_ftp_migration($opts);
+		$migration->wp_ftp_migration($opts_migration);
 
-		$retour_migration = TRUE;
+		// Supprime les fichiers locaux
+		$migration->wp_clean_ftp_migration();
+
+		// Contact le site distant pour activer la methode api_call
+		$retour_migration = $migration->wp_migration($opts_migration);
 	}
 }
 
 if(isset($_POST['api_call'])) {
 	if(!empty($_POST['api_call'])) {
-/*
-$_GET['dbname']
-$_GET['dbname']
-$_GET['dbpassword']
-$_GET['dbhost']
 
-		$migration->();
-*/
-		// Lance l'execution 
-		$migration->wp_migration($opts);
+		$opts = array(
+			'dbname' 		=> $opts['dbname'],
+			'dbpassword' 	=> $opts['dbpassword'],
+			'dbhost' 		=> $opts['dbhost'],
+			'site' 			=> $opts['site']
+		);
 
-		$retour_migration_api = TRUE;
+		// extraction des fichiers
+		$migration->wp_import_file();
+
+		// modifie le fichier wordpress avec les infos du nouveau serveur
+		$migration->wp_configfile($opts);
+
+		// Effectue l'importation du SQL
+
+		// nettoie les fichiers sql et zip
+		$migration->wp_clean_ftp_migration();
+
+		return TRUE;
 	}
 }
 
@@ -796,27 +808,12 @@ Class Wp_Migration {
 		$_dbpassword,
 		$_table_prefix;
 
-	var $_bdd;
-
 	public function __construct() {
 
 		$this->_wp_lang 		= 'fr_FR';
 		$this->_wp_api 			= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core 	= 'core/';
 
-	}
-
-	public function bdd() {
-		if( !isset($_bdd)) {
-			try
-			{
-			    $this->_bdd = new PDO('mysql:host='.$this->_dbhost.';dbname='.$this->_dbname.';charset=utf8', $this->_dbuser, $this->_dbpassword);
-			}
-			catch(Exception $e)
-			{
-			    die('Erreur : '.$e->getMessage());
-			}
-		}
 	}
 
 	/**
@@ -829,6 +826,11 @@ Class Wp_Migration {
 		$this->_dbuser 			= $options[2];
 		$this->_dbpassword 		= $options[3];
 		$this->_table_prefix 	= $options[4];
+
+		Config::write('db.host', $this->_dbhost);
+		Config::write('db.basename', $this->_dbname);
+		Config::write('db.user', $this->_dbuser);
+		Config::write('db.password', $this->_dbpassword);		
 	}
 
 	/**
@@ -836,9 +838,9 @@ Class Wp_Migration {
 	 */
 	public function wp_get_info(){
 
-		$this->bdd();
+	    $bdd = Bdd::getInstance();
 
-		$req = $_bdd->prepare('SELECT option_value FROM '.$this->_table_prefix.'options WHERE option_name = \'siteurl\';');
+		$req = $bdd->dbh->prepare('SELECT option_value FROM '.$this->_table_prefix.'options WHERE option_name = \'siteurl\';');
 		$req->execute();
 
 		return $req->fetch();
@@ -846,25 +848,28 @@ Class Wp_Migration {
 
 	public function wp_ftp_migration($opts){
 
-		//$opts['ftp_folder']
-
 		$file = 'migration_file.zip';
 		$remote_file = 'migration_file.zip';
 
-		$conn = ftp_connect($opts['ftp_url']);
+		$conn_id = ftp_connect($opts['ftp_url']);
 
 		$login_result = ftp_login($conn_id, $opts['user_ftp'], $opts['ftp_pass']);
 
 		// Charge un fichier
-		ftp_put($conn_id, 'migration.php', 'migration.php', FTP_ASCII);
+		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.'migration.php', 'migration.php', FTP_ASCII);
 
-		if (ftp_put($conn_id, $remote_file, $file, FTP_ASCII)) {
+		if (ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, $file, FTP_ASCII)) {
+			ftp_close($conn_id);
 			return TRUE;
 		} else {
+			ftp_close($conn_id);
 			return FALSE;
 		}
+	}
 
-		ftp_close($conn);
+	public function wp_clean_ftp_migration(){
+		unlink('migration_file.zip');
+		unlink('migration_bdd.sql');
 	}
 
 	/**
@@ -915,17 +920,18 @@ Class Wp_Migration {
 		return FALSE;
 	}
 
-	public function wp_migration($opts) {
-
+	/**
+	 * Contact l'api distante pour lui donner les ordres du coté serveur distant
+	 */
+	public function wp_migration($opts_migration) {
 
 		$postdata = http_build_query(
 		    array(
 		        'api_call' 		=> 'migration',
-				'dbname' 		=> $opts['dbname'],
-				'dbname' 		=> $opts['dbname'],
-				'dbpassword' 	=> $opts['dbpassword'],
-				'dbhost' 		=> $opts['dbhost'],
-				'site' 			=> $opts['site']
+				'dbname' 		=> $opts_migration['user_sql'],
+				'dbpassword' 	=> $opts_migration['pass_sql'],
+				'dbhost' 		=> $opts_migration['serveur_sql'],
+				'site' 			=> $opts_migration['www_url']
 		    )
 		);
 
@@ -939,24 +945,25 @@ Class Wp_Migration {
 
 		$context  = stream_context_create($opts);
 
-		$result = file_get_contents($opts['site'].'/migration.php', false, $context);
+		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
+		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
 	}
 
 	public function wp_url($oldurl, $newurl) {
 
-		$this->bdd();
+		$bdd = Bdd::getInstance();
 
 		# Changer l'URL du site
-		$req1 = $_bdd->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
+		$req1 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
 
 		# Changer l'URL des GUID
-		$req2 = $_bdd->prepare('UPDATE '.$table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
+		$req2 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
 
 		# Changer l'URL des médias dans les articles et pages
-		$req3 = $_bdd->prepare('UPDATE '.$table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
+		$req3 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
 
 		# Changer l'URL des données meta
-		$req4 = $_bdd->prepare('UPDATE '.$table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
+		$req4 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
 
 		$req1->execute(array(
 		    'oldurl' => $oldurl,
@@ -1014,14 +1021,14 @@ Class Wp_Migration {
 
 	public function wp_configfile($opts) {
 		
-		$filename = 'config.php';
+		$filename = 'wp-config.php';
 
 		$content = file_get_contents($filename);
 
 		$content = preg_replace ("/define\('DB_NAME', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbname']."');", $content);
-		$content = preg_replace ("/define\('DB_USER', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbname']."');", $content);
-		$content = preg_replace ("/define\('DB_PASSWORD', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbpassword']."');", $content);
-		$content = preg_replace ("/define\('DB_HOST', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbhost']."');", $content);
+		$content = preg_replace ("/define\('DB_USER', '(.*)'\);/i", "define('DB_USER', '".$opts['dbname']."');", $content);
+		$content = preg_replace ("/define\('DB_PASSWORD', '(.*)'\);/i", "define('DB_PASSWORD', '".$opts['dbpassword']."');", $content);
+		$content = preg_replace ("/define\('DB_HOST', '(.*)'\);/i", "define('DB_HOST', '".$opts['dbhost']."');", $content);
 
 		file_put_contents($filename , $content );
 
@@ -1099,9 +1106,9 @@ Class Wp_Migration {
 	 */
 	public function wp_sql_clean_revision() {
 
-		$this->bdd();
+		$bdd = Bdd::getInstance();
 
-		$sql = $_bdd->prepare('DELETE FROM '.$this->_table_prefix.'posts WHERE post_type = "revision"');
+		$sql = $bdd->dbh->prepare('DELETE FROM '.$this->_table_prefix.'posts WHERE post_type = "revision"');
 		$sql->execute();
 
 	}
@@ -1111,9 +1118,9 @@ Class Wp_Migration {
 	 */
 	public function wp_sql_clean_spam() {
 
-		$this->bdd();
+		$bdd = Bdd::getInstance();
 
-		$sql = $_bdd->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
+		$sql = $bdd->dbh->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
 		$sql->execute();
 
 	}
@@ -1183,6 +1190,50 @@ Class Wp_Migration {
 	     rmdir($dir);
 	   }
 	}
+}
+
+class Bdd
+{
+    public $dbh; // handle of the db connexion
+    private static $instance;
+
+    private function __construct()
+    {
+        // building data source name from config
+        $dsn = 'mysql:host=' . Config::read('db.host') .
+               ';dbname='    . Config::read('db.basename') .
+               ';charset=utf8';
+
+        $user 		= Config::read('db.user');
+        $password 	= Config::read('db.password');
+
+        $this->dbh = new PDO($dsn, $user, $password);
+    }
+
+    public static function getInstance()
+    {
+        if (!isset(self::$instance))
+        {
+            $object = __CLASS__;
+            self::$instance = new $object;
+        }
+        return self::$instance;
+    }
+}
+
+class Config
+{
+    static $confArray;
+
+    public static function read($name)
+    {
+        return self::$confArray[$name];
+    }
+
+    public static function write($name, $value)
+    {
+        self::$confArray[$name] = $value;
+    }
 }
 
 ?>
