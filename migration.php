@@ -32,7 +32,7 @@ $migration = new Wp_Migration();
 /**
  * Si un fichier wp-config.php existe, le script comprend que WP est deja installé
  */
-if(is_file('wp-config.php')){
+if(file_exists('wp-config.php')) {
 
 	define( 'WP_INSTALLING', false );
 
@@ -88,7 +88,6 @@ if(isset($_POST['exporter'])) {
 	if(!empty($_POST['exporter'])) {
 
 		$retour_export = $migration->wp_export_file();
-
 	}
 }
 
@@ -511,7 +510,7 @@ if(isset($_POST['api_call'])) {
 					<?php endif; ?>
 				</form>
 
-				<?php if(is_file('migration_file.zip') && $retour_export == FALSE) : ?>
+				<?php if(file_exists('migration_file.zip') && $retour_export == FALSE) : ?>
 				<div class="panel panel-success">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
@@ -571,7 +570,7 @@ if(isset($_POST['api_call'])) {
 					<?php endif; ?>
 				</form>
 
-				<?php if(is_file('migration_bdd.sql') && $retour_export_sql == FALSE) : ?>
+				<?php if(file_exists('migration_bdd.sql') && $retour_export_sql == FALSE) : ?>
 				<div class="panel panel-success">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
@@ -612,14 +611,14 @@ if(isset($_POST['api_call'])) {
 					<div class="form-group">
 						<input type="hidden" class="form-control" id="importer" name="importer" placeholder="" value="test">
 					</div>
-					<?php if(is_file('migration_file.zip')): ?>
+					<?php if(file_exists('migration_file.zip')): ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
 					</div>
 					<?php endif; ?>
 				</form>
 
-				<?php if(!is_file('migration_file.zip')): ?>
+				<?php if(!file_exists('migration_file.zip')): ?>
 				<div class="panel panel-warning">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
@@ -658,14 +657,14 @@ if(isset($_POST['api_call'])) {
 					<div class="form-group">
 						<input type="hidden" class="form-control" id="importer_sql" name="importer_sql" placeholder="" value="test">
 					</div>
-					<?php if(is_file('migration_bdd.sql')): ?>
+					<?php if(file_exists('migration_bdd.sql')): ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Importer la base de données</button>
 					</div>
 					<?php endif; ?>
 				</form>
 
-				<?php if(!is_file('migration_bdd.sql')): ?>
+				<?php if(!file_exists('migration_bdd.sql')): ?>
 				<div class="panel panel-warning">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
@@ -925,7 +924,6 @@ Class Wp_Migration {
 		$this->_wp_lang 		= 'fr_FR';
 		$this->_wp_api 			= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core 	= 'core/';
-
 	}
 
 	/**
@@ -972,14 +970,17 @@ Class Wp_Migration {
 
 		if (ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, $file, FTP_ASCII)) {
 			ftp_close($conn_id);
+
 			return TRUE;
 		} else {
 			ftp_close($conn_id);
+
 			return FALSE;
 		}
 	}
 
 	public function wp_clean_ftp_migration(){
+
 		unlink('migration_file.zip');
 		unlink('migration_bdd.sql');
 	}
@@ -1123,12 +1124,11 @@ Class Wp_Migration {
 
 		$ht .= 'Options All -Indexes'."\r\n";
 		
-		if(is_file('.htaccess')) {
+		if(file_exists('.htaccess')) {
 			copy('.htaccess', '.htaccess.bak');
 		}
 
 		file_put_contents( '.htaccess', $ht );
-
 	}
 
 	public function wp_configfile($opts) {
@@ -1158,7 +1158,6 @@ Class Wp_Migration {
 
 		chmod( 'wp-config.php', 0666 );
 		unlink( 'wp-config-sample.php' );
-
 	}
 
 	/**
@@ -1169,7 +1168,6 @@ Class Wp_Migration {
 		$this->Zip('./', "migration_file.zip");
 
 		return TRUE;
-
 	}
 
 	/**
@@ -1181,9 +1179,15 @@ Class Wp_Migration {
 	 */
 	public function wp_export_sql() {
 
-		/*if(function_exists('exec')){
+		if(file_exists('migration_bdd.sql')){
+			unlink('migration_bdd.sql');
+		}
+
+		if(function_exists('exec')){
+
 			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > migration_bdd.sql';
 			exec($command, $output = array(), $worked);
+
 			switch($worked){
 				case 0:
 					return TRUE;
@@ -1195,9 +1199,11 @@ Class Wp_Migration {
 					return FALSE;
 				break;
 			}
+
 		} elseif(function_exists('system')){
+
 			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > migration_bdd.sql");
-		} else {*/
+		} else {
 			
 		    $bdd = Bdd::getInstance();
 
@@ -1209,6 +1215,15 @@ Class Wp_Migration {
 	            $target_tables[] = $row[0]; 
 	        }
 
+			$content   =  '-- Migration SQL Dump'. "\n";
+			$content  .=  '-- version 1.0'. "\n";
+			$content  .=  '-- http://www.viky.fr'. "\n";
+			$content  .=  '--'. "\n";
+			$content  .=  '-- Host: localhost'. "\n";
+			$content  .=  '-- Generation Time: '. "\n";
+			$content  .=  '-- Server version: '. "\n";
+			$content  .=  '-- PHP Version: '. "\n";
+
 	        foreach($target_tables as $table)
 	        {
 
@@ -1217,6 +1232,11 @@ Class Wp_Migration {
 	            $rows_num		=	$result->rowCount();
 	            $res            =   $bdd->dbh->query('SHOW CREATE TABLE '.$table); 
 	            $TableMLine     =   $res->fetch();
+
+				$content       .=  "\n" . "--" . "\n";
+				$content       .= "-- Table structure for table `".$table."`". "\n";
+				$content       .= "--". "\n";
+
 	            $content        = (!isset($content) ?  '' : $content) . "\n\n".$TableMLine[1].";\n\n";
 
 	            for ($i = 0, $st_counter = 0; $i < $fields_amount;   $i++, $st_counter=0) 
@@ -1262,7 +1282,7 @@ Class Wp_Migration {
         	}
 
         	file_put_contents('migration_bdd.sql', $content);
-		//}
+		}
 	}
 
 	public function wp_import_file() {
@@ -1272,7 +1292,6 @@ Class Wp_Migration {
 	    $zip->open('migration_file.zip');
 	    $zip->extractTo('.');
 	    $zip->close();
-
 	}
 
 	/**
@@ -1284,22 +1303,27 @@ Class Wp_Migration {
 	 */
 	public function wp_import_sql() {
 
-		/*if(function_exists('exec')){
+		if(function_exists('exec')){
+
 			$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql';
 			exec($command, $output = array(), $worked);
+
 			switch($worked){
 				case 0:
+
 					return TRUE;
 				break;
 				case 1:
+
 					return FALSE;
 				break;
 			}
-		} elseif(function_exists('system')){
-			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql');
-		} else {*/
-			
 
+		} elseif(function_exists('system')){
+
+			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql');
+		} else {
+			
 		    $bdd = Bdd::getInstance();
 
 			$templine = '';
@@ -1326,7 +1350,7 @@ Class Wp_Migration {
 			}
 
 			return TRUE;
-		//}
+		}
 	}
 
 	/**
@@ -1338,7 +1362,6 @@ Class Wp_Migration {
 
 		$sql = $bdd->dbh->prepare('DELETE FROM '.$this->_table_prefix.'posts WHERE post_type = "revision"');
 		$sql->execute();
-
 	}
 
 	/**
@@ -1350,7 +1373,6 @@ Class Wp_Migration {
 
 		$sql = $bdd->dbh->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
 		$sql->execute();
-
 	}
 
 	/**
@@ -1411,7 +1433,6 @@ Class Wp_Migration {
 		delete_theme( 'twentyten' );
 		// We delete the _MACOSX folder (bug with a Mac)
 		delete_theme( '__MACOSX' );
-
 	}
 
 	/**
@@ -1422,11 +1443,13 @@ Class Wp_Migration {
 	public function Zip($source, $destination)
 	{
 	    if (!extension_loaded('zip') || !file_exists($source)) {
+
 	        return false;
 	    }
 
 	    $zip = new ZipArchive();
 	    if (!$zip->open($destination, ZIPARCHIVE::CREATE)) {
+
 	        return false;
 	    }
 
@@ -1468,16 +1491,16 @@ Class Wp_Migration {
 	 * Supprime recursivement un dossier et ses fichiers
 	 */
 	public function rrmdir($dir) {
-	   if (is_dir($dir)) {
-	     $objects = scandir($dir);
-	     foreach ($objects as $object) {
-	       if ($object != "." && $object != "..") {
-	         if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
-	       }
-	     }
-	     reset($objects);
-	     rmdir($dir);
-	   }
+	    if (is_dir($dir)) {
+	    	$objects = scandir($dir);
+	    	foreach ($objects as $object) {
+	       		if ($object != "." && $object != "..") {
+	         		if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
+	       		}
+	     	}
+	    	reset($objects);
+	    	rmdir($dir);
+	   	}
 	}
 }
 
@@ -1496,7 +1519,7 @@ class Bdd
         $user 		= Config::read('db.user');
         $password 	= Config::read('db.password');
 
-        $this->dbh = new PDO($dsn, $user, $password);
+        $this->dbh 	= new PDO($dsn, $user, $password);
     }
 
     public static function getInstance()
@@ -1506,6 +1529,7 @@ class Bdd
             $object = __CLASS__;
             self::$instance = new $object;
         }
+
         return self::$instance;
     }
 }
@@ -1516,6 +1540,7 @@ class Config
 
     public static function read($name)
     {
+
         return self::$confArray[$name];
     }
 
