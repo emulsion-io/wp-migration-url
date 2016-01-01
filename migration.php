@@ -3,12 +3,17 @@
 /**
  * @author Fabrice Simonet
  * @link http://viky.fr
+ *
+ * @version 1.0 codename Eulalie
  */
+
+ini_set("memory_limit", "-1");
+set_time_limit(0);
 
 /**
  * Variable de status d'execution du script
  */
-$retour 				= FALSE;
+$retour_url				= FALSE;
 $retour_migration		= FALSE;
 $retour_migration_api	= FALSE;
 $retour_export 			= FALSE;
@@ -19,6 +24,8 @@ $retour_htaccess 		= FALSE;
 $retour_dl 				= FALSE;
 $retour_clean_revision 	= FALSE;
 $retour_clean_spam 		= FALSE;
+$retour_plug_install	= FALSE;
+$retour_delete_theme	= FALSE;
 
 $migration = new Wp_Migration();
 
@@ -26,6 +33,8 @@ $migration = new Wp_Migration();
  * Si un fichier wp-config.php existe, le script comprend que WP est deja installé
  */
 if(is_file('wp-config.php')){
+
+	define( 'WP_INSTALLING', false );
 
 	include ('wp-config.php');
 
@@ -59,7 +68,7 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 
 		$migration->wp_url($oldurl, $newurl);
 
-		$retour = TRUE;
+		$retour_url = TRUE;
 	}
 }
 
@@ -143,6 +152,24 @@ if(isset($_POST['clean_spam'])) {
 	}
 }
 
+if(isset($_POST['plug_install'])) {
+	if(!empty($_POST['plug_install'])) {
+
+		$migration->wp_install_plugins($_POST['plug_install_liste']);
+
+		$retour_plug_install = TRUE;
+	}
+}
+
+if(isset($_POST['delete_theme'])) {
+	if(!empty($_POST['delete_theme'])) {
+
+		$migration->wp_delete_theme();
+
+		$retour_delete_theme = TRUE;
+	}
+}
+
 if(isset($_POST['migration'])) {
 	if(!empty($_POST['migration'])) {
 
@@ -191,6 +218,7 @@ if(isset($_POST['api_call'])) {
 		$migration->wp_configfile($opts);
 
 		// Effectue l'importation du SQL
+		$migration->wp_import_sql();
 
 		// nettoie les fichiers sql et zip
 		$migration->wp_clean_ftp_migration();
@@ -298,7 +326,7 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</div>
             <div class="col-md-12">
-            	<?php if($retour == TRUE) : ?>
+            	<?php if($retour_url == TRUE) : ?>
             		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
             	<?php endif; ?>
 				<form method="post">
@@ -632,7 +660,7 @@ if(isset($_POST['api_call'])) {
 					</div>
 					<?php if(is_file('migration_bdd.sql')): ?>
 					<div class="form-group">
-						<button type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
+						<button type="submit" class="btn btn-default">Importer la base de données</button>
 					</div>
 					<?php endif; ?>
 				</form>
@@ -769,6 +797,103 @@ if(isset($_POST['api_call'])) {
 				</form>
             </div>
         </article>
+
+        <article class="row">
+           	<div class="col-md-12">
+           	    <h2>Installe les plugins de votre choix</h2>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>Installe les plugins listé par une virgule</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_plug_install == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">Les plugins ont ete installé avec succes.</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="plug_install" name="plug_install" placeholder="" value="test">
+					</div>
+
+					<div class="form-group">
+						<label for="plug_install_liste">Liste des plugins</label>
+						<input type="text" class="form-control" id="plug_install_liste" name="plug_install_liste" placeholder="" value="">
+					</div>
+
+					<?php if($wp_exist == TRUE) : ?>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Install les plugins </button>
+					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>
+					<?php endif; ?>	
+				</form>
+            </div>
+        </article>
+
+         <article class="row">
+           	<div class="col-md-12">
+           	    <h2>Supprime les themes defaut de Wordpress</h2>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>twentyfourteen</li>
+					    	<li>twentythirteen</li>
+					    	<li>twentytwelve</li>
+					    	<li>twentyeleven</li>
+					    	<li>twentyten</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_delete_theme == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">Les themes ont ete desinstallé avec succes.</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="delete_theme" name="delete_theme" placeholder="" value="test">
+					</div>
+
+					<?php if($wp_exist == TRUE) : ?>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Supprime les themes</button>
+					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>
+					<?php endif; ?>	
+				</form>
+            </div>
+        </article>       
 
         <footer class="row">
             <div class="col-md-12"></div>
@@ -1031,6 +1156,9 @@ Class Wp_Migration {
 		    file_put_contents($filename, PHP_EOL . $methode, FILE_APPEND);
 		}
 
+		chmod( 'wp-config.php', 0666 );
+		unlink( 'wp-config-sample.php' );
+
 	}
 
 	/**
@@ -1044,9 +1172,16 @@ Class Wp_Migration {
 
 	}
 
+	/**
+	 * Exporte la base de données Wordpress selon 3 types de possibilité pour repondre le plus rapidement a la demande en fonction des serveurs,
+	 * exec
+	 * systeme
+	 * php full script manuel
+	 * http://stackoverflow.com/questions/22195493/export-mysql-database-using-php-only
+	 */
 	public function wp_export_sql() {
 
-		if(function_exists('exec')){
+		/*if(function_exists('exec')){
 			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > migration_bdd.sql';
 			exec($command, $output = array(), $worked);
 			switch($worked){
@@ -1062,9 +1197,72 @@ Class Wp_Migration {
 			}
 		} elseif(function_exists('system')){
 			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > migration_bdd.sql");
-		} else {
-	
-		}
+		} else {*/
+			
+		    $bdd = Bdd::getInstance();
+
+			$bdd->dbh->query("SET NAMES 'utf8'");
+
+	        $queryTables    = $bdd->dbh->query('SHOW TABLES'); 
+	        while($row = $queryTables->fetch()) 
+	        { 
+	            $target_tables[] = $row[0]; 
+	        }
+
+	        foreach($target_tables as $table)
+	        {
+
+	            $result         =   $bdd->dbh->query('SELECT * FROM '.$table);  
+	            $fields_amount  =   $result->columnCount();  
+	            $rows_num		=	$result->rowCount();
+	            $res            =   $bdd->dbh->query('SHOW CREATE TABLE '.$table); 
+	            $TableMLine     =   $res->fetch();
+	            $content        = (!isset($content) ?  '' : $content) . "\n\n".$TableMLine[1].";\n\n";
+
+	            for ($i = 0, $st_counter = 0; $i < $fields_amount;   $i++, $st_counter=0) 
+	            {
+	                while($row = $result->fetch())  
+	                { //when started (and every after 100 command cycle):
+	                    if ($st_counter%100 == 0 || $st_counter == 0 )  
+	                    {
+	                            $content .= "\nINSERT INTO ".$table." VALUES";
+	                    }
+	                    $content .= "\n(";
+	                    for($j=0; $j<$fields_amount; $j++)  
+	                    { 
+	                        $row[$j] = str_replace("\n","\\n", addslashes($row[$j]) ); 
+	                        if (isset($row[$j]))
+	                        {
+	                            $content .= '"'.$row[$j].'"' ; 
+	                        }
+	                        else 
+	                        {   
+	                            $content .= '""';
+	                        }     
+	                        if ($j<($fields_amount-1))
+	                        {
+	                                $content.= ',';
+	                        }      
+	                    }
+	                    $content .=")";
+	                    //every after 100 command cycle [or at last line] ....p.s. but should be inserted 1 cycle eariler
+	                    if ( (($st_counter+1)%100==0 && $st_counter!=0) || $st_counter+1==$rows_num) 
+	                    {   
+	                        $content .= ";";
+	                    } 
+	                    else 
+	                    {
+	                        $content .= ",";
+	                    } 
+	                    $st_counter=$st_counter+1;
+	                }
+	            } 
+
+	            $content .="\n\n\n";
+        	}
+
+        	file_put_contents('migration_bdd.sql', $content);
+		//}
 	}
 
 	public function wp_import_file() {
@@ -1077,9 +1275,16 @@ Class Wp_Migration {
 
 	}
 
+	/**
+	 * Permet d'importer la base de données selon 3 types de possibilites 
+	 * exec
+	 * systeme
+	 * php full manuel
+	 * http://stackoverflow.com/questions/19751354/how-to-import-sql-file-in-mysql-database-using-php
+	 */
 	public function wp_import_sql() {
 
-		if(function_exists('exec')){
+		/*if(function_exists('exec')){
 			$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql';
 			exec($command, $output = array(), $worked);
 			switch($worked){
@@ -1092,9 +1297,36 @@ Class Wp_Migration {
 			}
 		} elseif(function_exists('system')){
 			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql');
-		} else {
+		} else {*/
+			
 
-		}
+		    $bdd = Bdd::getInstance();
+
+			$templine = '';
+			// Read in entire file
+			$lines = file('migration_bdd.sql');
+			// Loop through each line
+			foreach ($lines as $line)
+			{
+				// Skip it if it's a comment
+				if (substr($line, 0, 2) == '--' || $line == '') {
+				    continue;
+				}
+
+				// Add this line to the current segment
+				$templine .= $line;
+				// If it has a semicolon at the end, it's the end of the query
+				if (substr(trim($line), -1, 1) == ';')
+				{
+				    // Perform the query
+				    $bdd->dbh->query($templine); //or print('Error performing query \'<strong>' . $templine . '\': ' . mysql_error() . '<br /><br />');
+				    // Reset temp variable to empty
+				    $templine = '';
+				}
+			}
+
+			return TRUE;
+		//}
 	}
 
 	/**
@@ -1118,6 +1350,67 @@ Class Wp_Migration {
 
 		$sql = $bdd->dbh->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
 		$sql->execute();
+
+	}
+
+	/**
+	 * Install une liste de plugin separé par une , 
+	 *
+	 * @var string $plug_off liste separé par une , 
+	 */
+	public function wp_install_plugins($plug_off){
+
+		$plugins     = explode( ",", $plug_off );
+		$plugins     = array_map( 'trim' , $plugins );
+		$plugins_dir = 'wp-content/plugins/';
+
+		foreach ( $plugins as $plugin ) {
+
+			// We retrieve the plugin XML file to get the link to downlad it
+		    $plugin_repo = file_get_contents( "http://api.wordpress.org/plugins/info/1.0/$plugin.json" );
+
+		    if ( $plugin_repo && $plugin = json_decode( $plugin_repo ) ) {
+
+				$plugin_path = config('wp_dir_plug') . $plugin->slug . '-' . $plugin->version . '.zip';
+
+				if ( ! file_exists( $plugin_path ) ) {
+					// We download the lastest version
+					if ( $download_link = file_get_contents( $plugin->download_link ) ) {
+						file_put_contents( $plugin_path, $download_link );
+					}							
+				}
+
+		    	// We unzip it
+		    	$zip = new ZipArchive;
+				if ( $zip->open( $plugin_path ) === true ) {
+					$zip->extractTo( $plugins_dir );
+					$zip->close();
+				}
+		    }
+		}
+
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/plugin.php');		
+
+		activate_plugins( array_keys( get_plugins() ) );
+	}
+
+	/**
+	 * Supprime les themes default de Wordpress
+	 *
+	 */
+	public function wp_delete_theme(){
+
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/upgrade.php' );
+
+		delete_theme( 'twentyfourteen' );
+		delete_theme( 'twentythirteen' );
+		delete_theme( 'twentytwelve' );
+		delete_theme( 'twentyeleven' );
+		delete_theme( 'twentyten' );
+		// We delete the _MACOSX folder (bug with a Mac)
+		delete_theme( '__MACOSX' );
 
 	}
 
