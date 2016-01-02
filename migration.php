@@ -7,8 +7,8 @@
  * @version 1.0 codename Eulalie
  */
 
-ini_set("memory_limit", "-1");
-set_time_limit(0);
+//ini_set("memory_limit", "-1");
+//set_time_limit(0);
 
 /**
  * Variable de status d'execution du script
@@ -179,6 +179,7 @@ if(isset($_POST['migration'])) {
 			'ftp_pass' => $_POST['ftp_pass'],
 			'ftp_folder' => $_POST['ftp_folder'],
 			'serveur_sql' => $_POST['serveur_sql'],
+			'name_sql' => $_POST['name_sql'],
 			'user_sql' => $_POST['user_sql'],
 			'pass_sql' => $_POST['pass_sql']
 		);
@@ -204,11 +205,14 @@ if(isset($_POST['api_call'])) {
 	if(!empty($_POST['api_call'])) {
 
 		$opts = array(
-			'dbname' 		=> $opts['dbname'],
-			'dbpassword' 	=> $opts['dbpassword'],
-			'dbhost' 		=> $opts['dbhost'],
-			'site' 			=> $opts['site']
+			'dbname' 		=> $_POST['dbname'],
+			'dbuser' 		=> $_POST['dbuser'],
+			'dbpassword' 	=> $_POST['dbpassword'],
+			'dbhost' 		=> $_POST['dbhost'],
+			'site' 			=> $_POST['site']
 		);
+
+		//file_put_contents('logfile.log', json_encode($_POST)); exit;
 
 		// extraction des fichiers
 		$migration->wp_import_file();
@@ -216,8 +220,33 @@ if(isset($_POST['api_call'])) {
 		// modifie le fichier wordpress avec les infos du nouveau serveur
 		$migration->wp_configfile($opts);
 
+		//------- Permet de charger les informations de connexion contenue dans le fichier wp-config.php nouvellement ecrite
+		define( 'WP_INSTALLING', false );
+		include ('wp-config.php');
+		// Assigne les variables du WP courant a la class
+		$options = array(
+			DB_HOST,
+			DB_NAME,
+			DB_USER,
+			DB_PASSWORD,
+			$table_prefix
+		);
+		$migration->set_var_wp($options);
+		// Recupere les informations sur le WP courant
+		$site_url = $migration->wp_get_info();
+		//------- 
+
 		// Effectue l'importation du SQL
 		$migration->wp_import_sql();
+
+		// modification des urls
+		$oldurl = $site_url['option_value'];
+		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']);
+		file_put_contents('log.log', $oldurl.' -*- '.$newurl );
+		$migration->wp_url($oldurl, $newurl);
+
+		// creation du .htaccess
+		$migration->wp_htaccess();
 
 		// nettoie les fichiers sql et zip
 		$migration->wp_clean_ftp_migration();
@@ -225,7 +254,6 @@ if(isset($_POST['api_call'])) {
 		return TRUE;
 	}
 }
-
 
 ?>
 
@@ -363,6 +391,10 @@ if(isset($_POST['api_call'])) {
 						<label for="serveur_sql">Serveur MySQL</label>
 						<input type="text" class="form-control" id="serveur_sql" name="serveur_sql" placeholder="localhost" value="">
 					</div>
+					<div class="form-group">
+						<label for="name_sql">Nom de la base de données MySQL</label>
+						<input type="text" class="form-control" id="name_sql" name="name_sql" placeholder="" value="">
+					</div>					
 					<div class="form-group">
 						<label for="user_sql">Utilisateur MySQL</label>
 						<input type="text" class="form-control" id="user_sql" name="user_sql" placeholder="" value="">
@@ -1045,7 +1077,8 @@ Class Wp_Migration {
 		$postdata = http_build_query(
 		    array(
 		        'api_call' 		=> 'migration',
-				'dbname' 		=> $opts_migration['user_sql'],
+		        'dbuser' 		=> $opts_migration['user_sql'],
+				'dbname' 		=> $opts_migration['name_sql'],
 				'dbpassword' 	=> $opts_migration['pass_sql'],
 				'dbhost' 		=> $opts_migration['serveur_sql'],
 				'site' 			=> $opts_migration['www_url']
@@ -1071,16 +1104,16 @@ Class Wp_Migration {
 		$bdd = Bdd::getInstance();
 
 		# Changer l'URL du site
-		$req1 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
+		$req1 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
 
 		# Changer l'URL des GUID
-		$req2 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
+		$req2 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
 
 		# Changer l'URL des médias dans les articles et pages
-		$req3 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
+		$req3 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
 
 		# Changer l'URL des données meta
-		$req4 = $bdd->dbh->prepare('UPDATE '.$table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
+		$req4 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
 
 		$req1->execute(array(
 		    'oldurl' => $oldurl,
@@ -1135,16 +1168,16 @@ Class Wp_Migration {
 		file_put_contents( '.htaccess', $ht );
 	}
 
-	public function wp_configfile($opts) {
+	public function wp_configfile($options) {
 		
 		$filename = 'wp-config.php';
 
 		$content = file_get_contents($filename);
 
-		$content = preg_replace ("/define\('DB_NAME', '(.*)'\);/i", "define('DB_NAME', '".$opts['dbname']."');", $content);
-		$content = preg_replace ("/define\('DB_USER', '(.*)'\);/i", "define('DB_USER', '".$opts['dbname']."');", $content);
-		$content = preg_replace ("/define\('DB_PASSWORD', '(.*)'\);/i", "define('DB_PASSWORD', '".$opts['dbpassword']."');", $content);
-		$content = preg_replace ("/define\('DB_HOST', '(.*)'\);/i", "define('DB_HOST', '".$opts['dbhost']."');", $content);
+		$content = preg_replace ("/define\('DB_NAME', '(.*)'\);/i", "define('DB_NAME', '".$options['dbname']."');", $content);
+		$content = preg_replace ("/define\('DB_USER', '(.*)'\);/i", "define('DB_USER', '".$options['dbuser']."');", $content);
+		$content = preg_replace ("/define\('DB_PASSWORD', '(.*)'\);/i", "define('DB_PASSWORD', '".$options['dbpassword']."');", $content);
+		$content = preg_replace ("/define\('DB_HOST', '(.*)'\);/i", "define('DB_HOST', '".$options['dbhost']."');", $content);
 
 		file_put_contents($filename , $content );
 
@@ -1326,6 +1359,8 @@ Class Wp_Migration {
 		} elseif(function_exists('system')){
 
 			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql');
+
+			return TRUE;
 		} else {
 			
 		    $bdd = Bdd::getInstance();
