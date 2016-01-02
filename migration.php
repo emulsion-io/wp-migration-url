@@ -220,7 +220,7 @@ if(isset($_POST['api_call'])) {
 		// modifie le fichier wordpress avec les infos du nouveau serveur
 		$migration->wp_configfile($opts);
 
-		//------- Permet de charger les informations de connexion contenue dans le fichier wp-config.php nouvellement ecrite
+		//------- Permet de charger les informations de connexion contenue dans le fichier wp-config.php nouvellement modifié
 		define( 'WP_INSTALLING', false );
 		include ('wp-config.php');
 		// Assigne les variables du WP courant a la class
@@ -232,17 +232,17 @@ if(isset($_POST['api_call'])) {
 			$table_prefix
 		);
 		$migration->set_var_wp($options);
-		// Recupere les informations sur le WP courant
-		$site_url = $migration->wp_get_info();
 		//------- 
 
 		// Effectue l'importation du SQL
 		$migration->wp_import_sql();
 
+		// Recupere les informations sur le WP courant
+		$site_url = $migration->wp_get_info();
+
 		// modification des urls
 		$oldurl = $site_url['option_value'];
 		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']);
-		file_put_contents('log.log', $oldurl.' -*- '.$newurl );
 		$migration->wp_url($oldurl, $newurl);
 
 		// creation du .htaccess
@@ -357,7 +357,7 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</div>
             <div class="col-md-12">
-            	<?php if($retour_url == TRUE) : ?>
+            	<?php if($retour_migration == TRUE) : ?>
             		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
             	<?php endif; ?>
 				<form method="post">
@@ -468,7 +468,7 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</div>
             <div class="col-md-12">
-            	<?php if($retour == TRUE) : ?>
+            	<?php if($retour_url == TRUE) : ?>
             		<div class="alert alert-success" role="alert">L'ecriture des nouvelles urls a bien ete effectue dans la base de données.</div>
             	<?php endif; ?>
 				<form method="post">
