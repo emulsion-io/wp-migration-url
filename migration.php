@@ -13,19 +13,19 @@ set_time_limit(0);
 /**
  * Variable de status d'execution du script
  */
-$retour_url				= FALSE;
-$retour_migration		= FALSE;
-$retour_migration_api	= FALSE;
+$retour_url 			= FALSE;
+$retour_migration 		= FALSE;
+$retour_migration_api 	= FALSE;
 $retour_export 			= FALSE;
 $retour_import 			= FALSE;
-$retour_export_sql		= FALSE;
-$retour_import_sql		= FALSE;
+$retour_export_sql 		= FALSE;
+$retour_import_sql 		= FALSE;
 $retour_htaccess 		= FALSE;
 $retour_dl 				= FALSE;
 $retour_clean_revision 	= FALSE;
 $retour_clean_spam 		= FALSE;
-$retour_plug_install	= FALSE;
-$retour_delete_theme	= FALSE;
+$retour_plug_install 	= FALSE;
+$retour_delete_theme 	= FALSE;
 
 $migration = new Wp_Migration();
 
@@ -270,7 +270,7 @@ if(isset($_POST['api_call'])) {
 						<h3 class="panel-title">Important</h3> 
 					</div>
 					<div class="panel-body">
-					Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectuer le changement des URLs.
+					Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectuer vos modifications.
 					</div>
 				</div>
 			</div>
@@ -287,10 +287,14 @@ if(isset($_POST['api_call'])) {
 							<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
 							<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
 							<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
+							<?php 
+							/*
 							<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " is enabled" : " is disabled"; ?></li>
 							<li>Fonction popen() <?php echo (function_exists('popen'))? " is enabled" : " is disabled"; ?></li>
 							<li>Fonction passthru() <?php echo (function_exists('passthru'))? " is enabled" : " is disabled"; ?></li>
 							<li>Fonction proc_open() <?php echo (function_exists('proc_open'))? " is enabled" : " is disabled"; ?></li>
+							*/ 
+							?>
 						</ul>
 					</div>
 				</div>
@@ -895,7 +899,7 @@ if(isset($_POST['api_call'])) {
         </article>       
 
         <footer class="row">
-            <div class="col-md-12"></div>
+            <div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
         </footer>
 
       </div>
