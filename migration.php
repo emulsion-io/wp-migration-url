@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://viky.fr
  *
- * @version 1.0 codename Eulalie
+ * @version 1.1 codename Eulalie
  */
 
 //ini_set("memory_limit", "-1");
@@ -173,15 +173,16 @@ if(isset($_POST['migration'])) {
 	if(!empty($_POST['migration'])) {
 
 		$opts_migration = array(
-			'www_url' => $_POST['www_url'],
-			'ftp_url' => $_POST['ftp_url'],
-			'user_ftp' => $_POST['user_ftp'],
-			'ftp_pass' => $_POST['ftp_pass'],
-			'ftp_folder' => $_POST['ftp_folder'],
-			'serveur_sql' => $_POST['serveur_sql'],
-			'name_sql' => $_POST['name_sql'],
-			'user_sql' => $_POST['user_sql'],
-			'pass_sql' => $_POST['pass_sql']
+			'www_url' 		=> $_POST['www_url'],
+			'ftp_url' 		=> $_POST['ftp_url'],
+			'user_ftp' 		=> $_POST['user_ftp'],
+			'ftp_pass' 		=> $_POST['ftp_pass'],
+			'ftp_folder' 	=> $_POST['ftp_folder'],
+			'serveur_sql' 	=> $_POST['serveur_sql'],
+			'name_sql' 		=> $_POST['name_sql'],
+			'user_sql' 		=> $_POST['user_sql'],
+			'pass_sql' 		=> $_POST['pass_sql'],
+			'table_prefix' 	=> $table_prefix
 		);
 
 		// Exporte le SQL
@@ -191,10 +192,14 @@ if(isset($_POST['migration'])) {
 		$migration->wp_export_file();
 
 		// Envoie les fichiers sur le serveur FTP distant
-		$migration->wp_ftp_migration($opts_migration);
+		$ftp_migration_retour = $migration->wp_ftp_migration($opts_migration);
 
 		// Supprime les fichiers locaux
 		$migration->wp_clean_ftp_migration();
+
+		if($ftp_migration_retour == FALSE){
+			echo "erreur FTP, connexion impossible"; exit;
+		}
 
 		// Contact le site distant pour activer la methode api_call
 		$retour_migration = $migration->wp_migration($opts_migration);
@@ -209,33 +214,35 @@ if(isset($_POST['api_call'])) {
 			'dbuser' 		=> $_POST['dbuser'],
 			'dbpassword' 	=> $_POST['dbpassword'],
 			'dbhost' 		=> $_POST['dbhost'],
-			'site' 			=> $_POST['site']
+			'site' 			=> $_POST['site'],
+			'table_prefix' 	=> $_POST['table_prefix'],
 		);
-
-		//file_put_contents('logfile.log', json_encode($_POST)); exit;
+		//$migration->wp_log(json_encode($_POST));
 
 		// extraction des fichiers
 		$migration->wp_import_file();
+		$migration->wp_log('Extraction des fichiers');
 
 		// modifie le fichier wordpress avec les infos du nouveau serveur
 		$migration->wp_configfile($opts);
+		$migration->wp_log('Configuration du wp-config.php');
 
-		//------- Permet de charger les informations de connexion contenue dans le fichier wp-config.php nouvellement modifié
-		define( 'WP_INSTALLING', false );
-		include ('wp-config.php');
 		// Assigne les variables du WP courant a la class
 		$options = array(
-			DB_HOST,
-			DB_NAME,
-			DB_USER,
-			DB_PASSWORD,
-			$table_prefix
+			$opts['dbhost'],
+			$opts['dbname'],
+			$opts['dbuser'],
+			$opts['dbpassword'],
+			$opts['table_prefix']
 		);
 		$migration->set_var_wp($options);
 		//------- 
 
+		$migration->wp_log('Rechargement des infos du nouveau WP');
+
 		// Effectue l'importation du SQL
 		$migration->wp_import_sql();
+		$migration->wp_log('Importation du SQL');
 
 		// Recupere les informations sur le WP courant
 		$site_url = $migration->wp_get_info();
@@ -244,12 +251,15 @@ if(isset($_POST['api_call'])) {
 		$oldurl = $site_url['option_value'];
 		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']);
 		$migration->wp_url($oldurl, $newurl);
+		$migration->wp_log('Modification des URLs');
 
 		// creation du .htaccess
 		$migration->wp_htaccess();
+		$migration->wp_log('Creation du htaccess');
 
 		// nettoie les fichiers sql et zip
 		$migration->wp_clean_ftp_migration();
+		$migration->wp_log('Netoyage des fichiers temporaire de migration');
 
 		return TRUE;
 	}
@@ -992,18 +1002,37 @@ Class Wp_Migration {
 		return $req->fetch();
 	}
 
+	public function wp_log($text){
+
+		if(file_exists('logfile.log')) {
+			$old = file_get_contents('logfile.log');
+		} else {
+			$old = "";
+		}
+
+		$var = $old.date('Y/m/d h:i:s')." : ".$text."\n";
+		file_put_contents('logfile.log', $var);
+
+	}
+
 	public function wp_ftp_migration($opts){
 
 		$file = 'migration_file.zip';
 		$remote_file = 'migration_file.zip';
 
 		$conn_id = ftp_connect($opts['ftp_url']);
+		if($conn_id == FALSE){
+			return FALSE;
+		}
 
 		$login_result = ftp_login($conn_id, $opts['user_ftp'], $opts['ftp_pass']);
+		if($login_result == FALSE){
+			return FALSE;
+		}
 
-		// Charge un fichier
+		// Envoie le fichier migration.php qui sert d'api distante
 		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.'migration.php', 'migration.php', FTP_ASCII);
-
+		// Envoie le fichier contenant le site a migrer
 		if (ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, $file, FTP_ASCII)) {
 			ftp_close($conn_id);
 
@@ -1081,7 +1110,8 @@ Class Wp_Migration {
 				'dbname' 		=> $opts_migration['name_sql'],
 				'dbpassword' 	=> $opts_migration['pass_sql'],
 				'dbhost' 		=> $opts_migration['serveur_sql'],
-				'site' 			=> $opts_migration['www_url']
+				'site' 			=> $opts_migration['www_url'],
+				'table_prefix'  => $opts_migration['table_prefix']
 		    )
 		);
 
