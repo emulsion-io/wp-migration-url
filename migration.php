@@ -26,6 +26,7 @@ $retour_clean_revision 	= FALSE;
 $retour_clean_spam 		= FALSE;
 $retour_plug_install 	= FALSE;
 $retour_delete_theme 	= FALSE;
+$retour_add_user 		= FALSE;
 
 $migration = new Wp_Migration();
 
@@ -166,6 +167,15 @@ if(isset($_POST['delete_theme'])) {
 		$migration->wp_delete_theme();
 
 		$retour_delete_theme = TRUE;
+	}
+}
+
+if(isset($_POST['add_user'])) {
+	if(!empty($_POST['add_user'])) {
+
+		$migration->wp_add_user($_POST['user'], $_POST['pass']);
+
+		$retour_add_user = TRUE;
 	}
 }
 
@@ -940,6 +950,57 @@ if(isset($_POST['api_call'])) {
             </div>
         </article>       
 
+         <article class="row">
+           	<div class="col-md-12">
+           	    <h2>Ajoute un utilisateur</h2>
+				<div class="panel panel-info">
+					<div class="panel-heading"> 
+						<h3 class="panel-title">Ce que fait cet assistant</h3> 
+					</div>
+					<div class="panel-body">
+					    <ul>
+					    	<li>Ajouter un Super Admin</li>
+					    </ul>
+					</div>
+				</div>
+			</div>
+
+            <div class="col-md-12">
+                <?php if($retour_add_user == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">L'utilisateur a ete ajouté avec succes.</div>
+            	<?php endif; ?>
+				<form method="post">
+					<div class="form-group">
+						<input type="hidden" class="form-control" id="add_user" name="add_user" placeholder="" value="test">
+					</div>
+					<div class="form-group">
+						<label for="user">Pseudo</label>
+						<input type="text" class="form-control" id="user" name="user" placeholder="" value="">
+					</div>
+					<div class="form-group">
+						<label for="pass">Mot de passe</label>
+						<input type="text" class="form-control" id="pass" name="pass" placeholder="" value="">
+					</div>
+					<?php if($wp_exist == TRUE) : ?>
+					<div class="form-group">
+						<button type="submit" class="btn btn-default">Ajouter l'utilisateur</button>
+					</div>
+					<?php else: ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    </ul>
+						</div>
+					</div>
+					<?php endif; ?>	
+				</form>
+            </div>
+        </article> 
+
         <footer class="row">
             <div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
         </footer>
@@ -1503,6 +1564,33 @@ Class Wp_Migration {
 		// We delete the _MACOSX folder (bug with a Mac)
 		delete_theme( '__MACOSX' );
 	}
+
+	/**
+	 * Ajoute un utilisateur a Wordpress
+	 *
+	 */
+	public function wp_add_user($user_login, $user_pass){
+
+		require_once( 'wp-load.php' );
+		require_once( 'wp-includes/user.php' );
+		
+		$userdata = array(
+		    'user_login' 	=>  $user_login,
+		    'user_url'  	=>  '',
+		    'user_email'	=>  '',
+		    'user_pass' 	=>  $user_pass,
+		    'role' 			=> 'administrator'
+		);
+
+		$user_id = wp_insert_user( $userdata ) ;
+
+		//On success
+		if ( ! is_wp_error( $user_id ) ) {
+		    return TRUE;
+		}
+
+		return FALSE;
+	}	
 
 	/**
 	 * Creer des Zip recursivement
