@@ -259,7 +259,7 @@ if(isset($_POST['api_call'])) {
 
 		// modification des urls
 		$oldurl = $site_url['option_value'];
-		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']);
+		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
 		$migration->wp_url($oldurl, $newurl);
 		$migration->wp_log('Modification des URLs');
 
@@ -498,7 +498,7 @@ if(isset($_POST['api_call'])) {
 					</div>
 					<div class="form-group">
 						<label for="new">Nouvelle URL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">
+						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>">
 					</div>
 					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
@@ -1119,16 +1119,16 @@ Class Wp_Migration {
 	public function wp_download(){
 
 		// Get WordPress data
-		$wp = json_decode( file_get_contents( $config['wp_api'] ) )->offers[0];
+		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
 
-		mkdir($config['wp_dir_core'], 0775);
+		mkdir($this->_wp_dir_core, 0775);
 
-		file_put_contents( $config['wp_dir_core'] . 'wordpress-' . $wp->version . '-' .  $config['wp_lang'] . '.zip', file_get_contents( $wp->download ) );
+		file_put_contents( $this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents( $wp->download ) );
 
 		$zip = new ZipArchive;
 
 		// We verify if we can use the archive
-		if ( $zip->open( $config['wp_dir_core'] . 'wordpress-' . $wp->version . '-' . $config['wp_lang']  . '.zip' ) === true ) {
+		if ( $zip->open( $this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip' ) === true ) {
 
 			// Let's unzip
 			$zip->extractTo( '.' );
