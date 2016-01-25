@@ -22,6 +22,7 @@ $retour_export_sql 		= FALSE;
 $retour_import_sql 		= FALSE;
 $retour_htaccess 		= FALSE;
 $retour_dl 				= FALSE;
+$retour_dl_full			= FALSE;
 $retour_clean_revision 	= FALSE;
 $retour_clean_spam 		= FALSE;
 $retour_plug_install 	= FALSE;
@@ -35,7 +36,7 @@ $migration = new Wp_Migration();
  */
 if(file_exists('wp-config.php')) {
 
-	define( 'WP_INSTALLING', false );
+	define( 'WP_INSTALLING', true );
 
 	include ('wp-config.php');
 
@@ -130,7 +131,31 @@ if(isset($_POST['dl'])) {
 
 		$migration->wp_download();
 
-		$retour_dl = TRUE;
+		if(isset($_POST['install_full'])) {
+
+	 		$opts['prefix'] 		= $_POST['prefix'];
+	 		$opts['debug'] 			= (isset($_POST['debug']))? 1 : 0 ;
+	 		$opts['debug_display'] 	= (isset($_POST['debug_display']))? 1 : 0 ;
+	 		$opts['debug_log'] 		= (isset($_POST['debug_log']))? 1 : 0 ;
+	 		$opts['dbname'] 		= $_POST['dbname'];
+	 		$opts['uname'] 			= $_POST['uname'];
+	 		$opts['pwd'] 			= $_POST['pwd'];
+	 		$opts['dbhost']	 		= $_POST['dbhost'];
+	 		$opts['weblog_title'] 	= $_POST['weblog_title'];
+	 		$opts['user_login'] 	= $_POST['user_login'];
+	 		$opts['admin_email'] 	= $_POST['admin_email'];
+	 		$opts['blog_public'] 	= (isset($_POST['blog_public']))? 1 : 0 ;
+	 		$opts['admin_password'] = $_POST['admin_password'];
+
+			$migration->wp_install_config($opts);
+			$migration->wp_install_bdd($opts);
+			$migration->wp_install_wp($opts);
+
+			$retour_dl_full = TRUE;
+		} else {
+
+			$retour_dl = TRUE;
+		}
 	}
 }
 
@@ -335,6 +360,7 @@ if(isset($_POST['api_call'])) {
 							<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
 							<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
 							<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
+							<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
 							<?php 
 							/*
 							<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " is enabled" : " is disabled"; ?></li>
@@ -422,7 +448,7 @@ if(isset($_POST['api_call'])) {
 					<div class="form-group">
 						<label for="pass_sql">Mot de passe MySQL</label>
 						<input type="text" class="form-control" id="pass_sql" name="pass_sql" placeholder="" value="">
-					</div>					
+					</div>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Lancer la migration</button>
 					</div>
@@ -460,12 +486,91 @@ if(isset($_POST['api_call'])) {
             			<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
             		</div>
             	<?php endif; ?>
+                <?php if($retour_dl_full == TRUE) : ?>
+            		<div class="alert alert-success" role="alert">
+            			L'installation a ete effectue avec succes.
+            			<p>Vous pouvez acceder a votre site : <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
+            		</div>
+            	<?php endif; ?>            	
 				<form method="post">
 					<div class="form-group">
 						<input type="hidden" class="form-control" id="dl" name="dl" placeholder="" value="test">
 					</div>
+
+					<div class="checkbox">
+						<label>
+							<input type="checkbox" id="install_full" name="install_full" value="1" onclick="$('#install_full_div').toggle();"> Installation Full ( Base données et WP )
+						</label>
+					</div>
+
+					<div id="install_full_div" style="display:none;">
+						<h3>Information de la base de données</h3>
+
+						<div class="form-group">
+							<label for="dbhost">Serveur MySQL</label>
+							<input type="text" class="form-control" id="dbhost" name="dbhost" placeholder="localhost" value="">
+						</div>
+						<div class="form-group">
+							<label for="dbname">Nom de la base de données MySQL</label>
+							<input type="text" class="form-control" id="dbname" name="dbname" placeholder="" value="">
+						</div>					
+						<div class="form-group">
+							<label for="uname">Utilisateur MySQL</label>
+							<input type="text" class="form-control" id="uname" name="uname" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="pwd">Mot de passe MySQL</label>
+							<input type="text" class="form-control" id="pwd" name="pwd" placeholder="" value="">
+						</div>
+
+						<h3>Information Wordpress</h3>
+
+						<div class="form-group">
+							<label for="prefix">prefix</label>
+							<input type="text" class="form-control" id="prefix" name="prefix" placeholder="wp_" value="wp_">
+						</div>
+
+						<div class="form-group">
+							<label for="weblog_title">Titre du blog</label>
+							<input type="text" class="form-control" id="weblog_title" name="weblog_title" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="user_login">Pseudo</label>
+							<input type="text" class="form-control" id="user_login" name="user_login" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="admin_email">Email</label>
+							<input type="text" class="form-control" id="admin_email" name="admin_email" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="admin_password">Mot de passe</label>
+							<input type="text" class="form-control" id="admin_password" name="admin_password" placeholder="" value="">
+						</div>
+
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="debug" name="debug" value="1"> debug
+							</label>
+						</div>
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="debug_display" name="debug_display" value="1"> debug_display
+							</label>
+						</div>
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="debug_log" name="debug_log" value="1"> debug_log
+							</label>
+						</div>					
+						<div class="checkbox">
+							<label>
+								<input type="checkbox" id="blog_public" name="blog_public" value="1"> Indexer le site
+							</label>
+						</div>
+					</div>
+
 					<div class="form-group">
-						<button type="submit" class="btn btn-default">Telecharger et Extraire un wordpress</button>
+						<button type="submit" class="btn btn-default">Lancer la procedure</button>
 					</div>
 				</form>
             </div>
@@ -1160,6 +1265,212 @@ Class Wp_Migration {
 	}
 
 	/**
+	 * create the wp-config file
+	 *
+	 *	$opts['prefix']
+	 *	$opts['debug']
+	 *	$opts['debug_display']
+	 *	$opts['debug_log']
+	 *	$opts['dbname']
+	 *	$opts['uname']
+	 *	$opts['pwd']
+	 *	$opts['dbhost']	 
+	 *
+	 */
+	public function wp_install_config($opts){
+
+		// We retrieve each line as an array
+		$config_file = file( 'wp-config-sample.php' );
+
+		// Managing the security keys
+		$secret_keys = explode( "\n", file_get_contents( 'https://api.wordpress.org/secret-key/1.1/salt/' ) );
+
+		foreach ( $secret_keys as $k => $v ) {
+			$secret_keys[$k] = substr( $v, 28, 64 );
+		}
+
+		// We change the data
+		$key = 0;
+		foreach ( $config_file as &$line ) {
+
+			if ( '$table_prefix  =' == substr( $line, 0, 16 ) ) {
+				$line = '$table_prefix  = \'' . $this->sanit( $opts['prefix'] ) . "';\r\n";
+				continue;
+			}
+
+			if ( ! preg_match( '/^define\(\'([A-Z_]+)\',([ ]+)/', $line, $match ) ) {
+				continue;
+			}
+
+			$constant = $match[1];
+
+			switch ( $constant ) {
+				case 'WP_DEBUG'	   :
+
+					// Debug mod
+					if ( (int) $opts['debug'] == 1 ) {
+						$line = "define('WP_DEBUG', 'true');\r\n";
+
+						// Display error
+						if ( (int) $opts['debug_display']  == 1 ) {
+							$line .= "\r\n\n " . "/** Affichage des erreurs à l'écran */" . "\r\n";
+							$line .= "define('WP_DEBUG_DISPLAY', 'true');\r\n";
+						}
+
+						// To write error in a log files
+						if ( (int) $opts['debug_log']  == 1 ) {
+							$line .= "\r\n\n " . "/** Ecriture des erreurs dans un fichier log */" . "\r\n";
+							$line .= "define('WP_DEBUG_LOG', 'true');\r\n";
+						}
+					}
+
+					//if ( (int) $this->conf_post_revisions >= 0 ) {
+					//	$line .= "\r\n\n " . "/** Désactivation des révisions d'articles */" . "\r\n";
+					//	$line .= "define('WP_POST_REVISIONS', " . (int) $this->conf_post_revisions . ");";
+					//}
+
+					//if ( (int) $this->conf_disallow_file_edit == 1 ) {
+					//	$line .= "\r\n\n " . "/** Désactivation de l'éditeur de thème et d'extension */" . "\r\n";
+					//	$line .= "define('DISALLOW_FILE_EDIT', true);";
+					//}
+
+					//if ( (int) $this->conf_autosave_interval >= 60 ) {
+					//	$line .= "\r\n\n " . "/** Intervalle des sauvegardes automatique */" . "\r\n";
+					//	$line .= "define('AUTOSAVE_INTERVAL', " . (int) $this->conf_autosave_interval . ");";
+					//}
+					
+					$line .= "\r\n\n " . "/** On augmente la mémoire limite */" . "\r\n";
+					$line .= "define('WP_MEMORY_LIMIT', '256M');" . "\r\n";
+
+					break;
+				case 'DB_NAME'     :
+					$line = "define('DB_NAME', '" . $this->sanit( $opts['dbname'] ) . "');\r\n";
+					break;
+				case 'DB_USER'     :
+					$line = "define('DB_USER', '" . $this->sanit( $opts['uname'] ) . "');\r\n";
+					break;
+				case 'DB_PASSWORD' :
+					$line = "define('DB_PASSWORD', '" . $this->sanit( $opts['pwd'] ) . "');\r\n";
+					break;
+				case 'DB_HOST'     :
+					$line = "define('DB_HOST', '" . $this->sanit( $opts['dbhost'] ) . "');\r\n";
+					break;
+				case 'AUTH_KEY'         :
+				case 'SECURE_AUTH_KEY'  :
+				case 'LOGGED_IN_KEY'    :
+				case 'NONCE_KEY'        :
+				case 'AUTH_SALT'        :
+				case 'SECURE_AUTH_SALT' :
+				case 'LOGGED_IN_SALT'   :
+				case 'NONCE_SALT'       :
+					$line = "define('" . $constant . "', '" . $secret_keys[$key++] . "');\r\n";
+					break;
+
+				case 'WPLANG' :
+					$line = "define('WPLANG', '" . $this->sanit( $this->_wp_lang ) . "');\r\n";
+					break;
+			}
+		}
+		unset( $line );
+
+		$handle = fopen( $this->directory . 'wp-config.php', 'w' );
+		foreach ( $config_file as $line ) {
+			fwrite( $handle, $line );
+		}
+		fclose( $handle );
+
+		// We set the good rights to the wp-config file
+		chmod( 'wp-config.php', 0666 );
+		unlink('wp-config-sample.php' );
+
+	}
+
+	public function wp_install_bdd($opts){
+		$bdd = Bdd::getInstance();
+
+        $queryBDD    = $bdd->dbh->query('SHOW TABLES'); 
+        while($row = $queryBDD->fetch()) 
+        { 
+            $target_BDD[] = $row[0];
+        }
+
+        if(in_array($target_BDD, $opts['dbname'])){
+
+        	return TRUE;
+        }
+
+		$retour = $bdd->dbh->query("CREATE DATABASE ".$opts['dbname']);
+
+		return $retour;
+	}
+
+	/**
+	 * install WordPress database
+	 *
+	 *	$opts['weblog_title']
+	 *	$opts['user_login']
+	 *	$opts['admin_email']
+	 *	$opts['blog_public']
+	 *	$opts['admin_password']
+	 *
+	 */
+	public function wp_install_wp($opts){
+
+		define( 'WP_INSTALLING', true );
+		
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/upgrade.php' );
+		require_once( 'wp-includes/wp-db.php' );
+
+		// WordPress installation
+		wp_install($opts['weblog_title'], $opts['user_login'], $opts['admin_email'], (int) $opts['blog_public'], '', $opts['admin_password']);
+
+		// We update the options with the right siteurl et homeurl value
+		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
+		update_option( 'siteurl', $newurl);
+		update_option( 'home', $newurl);
+		
+		//	We remove the default content
+		/*
+		if ( $this->default_content == '1' ) {
+			wp_delete_post( 1, true ); // We remove the article "Hello World"
+			wp_delete_post( 2, true ); // We remove the "Exemple page"
+		}
+		*/
+
+		//	We update permalinks
+		/*
+		if ( ! empty( $this->permalink_structure ) ) {
+			update_option( 'permalink_structure', $this->permalink_structure );
+		}
+		*/
+
+		//	We update the media settings
+		/*
+		if ( ! empty( $this->thumbnail_size_w ) || !empty($this->thumbnail_size_h ) ) {
+			update_option( 'thumbnail_size_w', (int) $this->thumbnail_size_w );
+			update_option( 'thumbnail_size_h', (int) $this->thumbnail_size_h );
+			update_option( 'thumbnail_crop', (int) $this->thumbnail_crop );
+		}
+
+		if ( ! empty( $_POST['medium_size_w'] ) || !empty( $this->medium_size_h ) ) {
+			update_option( 'medium_size_w', (int) $this->medium_size_w );
+			update_option( 'medium_size_h', (int) $this->medium_size_h );
+		}
+
+		if ( ! empty( $_POST['large_size_w'] ) || !empty( $this->large_size_h ) ) {
+			update_option( 'large_size_w', (int) $this->large_size_w );
+			update_option( 'large_size_h', (int) $this->large_size_h );
+		}
+
+		update_option( 'uploads_use_yearmonth_folders', (int) $this->uploads_use_yearmonth_folders );
+
+		*/
+
+		return TRUE;
+	}
+
+	/**
 	 * Contact l'api distante pour lui donner les ordres du coté serveur distant
 	 */
 	public function wp_migration($opts_migration) {
@@ -1644,6 +1955,26 @@ Class Wp_Migration {
 	    return $zip->close();
 	}
 
+	public function get_memory_limit() {
+		$memory_limit = ini_get('memory_limit');
+		if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
+		    if ($matches[2] == 'M') {
+		        $memory_limit = $matches[1] * 1024 * 1024; // nnnM -> nnn MB
+		    } else if ($matches[2] == 'K') {
+		        $memory_limit = $matches[1] * 1024; // nnnK -> nnn KB
+		    }
+		}
+
+		return $this->formatBytes($memory_limit);
+	}
+
+	public function formatBytes($bytes, $precision = 2) {
+	    $unit = ["B", "KB", "MB", "GB"];
+	    $exp = floor(log($bytes, 1024)) | 0;
+	    
+	    return round($bytes / (pow(1024, $exp)), $precision).$unit[$exp];
+	}
+
 	/**
 	 * Supprime recursivement un dossier et ses fichiers
 	 */
@@ -1658,6 +1989,10 @@ Class Wp_Migration {
 	    	reset($objects);
 	    	rmdir($dir);
 	   	}
+	}
+
+	private function sanit( $str ) {
+		return addcslashes( str_replace( array( ';', "\n" ), '', $str ), '\\' );
 	}
 }
 
