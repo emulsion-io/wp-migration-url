@@ -1123,7 +1123,9 @@ Class Wp_Migration {
 
 	var $_wp_lang,
 		$_wp_api,
-		$_wp_dir_core;
+		$_wp_dir_core,
+		$_file_destination;
+		$_file_sql;
 
 	var $_dbhost,
 		$_dbname,
@@ -1133,9 +1135,11 @@ Class Wp_Migration {
 
 	public function __construct() {
 
-		$this->_wp_lang 		= 'fr_FR';
-		$this->_wp_api 			= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
-		$this->_wp_dir_core 	= 'core/';
+		$this->_wp_lang 			= 'fr_FR';
+		$this->_wp_api 				= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
+		$this->_wp_dir_core 		= 'core/';
+		$this->_file_destination 	= 'migration_file.zip';
+		$this->_file_sql 			= 'migration_bdd.sql';
 	}
 
 	/**
@@ -1604,21 +1608,21 @@ Class Wp_Migration {
 	 */
 	public function wp_export_file() {
 		
-		if(file_exists('migration_file.zip')){
-			unlink('migration_file.zip');
+		if(file_exists($this->_file_destination)){
+			unlink($this->_file_destination);
 		}
 		
 		if(function_exists('exec')){
 
-			$this->Zip_soft('./', "migration_file.zip", 'exec');
+			$this->Zip_soft('./', $this->_file_destination, 'exec');
 			echo "exec";
 		} elseif(function_exists('system')){
 
-			$this->Zip_soft('./', "migration_file.zip", 'system');
+			$this->Zip_soft('./', $this->_file_destination, 'system');
 			echo "system";
 		} else {
 
-			$this->Zip('./', "migration_file.zip");
+			$this->Zip('./', $this->_file_destination);
 			echo "zip php";
 		}
 	
@@ -1634,13 +1638,13 @@ Class Wp_Migration {
 	 */
 	public function wp_export_sql() {
 
-		if(file_exists('migration_bdd.sql')){
-			unlink('migration_bdd.sql');
+		if(file_exists($this->_file_sql )){
+			unlink($this->_file_sql );
 		}
 
 		if(function_exists('exec')){
 
-			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > migration_bdd.sql';
+			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > '.$this->_file_sql;
 			exec($command, $output = array(), $worked);
 
 			switch($worked){
@@ -1657,7 +1661,7 @@ Class Wp_Migration {
 
 		} elseif(function_exists('system')){
 
-			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > migration_bdd.sql");
+			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > ".$this->_file_sql);
 		} else {
 			
 		    $bdd = Bdd::getInstance();
@@ -1736,7 +1740,7 @@ Class Wp_Migration {
 	            $content .="\n\n\n";
         	}
 
-        	file_put_contents('migration_bdd.sql', $content);
+        	file_put_contents($this->_file_sql , $content);
 		}
 	}
 
@@ -1744,7 +1748,7 @@ Class Wp_Migration {
 	 
 	    $zip = new ZipArchive;
 
-	    $zip->open('migration_file.zip');
+	    $zip->open($this->_file_destination);
 	    $zip->extractTo('.');
 	    $zip->close();
 	}
@@ -1760,7 +1764,7 @@ Class Wp_Migration {
 
 		if(function_exists('exec')){
 
-			$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql';
+			$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < '.$this->_file_sql;
 			exec($command, $output = array(), $worked);
 
 			switch($worked){
@@ -1776,7 +1780,7 @@ Class Wp_Migration {
 
 		} elseif(function_exists('system')){
 
-			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < migration_bdd.sql');
+			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < '.$this->_file_sql);
 
 			return TRUE;
 		} else {
@@ -1785,7 +1789,7 @@ Class Wp_Migration {
 
 			$templine = '';
 			// Read in entire file
-			$lines = file('migration_bdd.sql');
+			$lines = file($this->_file_sql);
 			// Loop through each line
 			foreach ($lines as $line)
 			{
@@ -1800,7 +1804,7 @@ Class Wp_Migration {
 				if (substr(trim($line), -1, 1) == ';')
 				{
 				    // Perform the query
-				    $bdd->dbh->query($templine); //or print('Error performing query \'<strong>' . $templine . '\': ' . mysql_error() . '<br /><br />');
+				    $bdd->dbh->query($templine);
 				    // Reset temp variable to empty
 				    $templine = '';
 				}
