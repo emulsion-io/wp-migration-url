@@ -1604,8 +1604,24 @@ Class Wp_Migration {
 	 */
 	public function wp_export_file() {
 		
-		$this->Zip('./', "migration_file.zip");
+		if(file_exists('migration_file.zip')){
+			unlink('migration_file.zip');
+		}
+		
+		if(function_exists('exec')){
 
+			$this->Zip_soft('./', "migration_file.zip", 'exec');
+			echo "exec";
+		} elseif(function_exists('system')){
+
+			$this->Zip_soft('./', "migration_file.zip", 'system');
+			echo "system";
+		} else {
+
+			$this->Zip('./', "migration_file.zip");
+			echo "zip php";
+		}
+	
 		return TRUE;
 	}
 
@@ -1904,6 +1920,30 @@ Class Wp_Migration {
 	}	
 
 	/**
+	 * Creer des Zip recursivement en utilisant les fonctions systemes
+	 *
+	 */
+	public function Zip_soft($source, $destination, $soft = 'exec')
+	{	    
+		if (!is_readable($source) || ! is_writeable(dirname($destination)) || (file_exists($destination) && !is_file($destination))) {
+			// really you should capture some more specific information
+			// in your excaption handling
+			return false;
+		}
+
+		$output 	= '';
+		$returnv 	= true;
+
+		if($soft == 'exec') {
+			exec("zip -r $destination $source", $output, $returnv);
+		} else {
+			system("zip -r $destination $source", $output, $returnv);
+		}
+
+		return !$returnv;
+	}
+
+	/**
 	 * Creer des Zip recursivement
 	 *
 	 * @link : http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php
@@ -1939,11 +1979,17 @@ Class Wp_Migration {
 
 	            if (is_dir($file) === true)
 	            {
-	                $zip->addEmptyDir(str_replace($source . '/', '', $file . '/'));
+	                if( ! $zip->addEmptyDir(str_replace($source . '/', '', $file . '/')))
+					{
+						throw new Exception("La memoire alouée par le serveur n'est pas sufisante");
+					}
 	            }
 	            else if (is_file($file) === true)
 	            {
-	                $zip->addFromString(str_replace($source . '/', '', $file), file_get_contents($file));
+	                if( ! $zip->addFromString(str_replace($source . '/', '', $file), file_get_contents($file)))
+					{
+						throw new Exception("La memoire alouée par le serveur n'est pas sufisante");
+					}
 	            }
 	        }
 	    }
@@ -1955,7 +2001,7 @@ Class Wp_Migration {
 	    return $zip->close();
 	}
 
-	public function get_memory_limit() {
+	public function get_memory_limit($units = TRUE) {
 		$memory_limit = ini_get('memory_limit');
 		if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
 		    if ($matches[2] == 'M') {
@@ -1965,14 +2011,18 @@ Class Wp_Migration {
 		    }
 		}
 
-		return $this->formatBytes($memory_limit);
+		return $this->formatBytes($memory_limit, 2, $units);
 	}
 
-	public function formatBytes($bytes, $precision = 2) {
+	public function formatBytes($bytes, $precision = 2, $units = true) {
 	    $unit = ["B", "KB", "MB", "GB"];
 	    $exp = floor(log($bytes, 1024)) | 0;
 	    
-	    return round($bytes / (pow(1024, $exp)), $precision).$unit[$exp];
+	    if($units === TRUE) {
+	    	return round($bytes / (pow(1024, $exp)), $precision).$unit[$exp];
+		} else {
+	    	return round($bytes / (pow(1024, $exp)), $precision);
+		}
 	}
 
 	/**
