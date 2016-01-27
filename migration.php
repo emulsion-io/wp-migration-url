@@ -64,7 +64,7 @@ if(file_exists('wp-config.php')) {
 }
 
 /**
- * ACTION : Permet de changer les Urls dans la config de Wordpress ainsi que dans les articles, pages et tous les contenues
+ * ACTION : Permet de changer les Urls dans la config de Wordpress ainsi que dans les articles, pages et tous les contenus
  */
 if(isset($_POST['action_change_url'])) {
 	if(!empty($_POST['action_change_url'])) {
@@ -72,9 +72,9 @@ if(isset($_POST['action_change_url'])) {
 		$oldurl = $_POST['old'];
 		$newurl = $_POST['new'];
 
-		$migration->wp_url($oldurl, $newurl);
+		$retour_url = $migration->wp_url($oldurl, $newurl);
 
-		$retour_url = TRUE;
+		$migration->retour('', $retour_url);
 	}
 }
 
@@ -342,809 +342,850 @@ if(isset($_POST['api_call'])) {
 
 <!DOCTYPE html>
 <html lang="en">
-   <head>
-      <meta charset="utf-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 
-      <title>Migration Wordpress Easy</title>
+		<title>Migration Wordpress Easy</title>
 
-      <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+		<link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+		<link href='https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css' rel='stylesheet' type='text/css'>
 
-      <!-- Font -->
-      <link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
-      <!-- Css -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
 
-      <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-      <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-      <!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-      <![endif]-->
-      </head>
-   <body>
-      <div class="container">
-         <header class="row">
-            <div class="col-md-12">
-				<div class="jumbotron">
-				  <h1>Migration Wordpress Easy</h1>
-				  <p>La boite a outils pour Wordpress</p>
-				</div>
-
-            </div>
-         </header>
-
-         <article class="row">
-            <div class="col-md-12">
-				<div class="panel panel-warning">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Important</h3> 
-					</div>
-					<div class="panel-body">
-					Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectuer vos modifications.
+		<!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+		<![endif]-->
+	</head>
+	<body>
+		<div class="container">
+			<header class="row">
+				<div class="col-md-12">
+					<div class="jumbotron">
+						<h1>Migration Wordpress Easy</h1>
+						<p>La boite a outils pour Wordpress</p>
 					</div>
 				</div>
-			</div>
-		</article>
+			</header>
 
-         <article class="row">
-            <div class="col-md-12">
-				<div class="panel panel-warning">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Info Serveur</h3> 
-					</div>
-					<div class="panel-body">
-						<ul>
-							<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
-							<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
-							<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
-							<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
-							<?php 
-							/*
-							<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " is enabled" : " is disabled"; ?></li>
-							<li>Fonction popen() <?php echo (function_exists('popen'))? " is enabled" : " is disabled"; ?></li>
-							<li>Fonction passthru() <?php echo (function_exists('passthru'))? " is enabled" : " is disabled"; ?></li>
-							<li>Fonction proc_open() <?php echo (function_exists('proc_open'))? " is enabled" : " is disabled"; ?></li>
-							*/ 
-							?>
-						</ul>
+			<article class="row">
+				<div class="col-md-12">
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Important</h3> 
+						</div>
+						<div class="panel-body">
+						Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectuer vos modifications.
+						</div>
 					</div>
 				</div>
-			</div>
-		</article>		
-		<?php 
-			/**
-			 * Processus de migration automatique d'un Wordpress
-			 */
-		?>
+			</article>
 
-		<h2>Processus de migration automatique d'un Wordpress</h2>
-
-        <article class="row">
-            <div class="col-md-12">
-                <h3>Migration du Wordpress sur un autre serveur</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Dump de la base de donnnées</li>
-					    	<li>Creation de l'archive des fichiers Wordpress et du Dump SQL</li>
-					    	<li>Envoie des fichiers sur le serveur FTP distant</li>
-					    	<li>Extrait les fichiers ainsi que le fichier d'api distant</li>
-					    	<li>Installe le fichier de config.php sur le serveur distant</li>
-					    	<li>Installe la base de données sur le nouveau serveur distant</li>
-					    	<li>Modifie les URLs sur le serveur distant</li>
-					    </ul>
+			<article class="row">
+				<div class="col-md-12">
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Info Serveur</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
+								<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
+								<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
+								<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
+								<?php 
+								/*
+								<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " is enabled" : " is disabled"; ?></li>
+								<li>Fonction popen() <?php echo (function_exists('popen'))? " is enabled" : " is disabled"; ?></li>
+								<li>Fonction passthru() <?php echo (function_exists('passthru'))? " is enabled" : " is disabled"; ?></li>
+								<li>Fonction proc_open() <?php echo (function_exists('proc_open'))? " is enabled" : " is disabled"; ?></li>
+								*/ 
+								?>
+							</ul>
+						</div>
 					</div>
 				</div>
-			</div>
-            <div class="col-md-12">
-            	<?php if($retour_migration == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
-            		<div class="alert alert-success" role="alert"><?=$retour_migration_log; ?></div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_migration" name="action_migration" value="test">
+			</article>
+			<?php 
+				/**
+				 * Processus de migration automatique d'un Wordpress
+				 */
+			?>
 
-					<h3>Url http du futur site</h3>
-					<div class="form-group">
-						<label for="www_url">Url http du serveur</label>
-						<input type="text" class="form-control" id="www_url" name="www_url" placeholder="" value="">
-					</div>
-					<h3>Information du FTP cible</h3>
-					<div class="form-group">
-						<label for="ftp_url">Url du serveur FTP</label>
-						<input type="text" class="form-control" id="ftp_url" name="ftp_url" placeholder="" value="">
-					</div>
-					<div class="form-group">
-						<label for="user_ftp">Utilisateur FTP</label>
-						<input type="text" class="form-control" id="user_ftp" name="user_ftp" placeholder="" value="">
-					</div>
-					<div class="form-group">
-						<label for="ftp_pass">Mot de passe FTP</label>
-						<input type="text" class="form-control" id="ftp_pass" name="ftp_pass" placeholder="" value="">
-					</div>
-					<div class="form-group">
-						<label for="ftp_folder">Dossier d'installation ( doit exister )</label>
-						<input type="text" class="form-control" id="ftp_folder" name="ftp_folder" placeholder="" value="">
-					</div>
+			<h2>Processus de migration automatique d'un Wordpress</h2>
 
-					<h3>Information de la base de données du serveur cible</h3>
-
-					<div class="form-group">
-						<label for="serveur_sql">Serveur MySQL</label>
-						<input type="text" class="form-control" id="serveur_sql" name="serveur_sql" placeholder="localhost" value="">
-					</div>
-					<div class="form-group">
-						<label for="name_sql">Nom de la base de données MySQL</label>
-						<input type="text" class="form-control" id="name_sql" name="name_sql" placeholder="" value="">
-					</div>					
-					<div class="form-group">
-						<label for="user_sql">Utilisateur MySQL</label>
-						<input type="text" class="form-control" id="user_sql" name="user_sql" placeholder="" value="">
-					</div>
-					<div class="form-group">
-						<label for="pass_sql">Mot de passe MySQL</label>
-						<input type="text" class="form-control" id="pass_sql" name="pass_sql" placeholder="" value="">
-					</div>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Lancer la migration</button>
-					</div>
-				</form>
-            </div>
-        </article>
-
-		<h2>Liste des outils indepandant du processus d'installation automatique.</h2>
-
-		<?php 
-			/**
-			 * Liste des outils idepandant du processus d'installation automatique.
-			 */
-		?>
-
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h3>Telecharge, extrait et install un Wordpress officiel depuis le site wordpress.com</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Telecharge, extrait et install un Wordpress derniere version en date</li>
-					    </ul>
+			<article class="row">
+				<div class="col-md-12">
+					<h3>Migration du Wordpress sur un autre serveur</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+								<li>Dump de la base de donnnées</li>
+								<li>Creation de l'archive des fichiers Wordpress et du Dump SQL</li>
+								<li>Envoie des fichiers sur le serveur FTP distant</li>
+								<li>Extrait les fichiers ainsi que le fichier d'api distant</li>
+								<li>Installe le fichier de config.php sur le serveur distant</li>
+								<li>Installe la base de données sur le nouveau serveur distant</li>
+								<li>Modifie les URLs sur le serveur distant</li>
+						    </ul>
+						</div>
 					</div>
 				</div>
-			</div>
+				<div class="col-md-12">
+					<?php if($retour_migration == TRUE) : ?>
+						<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
+						<div class="alert alert-success" role="alert"><?=$retour_migration_log; ?></div>
+					<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_migration" name="action_migration" value="test">
 
-            <div class="col-md-12">
-                <?php if($retour_dl == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">
-            			L'extraction des fichiers a ete effectue avec succes.
-            			<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
-            		</div>
-            	<?php endif; ?>
-                <?php if($retour_dl_full == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">
-            			L'installation a ete effectue avec succes.
-            			<p>Vous pouvez acceder a votre site : <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
-            		</div>
-            	<?php endif; ?>            	
-				<form method="post">
-					<input type="hidden" id="action_dl" name="action_dl" value="test">
-
-					<div class="checkbox">
-						<label>
-							<input type="checkbox" id="install_full" name="install_full" value="1" onclick="$('#install_full_div').toggle();"> Installation Full ( Base données et WP )
-						</label>
-					</div>
-
-					<div id="install_full_div" style="display:none;">
-						<h3>Information de la base de données</h3>
-
+						<h3>Url http du futur site</h3>
 						<div class="form-group">
-							<label for="dbhost">Serveur MySQL</label>
-							<input type="text" class="form-control" id="dbhost" name="dbhost" placeholder="localhost" value="">
+							<label for="www_url">Url http du serveur</label>
+							<input type="text" class="form-control" id="www_url" name="www_url" placeholder="" value="">
+						</div>
+						<h3>Information du FTP cible</h3>
+						<div class="form-group">
+							<label for="ftp_url">Url du serveur FTP</label>
+							<input type="text" class="form-control" id="ftp_url" name="ftp_url" placeholder="" value="">
 						</div>
 						<div class="form-group">
-							<label for="dbname">Nom de la base de données MySQL</label>
-							<input type="text" class="form-control" id="dbname" name="dbname" placeholder="" value="">
+							<label for="user_ftp">Utilisateur FTP</label>
+							<input type="text" class="form-control" id="user_ftp" name="user_ftp" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="ftp_pass">Mot de passe FTP</label>
+							<input type="text" class="form-control" id="ftp_pass" name="ftp_pass" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="ftp_folder">Dossier d'installation ( doit exister )</label>
+							<input type="text" class="form-control" id="ftp_folder" name="ftp_folder" placeholder="" value="">
+						</div>
+
+						<h3>Information de la base de données du serveur cible</h3>
+
+						<div class="form-group">
+							<label for="serveur_sql">Serveur MySQL</label>
+							<input type="text" class="form-control" id="serveur_sql" name="serveur_sql" placeholder="localhost" value="">
+						</div>
+						<div class="form-group">
+							<label for="name_sql">Nom de la base de données MySQL</label>
+							<input type="text" class="form-control" id="name_sql" name="name_sql" placeholder="" value="">
 						</div>					
 						<div class="form-group">
-							<label for="uname">Utilisateur MySQL</label>
-							<input type="text" class="form-control" id="uname" name="uname" placeholder="" value="">
+							<label for="user_sql">Utilisateur MySQL</label>
+							<input type="text" class="form-control" id="user_sql" name="user_sql" placeholder="" value="">
 						</div>
 						<div class="form-group">
-							<label for="pwd">Mot de passe MySQL</label>
-							<input type="text" class="form-control" id="pwd" name="pwd" placeholder="" value="">
+							<label for="pass_sql">Mot de passe MySQL</label>
+							<input type="text" class="form-control" id="pass_sql" name="pass_sql" placeholder="" value="">
 						</div>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Lancer la migration</button>
+						</div>
+					</form>
+				</div>
+			</article>
 
-						<h3>Information Wordpress</h3>
+			<h2>Liste des outils indepandant du processus d'installation automatique.</h2>
 
-						<div class="form-group">
-							<label for="prefix">prefix</label>
-							<input type="text" class="form-control" id="prefix" name="prefix" placeholder="wp_" value="wp_">
-						</div>
+			<?php 
+				/**
+				 * Liste des outils idepandant du processus d'installation automatique.
+				 */
+			?>
 
-						<div class="form-group">
-							<label for="weblog_title">Titre du blog</label>
-							<input type="text" class="form-control" id="weblog_title" name="weblog_title" placeholder="" value="">
+			<article class="row">
+				<div class="col-md-12">
+					<h3>Telecharge, extrait et install un Wordpress officiel depuis le site wordpress.com</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
-						<div class="form-group">
-							<label for="user_login">Pseudo</label>
-							<input type="text" class="form-control" id="user_login" name="user_login" placeholder="" value="">
+						<div class="panel-body">
+							<ul>
+								<li>Telecharge, extrait et install un Wordpress derniere version en date</li>
+							</ul>
 						</div>
-						<div class="form-group">
-							<label for="admin_email">Email</label>
-							<input type="text" class="form-control" id="admin_email" name="admin_email" placeholder="" value="">
+					</div>
+				</div>
+
+				<div class="col-md-12">
+					<?php if($retour_dl == TRUE) : ?>
+						<div class="alert alert-success" role="alert">
+							L'extraction des fichiers a ete effectue avec succes.
+							<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
 						</div>
-						<div class="form-group">
-							<label for="admin_password">Mot de passe</label>
-							<input type="text" class="form-control" id="admin_password" name="admin_password" placeholder="" value="">
+					<?php endif; ?>
+					<?php if($retour_dl_full == TRUE) : ?>
+						<div class="alert alert-success" role="alert">
+							L'installation a ete effectue avec succes.
+							<p>Vous pouvez acceder a votre site : <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
 						</div>
+					<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_dl" name="action_dl" value="test">
 
 						<div class="checkbox">
 							<label>
-								<input type="checkbox" id="debug" name="debug" value="1"> debug
+								<input type="checkbox" id="install_full" name="install_full" value="1" onclick="$('#install_full_div').toggle();"> Installation Full ( Base données et WP )
 							</label>
 						</div>
-						<div class="checkbox">
-							<label>
-								<input type="checkbox" id="debug_display" name="debug_display" value="1"> debug_display
-							</label>
+
+						<div id="install_full_div" style="display:none;">
+							<h3>Information de la base de données</h3>
+
+							<div class="form-group">
+								<label for="dbhost">Serveur MySQL</label>
+								<input type="text" class="form-control" id="dbhost" name="dbhost" placeholder="localhost" value="">
+							</div>
+							<div class="form-group">
+								<label for="dbname">Nom de la base de données MySQL</label>
+								<input type="text" class="form-control" id="dbname" name="dbname" placeholder="" value="">
+							</div>					
+							<div class="form-group">
+								<label for="uname">Utilisateur MySQL</label>
+								<input type="text" class="form-control" id="uname" name="uname" placeholder="" value="">
+							</div>
+							<div class="form-group">
+								<label for="pwd">Mot de passe MySQL</label>
+								<input type="text" class="form-control" id="pwd" name="pwd" placeholder="" value="">
+							</div>
+
+							<h3>Information Wordpress</h3>
+
+							<div class="form-group">
+								<label for="prefix">prefix</label>
+								<input type="text" class="form-control" id="prefix" name="prefix" placeholder="wp_" value="wp_">
+							</div>
+
+							<div class="form-group">
+								<label for="weblog_title">Titre du blog</label>
+								<input type="text" class="form-control" id="weblog_title" name="weblog_title" placeholder="" value="">
+							</div>
+							<div class="form-group">
+								<label for="user_login">Pseudo</label>
+								<input type="text" class="form-control" id="user_login" name="user_login" placeholder="" value="">
+							</div>
+							<div class="form-group">
+								<label for="admin_email">Email</label>
+								<input type="text" class="form-control" id="admin_email" name="admin_email" placeholder="" value="">
+							</div>
+							<div class="form-group">
+								<label for="admin_password">Mot de passe</label>
+								<input type="text" class="form-control" id="admin_password" name="admin_password" placeholder="" value="">
+							</div>
+
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" id="debug" name="debug" value="1"> debug
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" id="debug_display" name="debug_display" value="1"> debug_display
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" id="debug_log" name="debug_log" value="1"> debug_log
+								</label>
+							</div>					
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" id="blog_public" name="blog_public" value="1"> Indexer le site
+								</label>
+							</div>
 						</div>
-						<div class="checkbox">
-							<label>
-								<input type="checkbox" id="debug_log" name="debug_log" value="1"> debug_log
-							</label>
+
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Lancer la procedure</button>
+						</div>
+					</form>
+				</div>
+			</article>
+
+			<article class="row">
+				<div class="col-md-12">
+					<h3>Ecriture des nouvelles Urls</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Modification des URLs dans la table wp_option, home et siteurl sont affectés</li>
+								<li>Modification des URLs dans la table wp_posts, guid et post_content sont affectés</li>
+								<li>Modification des URLs dans la table wp_postmeta, toutes les meta_value auront la nouvelle URL</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-12">
+					<?php if($retour_url == TRUE) : ?>
+						<div class="alert alert-success" role="alert">L'ecriture des nouvelles urls a bien ete effectue dans la base de données.</div>
+					<?php endif; ?>
+					<form id="form_action_change_url" method="post">
+						<input type="hidden" id="action_change_url" name="action_change_url" value="test">
+
+						<div class="form-group">
+							<label for="old">Ancienne URL</label>
+							<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
+						</div>
+						<div class="form-group">
+							<label for="new">Nouvelle URL</label>
+							<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>">
+						</div>
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" id="go_action_change_url" class="btn btn-default">Mettre a jour</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+								<ul>
+									<li>Wordpress n'est pas installé sur le serveur</li>
+								</ul>
+							</div>
 						</div>					
-						<div class="checkbox">
-							<label>
-								<input type="checkbox" id="blog_public" name="blog_public" value="1"> Indexer le site
-							</label>
+						<?php endif; ?>
+					</form>
+					<script>
+						$( "#form_action_change_url" ).submit(function( event ) {
+							$("#go_action_change_url").button('loading');
+							swal({
+								title: "Ecriture des nouvelles Urls",
+								text: "Ete-vous sur de vouloir effectuer cette action ?",
+								type: "info",
+								showCancelButton: true,
+								closeOnConfirm: false,
+								showLoaderOnConfirm: true,
+							},
+							function(){
+								var donnees = {
+									'action_change_url'	: 'ok',
+									'old' 				: $('#old').val(),
+									'new' 				: $('#new').val(),
+								}
+								$.ajax({
+									url: "migration.php",
+									type : 'post',
+									data : donnees,
+									dataType: 'json',
+									success: function(retour){
+										$("#go_action_change_url").button('reset');
+										if(retour.success == true)
+										{
+											swal("Good job!", "L'ecriture des nouvelles urls a bien ete effectue dans la base de données.", "success");
+										}else{
+											swal({
+											 	title: "HTML <small>Title</small>!",
+												text: "A custom <span style='color:#F8BB86'>html<span> message.",
+											 	html: true
+											});
+										}
+									}, 
+									timeout: function(){
+										swal("Timeout!", "Le temps d'attente est trop long, demande expiré, renter votre chance.", "error");
+									},
+									error: function(){
+										swal("Error!", "Une erreur est intervenu dans le traitement de la requette, renter votre chance.", "error");
+									}
+								});
+							});
+							event.preventDefault();
+						});
+					</script>
+				</div>
+			</article>
+
+	        <h2>Export</h2>
+
+			<article class="row">
+				<div class="col-md-12">
+					<h3>Creation d'une archive avec les fichiers de Wordpress</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Creer un Zip de tout le repertoire courant</li>
+							</ul>
 						</div>
 					</div>
-
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Lancer la procedure</button>
-					</div>
-				</form>
-            </div>
-        </article>  
-
-        <article class="row">
-            <div class="col-md-12">
-                <h3>Ecriture des nouvelles Urls</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Modification des URLs dans la table wp_option, home et siteurl sont affectés</li>
-					    	<li>Modification des URLs dans la table wp_posts, guid et post_content sont affectés</li>
-					    	<li>Modification des URLs dans la table wp_postmeta, toutes les meta_value auront la nouvelle URL</li>
-					    </ul>
-					</div>
 				</div>
-			</div>
-            <div class="col-md-12">
-            	<?php if($retour_url == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">L'ecriture des nouvelles urls a bien ete effectue dans la base de données.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_change_url" name="action_change_url" value="test">
 
-					<div class="form-group">
-						<label for="old">Ancienne URL</label>
-						<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
-					</div>
-					<div class="form-group">
-						<label for="new">Nouvelle URL</label>
-						<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>">
-					</div>
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Mettre a jour</button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
+	            <div class="col-md-12">
+	                <?php if($retour_export == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">
+	            		L'export a ete effectue avec succes.
+	            			<p><a href="/<?=$migration->_file_destination;?>">Telecharger le zip des fichers</a></p>
+	            		</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<div class="form-group">
+							<input type="hidden" class="form-control" id="action_exporter" name="action_exporter" placeholder="" value="test">
+						</div>
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Creer le Zip des fichiers</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>
+					</form>
+
+					<?php if(file_exists($migration->_file_destination) && $retour_export == FALSE) : ?>
+					<div class="panel panel-success">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Information</h3> 
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
-						    </ul>
-						</div>
-					</div>					
-					<?php endif; ?>
-				</form>
-            </div>
-        </article>
-
-        <h2>Export</h2>
-
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h3>Creation d'une archive avec les fichiers de Wordpress</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Creer un Zip de tout le repertoire courant</li>
-					    </ul>
-					</div>
-				</div>
-			</div>
-
-            <div class="col-md-12">
-                <?php if($retour_export == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">
-            		L'export a ete effectue avec succes.
-            			<p><a href="/<?=$migration->_file_destination;?>">Telecharger le zip des fichers</a></p>
-            		</div>
-            	<?php endif; ?>
-				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="action_exporter" name="action_exporter" placeholder="" value="test">
-					</div>
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Creer le Zip des fichiers</button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
-						<div class="panel-heading"> 
-							<h3 class="panel-title">Information</h3> 
-						</div>
-						<div class="panel-body">
-						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
-						    </ul>
-						</div>
-					</div>
-					<?php endif; ?>
-				</form>
-
-				<?php if(file_exists($migration->_file_destination) && $retour_export == FALSE) : ?>
-				<div class="panel panel-success">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Information</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Un Zip contenant vos fichiers existe deja, telecharger l'existant ? <a href="/<?=$migration->_file_destination;?>">Telecharger le Zip existant</a></li>
-					    </ul>
-					</div>
-				</div>
-				<?php endif; ?>
-
-            </div>
-        </article>
-
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h3>Exporte la base de données de votre Wordpress</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Extrait la base données</li>
-					    </ul>
-					</div>
-				</div>
-			</div>
-
-            <div class="col-md-12">
-                <?php if($retour_export_sql == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">
-            			L'export a ete effectue avec succes.
-            			<p><a href="/<?=$migration->_file_sql;?>">Telecharger le Dump</a></p>
-            		</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_exporter_sql" name="action_exporter_sql" value="test">
-
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Lancer le dump SQL</button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
-						<div class="panel-heading"> 
-							<h3 class="panel-title">Information</h3> 
-						</div>
-						<div class="panel-body">
-						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    	<li>Un Zip contenant vos fichiers existe deja, telecharger l'existant ? <a href="/<?=$migration->_file_destination;?>">Telecharger le Zip existant</a></li>
 						    </ul>
 						</div>
 					</div>
 					<?php endif; ?>
-				</form>
 
-				<?php if(file_exists($migration->_file_sql) && $retour_export_sql == FALSE) : ?>
-				<div class="panel panel-success">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Information</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Un Dump existe deja, telecharger l'existant ? <a href="/<?=$migration->_file_sql;?>">Telecharger le Dump existant</a></li>
-					    </ul>
-					</div>
-				</div>
-				<?php endif; ?>
+	            </div>
+	        </article>
 
-            </div>
-        </article>
-
-		<h2>Import</h2>
-
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h3>Importation de votre Zip</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Extrait l'ensemble de vos fichiers dans le dossier courant</li>
-					    </ul>
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h3>Exporte la base de données de votre Wordpress</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Extrait la base données</li>
+						    </ul>
+						</div>
 					</div>
 				</div>
-			</div>
 
-            <div class="col-md-12">
-                <?php if($retour_import == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">L'extraction des fichiers a ete effectue avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<div class="form-group">
-						<input type="hidden" id="action_importer" name="action_importer" value="test">
-					</div>
-					<?php if(file_exists($migration->_file_destination)): ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
+	            <div class="col-md-12">
+	                <?php if($retour_export_sql == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">
+	            			L'export a ete effectue avec succes.
+	            			<p><a href="/<?=$migration->_file_sql;?>">Telecharger le Dump</a></p>
+	            		</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_exporter_sql" name="action_exporter_sql" value="test">
+
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Lancer le dump SQL</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>
+					</form>
+
+					<?php if(file_exists($migration->_file_sql) && $retour_export_sql == FALSE) : ?>
+					<div class="panel panel-success">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Un Dump existe deja, telecharger l'existant ? <a href="/<?=$migration->_file_sql;?>">Telecharger le Dump existant</a></li>
+						    </ul>
+						</div>
 					</div>
 					<?php endif; ?>
-				</form>
 
-				<?php if(!file_exists($migration->_file_destination)): ?>
-				<div class="panel panel-warning">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Information</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
-					    </ul>
-					</div>
-				</div>
-				<?php endif; ?>
+	            </div>
+	        </article>
 
-            </div>
-        </article>
-		
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h3>Importation de votre Base de données</h3>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Permet d'importer les données de votre dump dans base de données sur votre serveur</li>
-					    	<li>La base de données indiquée dans le fichier de configuration doit exister</li>
-					    </ul>
+			<h2>Import</h2>
+
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h3>Importation de votre Zip</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Extrait l'ensemble de vos fichiers dans le dossier courant</li>
+						    </ul>
+						</div>
 					</div>
 				</div>
-			</div>
 
-            <div class="col-md-12">
-                <?php if($retour_import_sql == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">L'importation de la base de données a ete effectue avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_importer_sql" name="action_importer_sql" value="test">
+	            <div class="col-md-12">
+	                <?php if($retour_import == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">L'extraction des fichiers a ete effectue avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<div class="form-group">
+							<input type="hidden" id="action_importer" name="action_importer" value="test">
+						</div>
+						<?php if(file_exists($migration->_file_destination)): ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
+						</div>
+						<?php endif; ?>
+					</form>
 
-					<?php if(file_exists($migration->_file_sql)): ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Importer la base de données</button>
+					<?php if(!file_exists($migration->_file_destination)): ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
+						    </ul>
+						</div>
 					</div>
 					<?php endif; ?>
-				</form>
 
-				<?php if(!file_exists($migration->_file_sql)): ?>
-				<div class="panel panel-warning">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Information</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
-					    </ul>
-					</div>
-				</div>
-				<?php endif; ?>
-
-            </div>
-        </article>
-
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h2>Creer le fichier HTACCESS wordpress</h2>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Creer le fichier Htaccess avec la configuration de votre serveur automatiquement</li>
-					    	<li>Ajoute des regles de securité pour Wordpress</li>
-					    </ul>
+	            </div>
+	        </article>
+			
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h3>Importation de votre Base de données</h3>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Permet d'importer les données de votre dump dans base de données sur votre serveur</li>
+						    	<li>La base de données indiquée dans le fichier de configuration doit exister</li>
+						    </ul>
+						</div>
 					</div>
 				</div>
-			</div>
 
-            <div class="col-md-12">
-                <?php if($retour_htaccess == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">Le fichier a ete ecrit avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_htaccess" name="action_htaccess" value="test">
+	            <div class="col-md-12">
+	                <?php if($retour_import_sql == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">L'importation de la base de données a ete effectue avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_importer_sql" name="action_importer_sql" value="test">
 
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Creer le fichier HTaccess</button>
-					</div>
-				</form>
-            </div>
-        </article>
+						<?php if(file_exists($migration->_file_sql)): ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Importer la base de données</button>
+						</div>
+						<?php endif; ?>
+					</form>
 
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h2>Efface toutes les revisions de votre wordpress</h2>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Efface les revisions des articles et pages et de tous les contenus</li>
-					    </ul>
-					</div>
-				</div>
-			</div>
-
-            <div class="col-md-12">
-                <?php if($retour_clean_revision == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">Les revisions ont ete supprimées avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_clean_revision" name="action_clean_revision" value="test">
-
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Effacer les revisions</button>
-					</div>
-					<?php else: ?>
+					<?php if(!file_exists($migration->_file_sql)): ?>
 					<div class="panel panel-warning">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Information</h3> 
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
 						    </ul>
 						</div>
-					</div>					
+					</div>
 					<?php endif; ?>
-				</form>
-            </div>
-        </article>
 
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h2>Efface tous les commentaires non validés</h2>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Efface tous les commentaires non validés</li>
-					    </ul>
-					</div>
-				</div>
-			</div>
+	            </div>
+	        </article>
 
-            <div class="col-md-12">
-                <?php if($retour_clean_spam == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">Les commentaires ont ete supprimés avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_clean_spam" name="action_clean_spam"value="test">
-
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Effacer les commentaires non validés</button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h2>Creer le fichier HTACCESS wordpress</h2>
+					<div class="panel panel-info">
 						<div class="panel-heading"> 
-							<h3 class="panel-title">Information</h3> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    	<li>Creer le fichier Htaccess avec la configuration de votre serveur automatiquement</li>
+						    	<li>Ajoute des regles de securité pour Wordpress</li>
 						    </ul>
 						</div>
 					</div>
-					<?php endif; ?>	
-				</form>
-            </div>
-        </article>
-
-        <article class="row">
-           	<div class="col-md-12">
-           	    <h2>Installe les plugins de votre choix</h2>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Installe les plugins listé par une virgule</li>
-					    </ul>
-					</div>
 				</div>
-			</div>
 
-            <div class="col-md-12">
-                <?php if($retour_plug_install == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">Les plugins ont ete installé avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_plug_install" name="action_plug_install" value="test">
+	            <div class="col-md-12">
+	                <?php if($retour_htaccess == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">Le fichier a ete ecrit avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_htaccess" name="action_htaccess" value="test">
 
-					<div class="form-group">
-						<label for="plug_install_liste">Liste des plugins</label>
-						<input type="text" class="form-control" id="plug_install_liste" name="plug_install_liste" placeholder="" value="">
-					</div>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Creer le fichier HTaccess</button>
+						</div>
+					</form>
+	            </div>
+	        </article>
 
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Install les plugins </button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h2>Efface toutes les revisions de votre wordpress</h2>
+					<div class="panel panel-info">
 						<div class="panel-heading"> 
-							<h3 class="panel-title">Information</h3> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    	<li>Efface les revisions des articles et pages et de tous les contenus</li>
 						    </ul>
 						</div>
 					</div>
-					<?php endif; ?>	
-				</form>
-            </div>
-        </article>
-
-         <article class="row">
-           	<div class="col-md-12">
-           	    <h2>Supprime les themes defaut de Wordpress</h2>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>twentyfourteen</li>
-					    	<li>twentythirteen</li>
-					    	<li>twentytwelve</li>
-					    	<li>twentyeleven</li>
-					    	<li>twentyten</li>
-					    </ul>
-					</div>
 				</div>
-			</div>
 
-            <div class="col-md-12">
-                <?php if($retour_delete_theme == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">Les themes ont ete desinstallé avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_delete_theme" name="action_delete_theme" value="test">
+	            <div class="col-md-12">
+	                <?php if($retour_clean_revision == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">Les revisions ont ete supprimées avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_clean_revision" name="action_clean_revision" value="test">
 
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Supprime les themes</button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Effacer les revisions</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>					
+						<?php endif; ?>
+					</form>
+	            </div>
+	        </article>
+
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h2>Efface tous les commentaires non validés</h2>
+					<div class="panel panel-info">
 						<div class="panel-heading"> 
-							<h3 class="panel-title">Information</h3> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    	<li>Efface tous les commentaires non validés</li>
 						    </ul>
 						</div>
 					</div>
-					<?php endif; ?>	
-				</form>
-            </div>
-        </article>       
-
-         <article class="row">
-           	<div class="col-md-12">
-           	    <h2>Ajoute un utilisateur</h2>
-				<div class="panel panel-info">
-					<div class="panel-heading"> 
-						<h3 class="panel-title">Ce que fait cet assistant</h3> 
-					</div>
-					<div class="panel-body">
-					    <ul>
-					    	<li>Ajouter un Super Admin</li>
-					    </ul>
-					</div>
 				</div>
-			</div>
 
-            <div class="col-md-12">
-                <?php if($retour_add_user == TRUE) : ?>
-            		<div class="alert alert-success" role="alert">L'utilisateur a ete ajouté avec succes.</div>
-            	<?php endif; ?>
-				<form method="post">
-					<input type="hidden" id="action_add_user" name="action_add_user" value="test">
+	            <div class="col-md-12">
+	                <?php if($retour_clean_spam == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">Les commentaires ont ete supprimés avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_clean_spam" name="action_clean_spam"value="test">
 
-					<div class="form-group">
-						<label for="user">Pseudo</label>
-						<input type="text" class="form-control" id="user" name="user" placeholder="" value="">
-					</div>
-					<div class="form-group">
-						<label for="pass">Mot de passe</label>
-						<input type="text" class="form-control" id="pass" name="pass" placeholder="" value="">
-					</div>
-					<?php if($wp_exist == TRUE) : ?>
-					<div class="form-group">
-						<button type="submit" class="btn btn-default">Ajouter l'utilisateur</button>
-					</div>
-					<?php else: ?>
-					<div class="panel panel-warning">
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Effacer les commentaires non validés</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>	
+					</form>
+	            </div>
+	        </article>
+
+	        <article class="row">
+	           	<div class="col-md-12">
+	           	    <h2>Installe les plugins de votre choix</h2>
+					<div class="panel panel-info">
 						<div class="panel-heading"> 
-							<h3 class="panel-title">Information</h3> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Wordpress n'est pas installé sur le serveur</li>
+						    	<li>Installe les plugins listé par une virgule</li>
 						    </ul>
 						</div>
 					</div>
-					<?php endif; ?>	
-				</form>
-            </div>
-        </article> 
+				</div>
 
-        <footer class="row">
-            <div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
-        </footer>
+	            <div class="col-md-12">
+	                <?php if($retour_plug_install == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">Les plugins ont ete installé avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_plug_install" name="action_plug_install" value="test">
 
-      </div>
+						<div class="form-group">
+							<label for="plug_install_liste">Liste des plugins</label>
+							<input type="text" class="form-control" id="plug_install_liste" name="plug_install_liste" placeholder="" value="">
+						</div>
 
-      <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Install les plugins </button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>	
+					</form>
+	            </div>
+	        </article>
+
+	         <article class="row">
+	           	<div class="col-md-12">
+	           	    <h2>Supprime les themes defaut de Wordpress</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>twentyfourteen</li>
+						    	<li>twentythirteen</li>
+						    	<li>twentytwelve</li>
+						    	<li>twentyeleven</li>
+						    	<li>twentyten</li>
+						    </ul>
+						</div>
+					</div>
+				</div>
+
+	            <div class="col-md-12">
+	                <?php if($retour_delete_theme == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">Les themes ont ete desinstallé avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_delete_theme" name="action_delete_theme" value="test">
+
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Supprime les themes</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>	
+					</form>
+	            </div>
+	        </article>       
+
+	         <article class="row">
+	           	<div class="col-md-12">
+	           	    <h2>Ajoute un utilisateur</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+						    <ul>
+						    	<li>Ajouter un Super Admin</li>
+						    </ul>
+						</div>
+					</div>
+				</div>
+
+	            <div class="col-md-12">
+	                <?php if($retour_add_user == TRUE) : ?>
+	            		<div class="alert alert-success" role="alert">L'utilisateur a ete ajouté avec succes.</div>
+	            	<?php endif; ?>
+					<form method="post">
+						<input type="hidden" id="action_add_user" name="action_add_user" value="test">
+
+						<div class="form-group">
+							<label for="user">Pseudo</label>
+							<input type="text" class="form-control" id="user" name="user" placeholder="" value="">
+						</div>
+						<div class="form-group">
+							<label for="pass">Mot de passe</label>
+							<input type="text" class="form-control" id="pass" name="pass" placeholder="" value="">
+						</div>
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button type="submit" class="btn btn-default">Ajouter l'utilisateur</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>	
+					</form>
+				</div>
+			</article> 
+
+			<footer class="row">
+				<div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
+			</footer>
+		</div>
    </body>
 </html>
 
@@ -1631,6 +1672,8 @@ Class Wp_Migration {
 		    'oldurl' => $oldurl,
 		    'newurl' => $newurl
 		));
+
+		return TRUE;
 	}
 
 	/**
@@ -2188,9 +2231,31 @@ Class Wp_Migration {
 	   	return FALSE;
 	}
 
+	/**
+	 *  @param string 	$str
+	 */
 	private function sanit( $str ) {
 		return addcslashes( str_replace( array( ';', "\n" ), '', $str ), '\\' );
 	}
+
+	/**
+	 *  @param string 	$data 
+	 *  @param bool 	$success
+	 */
+    public function retour($data = '', $success = TRUE)
+    {
+
+        $json = json_encode(array('success' => $success, 'data' => $data));
+        
+	    header('Access-Control-Allow-Origin: *');
+	    header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+	    header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
+	    header('content-type: text/html; charset=utf-8');
+
+	    echo $json;
+		
+        exit;
+    }	
 }
 
 class Bdd
