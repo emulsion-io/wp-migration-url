@@ -1165,6 +1165,14 @@ Class Wp_Migration {
 		$_dbpassword,
 		$_table_prefix;
 
+	/**
+	 * @var string $this->_wp_lang 			Langue Wordpress
+	 * @var string $this->_wp_api 			Url de l'api Wordpress
+	 * @var string $this->_wp_dir_core 		Dossier temporaire de copie des fichier WP
+	 * @var string $this->_file_destination Nom du fichier Zip créé lors de la sauvegarde
+	 * @var string $this->_file_sql 		Nom du fichier sql créé lors du Cump SQL
+	 * @var string $this->_file_log 		Nom du fichier de log créé lors de la migration sur le serveur distant
+	 */
 	public function __construct() {
 
 		$this->_wp_lang 			= 'fr_FR';
@@ -1177,6 +1185,8 @@ Class Wp_Migration {
 
 	/**
 	 * Assigne les variable du Wordpress courant a la class
+	 *
+	 * @param mixed[] $options Array Information de connexion a la base de données local 
 	 */
 	public function set_var_wp($options) {
 
@@ -1205,6 +1215,13 @@ Class Wp_Migration {
 		return $req->fetch();
 	}
 
+	/**
+	 * Ecrit les log dans le fichier $this->_file_log sur le serveur
+	 *
+	 * @param string $text 		Ligne de text du log
+	 *
+	 * @return bool 			retourne true ou false
+	 */
 	public function wp_log($text){
 
 		if(file_exists($this->_file_log)) {
@@ -1216,8 +1233,15 @@ Class Wp_Migration {
 		$var = $old.date('Y/m/d h:i:s')." : ".$text."\n";
 		file_put_contents($this->_file_log, $var);
 
+		return TRUE;
 	}
 
+
+	/**
+	 * Envoie les fichiers zip et migration sur le serveur distant en FTP
+	 *
+	 * @param mixed[] $opts Array informations de connexion au FTP distant
+	 */
 	public function wp_ftp_migration($opts){
 
 		$file 			= $this->_file_destination;
@@ -1225,11 +1249,13 @@ Class Wp_Migration {
 
 		$conn_id = ftp_connect($opts['ftp_url']);
 		if($conn_id == FALSE){
+
 			return FALSE;
 		}
 
 		$login_result = ftp_login($conn_id, $opts['user_ftp'], $opts['ftp_pass']);
 		if($login_result == FALSE){
+
 			return FALSE;
 		}
 
@@ -1247,6 +1273,9 @@ Class Wp_Migration {
 		}
 	}
 
+	/**
+	 * Efface les fichiers d'installation du serveur distant ( zip et sql )
+	 */
 	public function wp_clean_ftp_migration(){
 
 		unlink($this->_file_destination);
@@ -1419,9 +1448,15 @@ Class Wp_Migration {
 		// We set the good rights to the wp-config file
 		chmod( 'wp-config.php', 0666 );
 		unlink('wp-config-sample.php' );
-
 	}
 
+	/**
+	 * Tente de creer la base de donnée demandé si elle n'existe pas
+	 *
+	 * @param mixed[] $opts information de connexion a la base de donnée
+	 *
+	 * @return bool true|false
+	 */
 	public function wp_install_bdd($opts){
 		$bdd = Bdd::getInstance();
 
@@ -1442,14 +1477,11 @@ Class Wp_Migration {
 	}
 
 	/**
-	 * install WordPress database
+	 * Instale et configure WordPress sur le serveur local dans le dossier courant
 	 *
-	 *	$opts['weblog_title']
-	 *	$opts['user_login']
-	 *	$opts['admin_email']
-	 *	$opts['blog_public']
-	 *	$opts['admin_password']
+	 * @param mixed[] $opts informations d'inscription du compte admin Wordpress
 	 *
+	 * @return bool true|false
 	 */
 	public function wp_install_wp($opts){
 
@@ -1509,6 +1541,10 @@ Class Wp_Migration {
 
 	/**
 	 * Contact l'api distante pour lui donner les ordres du coté serveur distant
+	 *
+	 * @param mixed[] $opts_migration Array 
+	 *
+	 * @return bool true|false
 	 */
 	public function wp_migration($opts_migration) {
 
@@ -1538,6 +1574,13 @@ Class Wp_Migration {
 		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
 	}
 
+	/**
+	 * Recupere sur le serveur distant le fichier de log crée lors de la migration
+	 *
+	 * @param mixed[] $opts_migration Array 
+	 *
+	 * @return string retourne le log entier 
+	 */	
 	public function wp_migration_log($opts_migration) {
 
 		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
@@ -1546,6 +1589,13 @@ Class Wp_Migration {
 		return $result;
 	}
 
+	/**
+	 * Modifie les urls dans la table de configuration et les contenues
+	 *
+	 * @param string $oldurl ancienne url ( a remplacer ) 
+	 * @param string $newurl nouvelle url ( en remplacement )
+	 * 
+	 */
 	public function wp_url($oldurl, $newurl) {
 
 		$bdd = Bdd::getInstance();
@@ -1583,6 +1633,9 @@ Class Wp_Migration {
 		));
 	}
 
+	/**
+	 * Creer un htaccess adapté a wordpress
+	 */
 	public function wp_htaccess() {
 
 		$path = dirname($_SERVER['REQUEST_URI']);
@@ -1615,6 +1668,13 @@ Class Wp_Migration {
 		file_put_contents( '.htaccess', $ht );
 	}
 
+	/**
+	 * Modifie le fichier de configuration et ajoute les lignes de config pour mise a jour via le net et la langue FR
+	 *
+	 * @param mixed[] $options Array Options de connexion au serveur distant
+	 *
+	 * @return bool true|false
+	 */
 	public function wp_configfile($options) {
 		
 		$filename = 'wp-config.php';
@@ -1642,6 +1702,8 @@ Class Wp_Migration {
 
 		chmod( 'wp-config.php', 0666 );
 		unlink( 'wp-config-sample.php' );
+
+		return TRUE;
 	}
 
 	/**
@@ -1672,10 +1734,8 @@ Class Wp_Migration {
 
 	/**
 	 * Exporte la base de données Wordpress selon 3 types de possibilité pour repondre le plus rapidement a la demande en fonction des serveurs,
-	 * exec
-	 * systeme
-	 * php full script manuel
-	 * http://stackoverflow.com/questions/22195493/export-mysql-database-using-php-only
+	 *
+	 * @link http://stackoverflow.com/questions/22195493/export-mysql-database-using-php-only Export php SQL issus de cette doc
 	 */
 	public function wp_export_sql() {
 
@@ -1785,6 +1845,9 @@ Class Wp_Migration {
 		}
 	}
 
+	/**
+	 * Extrait les fichiers dans le dossier courant
+	 */
 	public function wp_import_file() {
 	 
 	    $zip = new ZipArchive;
@@ -1796,10 +1859,8 @@ Class Wp_Migration {
 
 	/**
 	 * Permet d'importer la base de données selon 3 types de possibilites 
-	 * exec
-	 * systeme
-	 * php full manuel
-	 * http://stackoverflow.com/questions/19751354/how-to-import-sql-file-in-mysql-database-using-php
+	 *
+	 * @link http://stackoverflow.com/questions/19751354/how-to-import-sql-file-in-mysql-database-using-php import SQL php issus de cette doc
 	 */
 	public function wp_import_sql() {
 
@@ -1880,7 +1941,7 @@ Class Wp_Migration {
 	/**
 	 * Install une liste de plugin separé par une , 
 	 *
-	 * @var string $plug_off liste separé par une , 
+	 * @param string $plug_off liste separé par une , 
 	 */
 	public function wp_install_plugins($plug_off){
 
@@ -1940,6 +2001,9 @@ Class Wp_Migration {
 	/**
 	 * Ajoute un utilisateur a Wordpress
 	 *
+	 * @param string $user_login 	Nom utilisateur
+	 * @param string $user_pass 	Mot de passe utilisateur
+	 *
 	 */
 	public function wp_add_user($user_login, $user_pass){
 
@@ -1967,6 +2031,11 @@ Class Wp_Migration {
 	/**
 	 * Creer des Zip recursivement en utilisant les fonctions systemes
 	 *
+	 * @param string $source 		Source des fichiers
+	 * @param string $destination 	Fichier de destinations ( zip )
+	 * @param string $soft 			Methode de creation du zip
+	 *
+	 * @return bool true|false
 	 */
 	public function Zip_soft($source, $destination, $soft = 'exec')
 	{	    
@@ -1991,7 +2060,12 @@ Class Wp_Migration {
 	/**
 	 * Creer des Zip recursivement
 	 *
-	 * @link : http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php
+	 * @link : http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php methode php issus de cette doc
+	 *
+	 * @param string $source 		Source des fichiers
+	 * @param string $destination 	Fichier de destinations ( zip )
+	 *
+	 * @return bool true|false
 	 */
 	public function Zip($source, $destination)
 	{
@@ -2046,6 +2120,15 @@ Class Wp_Migration {
 	    return $zip->close();
 	}
 
+	/**
+	 * Affiche la memoir php alouée par le serveur
+	 *
+	 * @link http://stackoverflow.com/questions/10208698/checking-memory-limit-in-php script issus de cette doc
+	 *
+	 * @param bool $units true|false
+	 *
+	 * @return string memoire alouée par le serveur
+	 */
 	public function get_memory_limit($units = TRUE) {
 		$memory_limit = ini_get('memory_limit');
 		if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
@@ -2059,7 +2142,18 @@ Class Wp_Migration {
 		return $this->formatBytes($memory_limit, 2, $units);
 	}
 
-	public function formatBytes($bytes, $precision = 2, $units = true) {
+	/**
+	 * Convertie en unité humaine B KB MB GB une information en octets
+	 *
+	 * @link http://stackoverflow.com/questions/2510434/format-bytes-to-kilobytes-megabytes-gigabytes
+	 *
+	 * @param int 	$bytes
+	 * @param int 	$precision
+	 * @param bool 	$units true|false
+	 *
+	 * @return string chaine d'unités avec son suffixe ou non
+	 */
+	public function formatBytes($bytes, $precision = 2, $units = TRUE) {
 	    $unit = ["B", "KB", "MB", "GB"];
 	    $exp = floor(log($bytes, 1024)) | 0;
 	    
@@ -2072,6 +2166,10 @@ Class Wp_Migration {
 
 	/**
 	 * Supprime recursivement un dossier et ses fichiers
+	 *
+	 * @param string 	$dir  chemin a effacer
+	 *
+	 * @return bool true|false
 	 */
 	public function rrmdir($dir) {
 	    if (is_dir($dir)) {
@@ -2083,7 +2181,11 @@ Class Wp_Migration {
 	     	}
 	    	reset($objects);
 	    	rmdir($dir);
+
+	    	return TRUE;
 	   	}
+
+	   	return FALSE;
 	}
 
 	private function sanit( $str ) {
