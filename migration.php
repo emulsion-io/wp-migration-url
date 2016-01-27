@@ -4,7 +4,22 @@
  * @author Fabrice Simonet
  * @link http://viky.fr
  *
- * @version 1.1 codename Eulalie
+ * @version 1.5.1 codename Eulalie
+*/
+
+/**
+ * Copyright (c) 2016 Fabrice Simonet, Matthieu Andre
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, 
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 //ini_set("memory_limit", "-1");
@@ -74,7 +89,7 @@ if(isset($_POST['action_change_url'])) {
 
 		$retour_url = $migration->wp_url($oldurl, $newurl);
 
-		$migration->retour('', $retour_url);
+		$migration->retour(array('message' => 'Les urls sont modifiées avec succes.'), $retour_url);
 	}
 }
 
@@ -86,7 +101,7 @@ if(isset($_POST['action_htaccess'])) {
 
 		$retour_htaccess = $migration->wp_htaccess();
 
-		$migration->retour('', $retour_htaccess);	
+		$migration->retour(array('message' => 'Fichier Htaccess crée avec succes.'), $retour_htaccess);	
 	}
 }
 
@@ -98,7 +113,7 @@ if(isset($_POST['action_exporter'])) {
 
 		$retour_export = $migration->wp_export_file();
 
-		$migration->retour('', $retour_export);		
+		$migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.'), $retour_export);		
 	}
 }
 
@@ -110,7 +125,7 @@ if(isset($_POST['action_exporter_sql'])) {
 
 		$retour_export_sql = $migration->wp_export_sql();
 
-		$migration->retour('', $retour_export_sql);
+		$migration->retour(array('message' => 'Dump SQL effectué avec succes.'), $retour_export_sql);
 	}
 }
 
@@ -122,7 +137,7 @@ if(isset($_POST['action_importer'])) {
 
 		$retour_import = $migration->wp_import_file();
 
-		$migration->retour('', $retour_import);
+		$migration->retour(array('message' => 'Votre zip est extrait avec succes.'), $retour_import);
 	}
 }
 
@@ -134,7 +149,7 @@ if(isset($_POST['action_importer_sql'])) {
 
 		$retour_import_sql = $migration->wp_import_sql();
 
-		$migration->retour('', $retour_import_sql);
+		$migration->retour(array('message' => 'La base de donnée est injecté sur votre serveur.'), $retour_import_sql);
 	}
 }
 
@@ -166,10 +181,10 @@ if(isset($_POST['action_dl'])) {
 			$migration->wp_install_bdd($opts);
 			$migration->wp_install_wp($opts);
 
-			$retour_dl_full = TRUE;
+			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
 		} else {
 
-			$retour_dl = TRUE;
+			$migration->retour(array('message' => 'Telechargement de WordPress effectué.'), TRUE);
 		}
 	}
 }
@@ -182,7 +197,7 @@ if(isset($_POST['action_clean_revision'])) {
 
 		$retour_clean_revision = $migration->wp_sql_clean_revision();
 
-		$migration->retour('', $retour_clean_revision);
+		$migration->retour(array('message' => 'Revision supprimée avec succes.'), $retour_clean_revision);
 	}
 }
 
@@ -194,7 +209,7 @@ if(isset($_POST['action_clean_spam'])) {
 
 		$retour_clean_spam = $migration->wp_sql_clean_spam();
 
-		$migration->retour('', $retour_clean_spam);
+		$migration->retour(array('message' => 'Spam supprimé avec succes.'), $retour_clean_spam);
 	}
 }
 
@@ -206,7 +221,7 @@ if(isset($_POST['action_plug_install'])) {
 
 		$retour_plug_install = $migration->wp_install_plugins($_POST['plug_install_liste']);
 
-		$migration->retour('', $retour_plug_install);
+		$migration->retour(array('message' => 'Plugins installés avec succes.'), $retour_plug_install);
 	}
 }
 
@@ -218,7 +233,7 @@ if(isset($_POST['action_delete_theme'])) {
 
 		$retour_delete_theme = $migration->wp_delete_theme();
 
-		$migration->retour('', $retour_delete_theme);	
+		$migration->retour(array('message' => 'Themes supprimés avec succes.'), $retour_delete_theme);	
 	}
 }
 
@@ -230,7 +245,7 @@ if(isset($_POST['action_add_user'])) {
 
 		$retour_add_user = $migration->wp_add_user($_POST['user'], $_POST['pass']);
 
-		$migration->retour('', $retour_add_user);	
+		$migration->retour(array('message' => 'Utilisateur ajouté avec succes.'), $retour_add_user);	
 	}
 }
 
@@ -275,6 +290,8 @@ if(isset($_POST['action_migration'])) {
 		// Contact le site distant pour activer la methode api_call
 		$retour_migration 		= $migration->wp_migration($opts_migration);
 		$retour_migration_log 	= $migration->wp_migration_log($opts_migration);
+
+		$migration->retour(array('message' => 'Migration effectuée avec succes.', 'context' => $retour_migration_log), $retour_migration);
 	}
 }
 
@@ -400,26 +417,13 @@ if(isset($_POST['api_call'])) {
 								<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
 								<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
 								<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
-								<?php 
-								/*
-								<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " is enabled" : " is disabled"; ?></li>
-								<li>Fonction popen() <?php echo (function_exists('popen'))? " is enabled" : " is disabled"; ?></li>
-								<li>Fonction passthru() <?php echo (function_exists('passthru'))? " is enabled" : " is disabled"; ?></li>
-								<li>Fonction proc_open() <?php echo (function_exists('proc_open'))? " is enabled" : " is disabled"; ?></li>
-								*/ 
-								?>
 							</ul>
 						</div>
 					</div>
 				</div>
 			</article>
-			<?php 
-				/**
-				 * Processus de migration automatique d'un Wordpress
-				 */
-			?>
 
-			<h2>Processus de migration automatique d'un Wordpress</h2>
+			<h2>Processus de migration automatique d'un Wordpress d'un serveur A vers un serveur B en FTP</h2>
 
 			<article class="row">
 				<div class="col-md-12">
@@ -442,17 +446,11 @@ if(isset($_POST['api_call'])) {
 					</div>
 				</div>
 				<div class="col-md-12">
-					<?php if($retour_migration == TRUE) : ?>
-						<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
-						<div class="alert alert-success" role="alert"><?=$retour_migration_log; ?></div>
-					<?php endif; ?>
-					<form method="post">
-						<input type="hidden" id="action_migration" name="action_migration" value="test">
-
+					<form id="action_migration" method="post">
 						<h3>Url http du futur site</h3>
 						<div class="form-group">
 							<label for="www_url">Url http du serveur</label>
-							<input type="text" class="form-control" id="www_url" name="www_url" placeholder="" value="">
+							<input type="text" class="form-control" id="www_url" name="www_url" placeholder="http://" value="">
 						</div>
 						<h3>Information du FTP cible</h3>
 						<div class="form-group">
@@ -491,23 +489,35 @@ if(isset($_POST['api_call'])) {
 							<input type="text" class="form-control" id="pass_sql" name="pass_sql" placeholder="" value="">
 						</div>
 						<div class="form-group">
-							<button type="submit" class="btn btn-default">Lancer la migration</button>
+							<button id="go_action_migration" type="submit" class="btn btn-default">Lancer la migration</button>
 						</div>
 					</form>
+					<script>
+						$( "#action_migration" ).submit(function( event ) {
+							var donnees = {
+								action_migration	: 'ok',
+								www_url				: $('#www_url').val(),
+								ftp_url				: $('#ftp_url').val(),
+								user_ftp			: $('#user_ftp').val(),
+								ftp_pass			: $('#ftp_pass').val(),
+								ftp_folder			: $('#ftp_folder').val(),
+								serveur_sql			: $('#serveur_sql').val(),
+								name_sql			: $('#name_sql').val(),
+								user_sql			: $('#user_sql').val(),
+								pass_sql			: $('#pass_sql').val()
+							}
+							sendform('action_migration', donnees);
+							event.preventDefault();
+						});
+					</script>
 				</div>
 			</article>
 
-			<h2>Liste des outils indepandant du processus d'installation automatique.</h2>
-
-			<?php 
-				/**
-				 * Liste des outils idepandant du processus d'installation automatique.
-				 */
-			?>
+			<h2>Outils de manipulation et de realisation de tache pour Wordpress.</h2>
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3>Telecharge, extrait et install un Wordpress officiel depuis le site wordpress.com</h3>
+					<h3>Telecharge, extrait et install un Wordpress depuis le site wordpress.com</h3>
 					<div class="panel panel-info">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Ce que fait cet assistant</h3> 
@@ -521,21 +531,7 @@ if(isset($_POST['api_call'])) {
 				</div>
 
 				<div class="col-md-12">
-					<?php if($retour_dl == TRUE) : ?>
-						<div class="alert alert-success" role="alert">
-							L'extraction des fichiers a ete effectue avec succes.
-							<p>Vous pouvez a present installer Wordpress en vous rendant a <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
-						</div>
-					<?php endif; ?>
-					<?php if($retour_dl_full == TRUE) : ?>
-						<div class="alert alert-success" role="alert">
-							L'installation a ete effectue avec succes.
-							<p>Vous pouvez acceder a votre site : <a href="http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?>">http://<?php echo $_SERVER['SERVER_NAME'] . dirname($_SERVER['REQUEST_URI']); ?></a></p>
-						</div>
-					<?php endif; ?>
-					<form method="post">
-						<input type="hidden" id="action_dl" name="action_dl" value="test">
-
+					<form id="action_dl" method="post">
 						<div class="checkbox">
 							<label>
 								<input type="checkbox" id="install_full" name="install_full" value="1" onclick="$('#install_full_div').toggle();"> Installation Full ( Base données et WP )
@@ -609,9 +605,32 @@ if(isset($_POST['api_call'])) {
 						</div>
 
 						<div class="form-group">
-							<button type="submit" class="btn btn-default">Lancer la procedure</button>
+							<button id="go_action_dl" type="submit" class="btn btn-default">Lancer la procedure</button>
 						</div>
 					</form>
+					<script>
+						$( "#action_dl" ).submit(function( event ) {
+							var donnees = {
+								action_dl		: 'ok',
+								install_full	: $('#install_full').val(),
+								dbhost			: $('#dbhost').val(),
+								dbname			: $('#dbname').val(),
+								uname			: $('#uname').val(),
+								pwd				: $('#pwd').val(),
+								prefix			: $('#prefix').val(),
+								weblog_title	: $('#weblog_title').val(),
+								user_login		: $('#user_login').val(),
+								admin_email		: $('#admin_email').val(),
+								admin_password	: $('#admin_password').val(),
+								debug			: $('#debug').val(),
+								debug_display	: $('#debug_display').val(),
+								debug_log		: $('#debug_log').val(),
+								blog_public		: $('#blog_public').val()
+							}
+							sendform('action_dl', donnees);
+							event.preventDefault();
+						});
+					</script>
 				</div>
 			</article>
 
@@ -1156,10 +1175,7 @@ if(isset($_POST['api_call'])) {
 					</div>
 				</div>
 
-	            <div class="col-md-12">
-	                <?php if($retour_add_user == TRUE) : ?>
-	            		<div class="alert alert-success" role="alert">L'utilisateur a ete ajouté avec succes.</div>
-	            	<?php endif; ?>
+	            <div class="col-md-12">         	
 					<form id="action_add_user" method="post">
 						<div class="form-group">
 							<label for="user">Pseudo</label>
@@ -1225,7 +1241,11 @@ if(isset($_POST['api_call'])) {
 							$("#go_"+id).button('reset');
 							if(retour.success == true)
 							{
-								swal("Good job!", "Action effectué avec succes!", "success");
+								swal("Good job!", retour.data.message, "success");
+
+								if (typeof retour.data.context != 'undefined') {
+									$( "#"+id ).prepend( '<div class="alert alert-success" role="alert">' + retour.data.context + '</div>' );
+								}
 							}else{
 								swal("Error!", "Une erreur est intervenu dans le traitement de la requête, renter votre chance.", "error");
 							}
