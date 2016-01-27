@@ -163,14 +163,18 @@ if(isset($_POST['action_importer_sql'])) {
 if(isset($_POST['action_dl'])) {
 	if(!empty($_POST['action_dl'])) {
 
-		$migration->wp_download();
+		$retour_action_dl = $migration->wp_download();
 
-		if(isset($_POST['install_full'])) {
+		if($retour_action_dl == FALSE){
+			$migration->retour(array('message' => ''), FALSE);
+		}
+
+		if($_POST['install_full'] == "true") {
 
 	 		$opts['prefix'] 		= $_POST['prefix'];
-	 		$opts['debug'] 			= (isset($_POST['debug']))? 1 : 0 ;
-	 		$opts['debug_display'] 	= (isset($_POST['debug_display']))? 1 : 0 ;
-	 		$opts['debug_log'] 		= (isset($_POST['debug_log']))? 1 : 0 ;
+	 		$opts['debug'] 			= ($_POST['debug'] == 'true')? 1 : 0 ;
+	 		$opts['debug_display'] 	= ($_POST['debug_display'] == 'true')? 1 : 0 ;
+	 		$opts['debug_log'] 		= ($_POST['debug_log'] == 'true')? 1 : 0 ;
 	 		$opts['dbname'] 		= $_POST['dbname'];
 	 		$opts['uname'] 			= $_POST['uname'];
 	 		$opts['pwd'] 			= $_POST['pwd'];
@@ -178,7 +182,7 @@ if(isset($_POST['action_dl'])) {
 	 		$opts['weblog_title'] 	= $_POST['weblog_title'];
 	 		$opts['user_login'] 	= $_POST['user_login'];
 	 		$opts['admin_email'] 	= $_POST['admin_email'];
-	 		$opts['blog_public'] 	= (isset($_POST['blog_public']))? 1 : 0 ;
+	 		$opts['blog_public'] 	= ($_POST['blog_public'] == 'true')? 1 : 0 ;
 	 		$opts['admin_password'] = $_POST['admin_password'];
 
 			$migration->wp_install_config($opts);
@@ -521,14 +525,14 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3>Telecharge, extrait et install un Wordpress depuis le site wordpress.com</h3>
+					<h3>Telecharge et extrait une installation de Wordpress avec possibilité de l'installer</h3>
 					<div class="panel panel-info">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
 							<ul>
-								<li>Telecharge, extrait et install un Wordpress derniere version en date</li>
+								<li>Telecharge, extrait et installe un Wordpress derniere version en date depuis le site officiel</li>
 							</ul>
 						</div>
 					</div>
@@ -538,7 +542,7 @@ if(isset($_POST['api_call'])) {
 					<form id="action_dl" method="post">
 						<div class="checkbox">
 							<label>
-								<input type="checkbox" id="install_full" name="install_full" value="1" onclick="$('#install_full_div').toggle();"> Installation Full ( Base données et WP )
+								<input type="checkbox" id="install_full" name="install_full" value="1" onclick="$('#install_full_div').toggle();"> Installer le Wordpress sur le serveur
 							</label>
 						</div>
 
@@ -614,9 +618,9 @@ if(isset($_POST['api_call'])) {
 								<h3 class="panel-title">Information</h3> 
 							</div>
 							<div class="panel-body">
-							    <ul>
-							    	<li>Attention une version de Wordpress est deja installé sur le serveur</li>
-							    </ul>
+								<ul>
+									<li>Attention une version de Wordpress est deja installé sur le serveur</li>
+								</ul>
 							</div>
 						</div>
 						<?php endif; ?>	
@@ -629,7 +633,7 @@ if(isset($_POST['api_call'])) {
 						$( "#action_dl" ).submit(function( event ) {
 							var donnees = {
 								action_dl		: 'ok',
-								install_full	: $('#install_full').val(),
+								install_full	: $('#install_full').is(':checked'),
 								dbhost			: $('#dbhost').val(),
 								dbname			: $('#dbname').val(),
 								uname			: $('#uname').val(),
@@ -639,10 +643,10 @@ if(isset($_POST['api_call'])) {
 								user_login		: $('#user_login').val(),
 								admin_email		: $('#admin_email').val(),
 								admin_password	: $('#admin_password').val(),
-								debug			: $('#debug').val(),
-								debug_display	: $('#debug_display').val(),
-								debug_log		: $('#debug_log').val(),
-								blog_public		: $('#blog_public').val()
+								debug			: $('#debug').is(':checked'),
+								debug_display	: $('#debug_display').is(':checked'),
+								debug_log		: $('#debug_log').is(':checked'),
+								blog_public		: $('#blog_public').is(':checked')
 							}
 							sendform('action_dl', donnees, 'Telecharge, extrait et install un Wordpress');
 							event.preventDefault();
@@ -1406,7 +1410,9 @@ Class Wp_Migration {
 		// Get WordPress data
 		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
 
-		mkdir($this->_wp_dir_core, 0775);
+		if( ! mkdir($this->_wp_dir_core, 0775)){
+			return FALSE;
+		}
 
 		file_put_contents( $this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents( $wp->download ) );
 
@@ -1445,17 +1451,11 @@ Class Wp_Migration {
 	}
 
 	/**
-	 * create the wp-config file
+	 * Ecrit le fichier de configuration
 	 *
-	 *	$opts['prefix']
-	 *	$opts['debug']
-	 *	$opts['debug_display']
-	 *	$opts['debug_log']
-	 *	$opts['dbname']
-	 *	$opts['uname']
-	 *	$opts['pwd']
-	 *	$opts['dbhost']	 
+	 * @param string $opts 		
 	 *
+	 * @return bool 			retourne true ou false
 	 */
 	public function wp_install_config($opts){
 
@@ -1553,7 +1553,7 @@ Class Wp_Migration {
 		}
 		unset( $line );
 
-		$handle = fopen( $this->directory . 'wp-config.php', 'w' );
+		$handle = fopen( 'wp-config.php', 'w' );
 		foreach ( $config_file as $line ) {
 			fwrite( $handle, $line );
 		}
