@@ -608,6 +608,19 @@ if(isset($_POST['api_call'])) {
 							</div>
 						</div>
 
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Attention une version de Wordpress est deja installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>	
+
 						<div class="form-group">
 							<button id="go_action_dl" type="submit" class="btn btn-default">Lancer la procedure</button>
 						</div>
@@ -859,7 +872,7 @@ if(isset($_POST['api_call'])) {
 						</div>
 						<div class="panel-body">
 						    <ul>
-						    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
+						    	<li>Le fichier <?=$migration->_file_destination;?> n'est pas present sur le serveur</li>
 						    </ul>
 						</div>
 					</div>
