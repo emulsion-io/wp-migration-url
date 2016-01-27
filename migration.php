@@ -16,6 +16,7 @@
 $retour_url 			= FALSE;
 $retour_migration 		= FALSE;
 $retour_migration_api 	= FALSE;
+$retour_migration_log 	= FALSE;
 $retour_export 			= FALSE;
 $retour_import 			= FALSE;
 $retour_export_sql 		= FALSE;
@@ -62,6 +63,9 @@ if(file_exists('wp-config.php')) {
 	$wp_exist = FALSE;
 }
 
+/**
+ * ACTION : Permet de changer les Urls dans la config de Wordpress ainsi que dans les articles, pages et tous les contenues
+ */
 if(isset($_POST['action_change_url'])) {
 	if(!empty($_POST['action_change_url'])) {
 
@@ -75,7 +79,7 @@ if(isset($_POST['action_change_url'])) {
 }
 
 /**
- * Creer un fichier htaccess
+ * ACTION : Creer un fichier htaccess
  */
 if(isset($_POST['action_htaccess'])) {
 	if(!empty($_POST['action_htaccess'])) {
@@ -86,6 +90,9 @@ if(isset($_POST['action_htaccess'])) {
 	}
 }
 
+/**
+ * ACTION : Creer un Zip des fichiers courant
+ */
 if(isset($_POST['action_exporter'])) {
 	if(!empty($_POST['action_exporter'])) {
 
@@ -93,6 +100,9 @@ if(isset($_POST['action_exporter'])) {
 	}
 }
 
+/**
+ * ACTION : effectue un Dump sql de la base de donnée du WP courant dans un fichier .sql
+ */
 if(isset($_POST['action_exporter_sql'])) {
 	if(!empty($_POST['action_exporter_sql'])) {
 
@@ -103,7 +113,7 @@ if(isset($_POST['action_exporter_sql'])) {
 }
 
 /**
- * Extrait les fichiers du zip
+ * ACTION : Extrait les fichiers du zip dans le dossier courant
  */
 if(isset($_POST['action_importer'])) {
 	if(!empty($_POST['action_importer'])) {
@@ -114,6 +124,9 @@ if(isset($_POST['action_importer'])) {
 	}
 }
 
+/**
+ * ACTION : Effectue un import du fichier SQL dans la base de donnée utilisé par l'instance de WP installé sur le serveur
+ */
 if(isset($_POST['action_importer_sql'])) {
 	if(!empty($_POST['action_importer_sql'])) {
 
@@ -124,7 +137,7 @@ if(isset($_POST['action_importer_sql'])) {
 }
 
 /**
- * Telecharge et extrait les fichiers d'un WP frais
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
  */
 if(isset($_POST['action_dl'])) {
 	if(!empty($_POST['action_dl'])) {
@@ -159,6 +172,9 @@ if(isset($_POST['action_dl'])) {
 	}
 }
 
+/**
+ * ACTION : Permet de supprimer toutes les revisions qui ne servent pas
+ */
 if(isset($_POST['action_clean_revision'])) {
 	if(!empty($_POST['action_clean_revision'])) {
 
@@ -168,6 +184,9 @@ if(isset($_POST['action_clean_revision'])) {
 	}
 }
 
+/**
+ * Efface tous les commentaires qui n'ont pas ete validé
+ */
 if(isset($_POST['action_clean_spam'])) {
 	if(!empty($_POST['action_clean_spam'])) {
 
@@ -177,6 +196,9 @@ if(isset($_POST['action_clean_spam'])) {
 	}
 }
 
+/**
+ * ACTION : Telecharge et installe tous les plugins de la liste saisie
+ */
 if(isset($_POST['action_plug_install'])) {
 	if(!empty($_POST['action_plug_install'])) {
 
@@ -186,6 +208,9 @@ if(isset($_POST['action_plug_install'])) {
 	}
 }
 
+/**
+ * ACTION : Supprime les themes WP de base ne servant pas ( si vous utilisez un d'autre eux, ne pas effectuer cette action )
+ */
 if(isset($_POST['action_delete_theme'])) {
 	if(!empty($_POST['action_delete_theme'])) {
 
@@ -195,6 +220,9 @@ if(isset($_POST['action_delete_theme'])) {
 	}
 }
 
+/**
+ * ACTION : Permet d'ajouter un utilisateur avec les droits admin dans l'instance de WP sur le serveur
+ */
 if(isset($_POST['action_add_user'])) {
 	if(!empty($_POST['action_add_user'])) {
 
@@ -204,6 +232,12 @@ if(isset($_POST['action_add_user'])) {
 	}
 }
 
+/**
+ * ACTION : Effectue un Dump SQL, creer le zip des fichiers locaux avec le dump sql, 
+ * envoie le zip et le fichier migration.php sur le serveur distant, 
+ * lance un appel distant sur migration.php pour effectuer l'export du zip, 
+ * l'injection des données SQL, la configuration des Urls, creer le htaccess et nettoie le dossier
+ */
 if(isset($_POST['action_migration'])) {
 	if(!empty($_POST['action_migration'])) {
 
@@ -237,10 +271,14 @@ if(isset($_POST['action_migration'])) {
 		}
 
 		// Contact le site distant pour activer la methode api_call
-		$retour_migration = $migration->wp_migration($opts_migration);
+		$retour_migration 		= $migration->wp_migration($opts_migration);
+		$retour_migration_log 	= $migration->wp_migration_log($opts_migration);
 	}
 }
 
+/**
+ * API : Permet d'effectuer les actions de "action_migration" sur le serveur distant
+ */
 if(isset($_POST['api_call'])) {
 	if(!empty($_POST['api_call'])) {
 
@@ -405,6 +443,7 @@ if(isset($_POST['api_call'])) {
             <div class="col-md-12">
             	<?php if($retour_migration == TRUE) : ?>
             		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
+            		<div class="alert alert-success" role="alert"><?=$retour_migration_log; ?></div>
             	<?php endif; ?>
 				<form method="post">
 					<input type="hidden" id="action_migration" name="action_migration" value="test">
@@ -647,7 +686,7 @@ if(isset($_POST['api_call'])) {
                 <?php if($retour_export == TRUE) : ?>
             		<div class="alert alert-success" role="alert">
             		L'export a ete effectue avec succes.
-            			<p><a href="/migration_file.zip">Telecharger le zip des fichers</a></p>
+            			<p><a href="/<?=$migration->_file_destination;?>">Telecharger le zip des fichers</a></p>
             		</div>
             	<?php endif; ?>
 				<form method="post">
@@ -672,14 +711,14 @@ if(isset($_POST['api_call'])) {
 					<?php endif; ?>
 				</form>
 
-				<?php if(file_exists('migration_file.zip') && $retour_export == FALSE) : ?>
+				<?php if(file_exists($migration->_file_destination) && $retour_export == FALSE) : ?>
 				<div class="panel panel-success">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Un Zip contenant vos fichiers existe deja, telecharger l'existant ? <a href="/migration_file.zip">Telecharger le Zip existant</a></li>
+					    	<li>Un Zip contenant vos fichiers existe deja, telecharger l'existant ? <a href="/<?=$migration->_file_destination;?>">Telecharger le Zip existant</a></li>
 					    </ul>
 					</div>
 				</div>
@@ -707,7 +746,7 @@ if(isset($_POST['api_call'])) {
                 <?php if($retour_export_sql == TRUE) : ?>
             		<div class="alert alert-success" role="alert">
             			L'export a ete effectue avec succes.
-            			<p><a href="/migration_bdd.sql">Telecharger le Dump</a></p>
+            			<p><a href="/<?=$migration->_file_sql;?>">Telecharger le Dump</a></p>
             		</div>
             	<?php endif; ?>
 				<form method="post">
@@ -731,14 +770,14 @@ if(isset($_POST['api_call'])) {
 					<?php endif; ?>
 				</form>
 
-				<?php if(file_exists('migration_bdd.sql') && $retour_export_sql == FALSE) : ?>
+				<?php if(file_exists($migration->_file_sql) && $retour_export_sql == FALSE) : ?>
 				<div class="panel panel-success">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Un Dump existe deja, telecharger l'existant ? <a href="/migration_bdd.sql">Telecharger le Dump existant</a></li>
+					    	<li>Un Dump existe deja, telecharger l'existant ? <a href="/<?=$migration->_file_sql;?>">Telecharger le Dump existant</a></li>
 					    </ul>
 					</div>
 				</div>
@@ -772,21 +811,21 @@ if(isset($_POST['api_call'])) {
 					<div class="form-group">
 						<input type="hidden" id="action_importer" name="action_importer" value="test">
 					</div>
-					<?php if(file_exists('migration_file.zip')): ?>
+					<?php if(file_exists($migration->_file_destination)): ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
 					</div>
 					<?php endif; ?>
 				</form>
 
-				<?php if(!file_exists('migration_file.zip')): ?>
+				<?php if(!file_exists($migration->_file_destination)): ?>
 				<div class="panel panel-warning">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Le fichier migration_file.zip n'est pas present sur le serveur</li>
+					    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
 					    </ul>
 					</div>
 				</div>
@@ -804,7 +843,8 @@ if(isset($_POST['api_call'])) {
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Permet d'importer la base de données sur votre serveur</li>
+					    	<li>Permet d'importer les données de votre dump dans base de données sur votre serveur</li>
+					    	<li>La base de données indiquée dans le fichier de configuration doit exister</li>
 					    </ul>
 					</div>
 				</div>
@@ -817,21 +857,21 @@ if(isset($_POST['api_call'])) {
 				<form method="post">
 					<input type="hidden" id="action_importer_sql" name="action_importer_sql" value="test">
 
-					<?php if(file_exists('migration_bdd.sql')): ?>
+					<?php if(file_exists($migration->_file_sql)): ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Importer la base de données</button>
 					</div>
 					<?php endif; ?>
 				</form>
 
-				<?php if(!file_exists('migration_bdd.sql')): ?>
+				<?php if(!file_exists($migration->_file_sql)): ?>
 				<div class="panel panel-warning">
 					<div class="panel-heading"> 
 						<h3 class="panel-title">Information</h3> 
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Le fichier migration_bdd.sql n'est pas present sur le serveur</li>
+					    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
 					    </ul>
 					</div>
 				</div>
@@ -1115,8 +1155,9 @@ Class Wp_Migration {
 	var $_wp_lang,
 		$_wp_api,
 		$_wp_dir_core,
-		$_file_destination;
-		$_file_sql;
+		$_file_destination,
+		$_file_sql,
+		$_file_log;
 
 	var $_dbhost,
 		$_dbname,
@@ -1131,6 +1172,7 @@ Class Wp_Migration {
 		$this->_wp_dir_core 		= 'core/';
 		$this->_file_destination 	= 'migration_file.zip';
 		$this->_file_sql 			= 'migration_bdd.sql';
+		$this->_file_log 			= 'logfile.log';
 	}
 
 	/**
@@ -1165,21 +1207,21 @@ Class Wp_Migration {
 
 	public function wp_log($text){
 
-		if(file_exists('logfile.log')) {
-			$old = file_get_contents('logfile.log');
+		if(file_exists($this->_file_log)) {
+			$old = file_get_contents($this->_file_log);
 		} else {
 			$old = "";
 		}
 
 		$var = $old.date('Y/m/d h:i:s')." : ".$text."\n";
-		file_put_contents('logfile.log', $var);
+		file_put_contents($this->_file_log, $var);
 
 	}
 
 	public function wp_ftp_migration($opts){
 
-		$file = 'migration_file.zip';
-		$remote_file = 'migration_file.zip';
+		$file 			= $this->_file_destination;
+		$remote_file 	= $this->_file_destination;
 
 		$conn_id = ftp_connect($opts['ftp_url']);
 		if($conn_id == FALSE){
@@ -1207,8 +1249,8 @@ Class Wp_Migration {
 
 	public function wp_clean_ftp_migration(){
 
-		unlink('migration_file.zip');
-		unlink('migration_bdd.sql');
+		unlink($this->_file_destination);
+		unlink($this->_file_sql);
 	}
 
 	/**
@@ -1494,6 +1536,14 @@ Class Wp_Migration {
 
 		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
 		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
+	}
+
+	public function wp_migration_log($opts_migration) {
+
+		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
+		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/'.$this->_file_log);
+
+		return $result;
 	}
 
 	public function wp_url($oldurl, $newurl) {
