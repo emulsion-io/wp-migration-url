@@ -630,9 +630,6 @@ if(isset($_POST['api_call'])) {
 					</div>
 				</div>
 				<div class="col-md-12">
-					<?php if($retour_url == TRUE) : ?>
-						<div class="alert alert-success" role="alert">L'ecriture des nouvelles urls a bien ete effectue dans la base de données.</div>
-					<?php endif; ?>
 					<form id="form_action_change_url" method="post">
 						<input type="hidden" id="action_change_url" name="action_change_url" value="test">
 
