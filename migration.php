@@ -62,8 +62,8 @@ if(file_exists('wp-config.php')) {
 	$wp_exist = FALSE;
 }
 
-if(isset($_POST['old']) && isset($_POST['new'])) {
-	if(!empty($_POST['old']) && !empty($_POST['new'])) {
+if(isset($_POST['action_change_url'])) {
+	if(!empty($_POST['action_change_url'])) {
 
 		$oldurl = $_POST['old'];
 		$newurl = $_POST['new'];
@@ -77,8 +77,8 @@ if(isset($_POST['old']) && isset($_POST['new'])) {
 /**
  * Creer un fichier htaccess
  */
-if(isset($_POST['htaccess'])) {
-	if(!empty($_POST['htaccess'])) {
+if(isset($_POST['action_htaccess'])) {
+	if(!empty($_POST['action_htaccess'])) {
 
 		$migration->wp_htaccess();
 
@@ -86,15 +86,15 @@ if(isset($_POST['htaccess'])) {
 	}
 }
 
-if(isset($_POST['exporter'])) {
-	if(!empty($_POST['exporter'])) {
+if(isset($_POST['action_exporter'])) {
+	if(!empty($_POST['action_exporter'])) {
 
 		$retour_export = $migration->wp_export_file();
 	}
 }
 
-if(isset($_POST['exporter_sql'])) {
-	if(!empty($_POST['exporter_sql'])) {
+if(isset($_POST['action_exporter_sql'])) {
+	if(!empty($_POST['action_exporter_sql'])) {
 
 		$migration->wp_export_sql();
 
@@ -105,8 +105,8 @@ if(isset($_POST['exporter_sql'])) {
 /**
  * Extrait les fichiers du zip
  */
-if(isset($_POST['importer'])) {
-	if(!empty($_POST['importer'])) {
+if(isset($_POST['action_importer'])) {
+	if(!empty($_POST['action_importer'])) {
 
 		$migration->wp_import_file();
 
@@ -114,8 +114,8 @@ if(isset($_POST['importer'])) {
 	}
 }
 
-if(isset($_POST['importer_sql'])) {
-	if(!empty($_POST['importer_sql'])) {
+if(isset($_POST['action_importer_sql'])) {
+	if(!empty($_POST['action_importer_sql'])) {
 
 		$migration->wp_import_sql();
 
@@ -126,8 +126,8 @@ if(isset($_POST['importer_sql'])) {
 /**
  * Telecharge et extrait les fichiers d'un WP frais
  */
-if(isset($_POST['dl'])) {
-	if(!empty($_POST['dl'])) {
+if(isset($_POST['action_dl'])) {
+	if(!empty($_POST['action_dl'])) {
 
 		$migration->wp_download();
 
@@ -159,8 +159,8 @@ if(isset($_POST['dl'])) {
 	}
 }
 
-if(isset($_POST['clean_revision'])) {
-	if(!empty($_POST['clean_revision'])) {
+if(isset($_POST['action_clean_revision'])) {
+	if(!empty($_POST['action_clean_revision'])) {
 
 		$migration->wp_sql_clean_revision();
 
@@ -168,8 +168,8 @@ if(isset($_POST['clean_revision'])) {
 	}
 }
 
-if(isset($_POST['clean_spam'])) {
-	if(!empty($_POST['clean_spam'])) {
+if(isset($_POST['action_clean_spam'])) {
+	if(!empty($_POST['action_clean_spam'])) {
 
 		$migration->wp_sql_clean_spam();
 
@@ -177,8 +177,8 @@ if(isset($_POST['clean_spam'])) {
 	}
 }
 
-if(isset($_POST['plug_install'])) {
-	if(!empty($_POST['plug_install'])) {
+if(isset($_POST['action_plug_install'])) {
+	if(!empty($_POST['action_plug_install'])) {
 
 		$migration->wp_install_plugins($_POST['plug_install_liste']);
 
@@ -186,8 +186,8 @@ if(isset($_POST['plug_install'])) {
 	}
 }
 
-if(isset($_POST['delete_theme'])) {
-	if(!empty($_POST['delete_theme'])) {
+if(isset($_POST['action_delete_theme'])) {
+	if(!empty($_POST['action_delete_theme'])) {
 
 		$migration->wp_delete_theme();
 
@@ -195,8 +195,8 @@ if(isset($_POST['delete_theme'])) {
 	}
 }
 
-if(isset($_POST['add_user'])) {
-	if(!empty($_POST['add_user'])) {
+if(isset($_POST['action_add_user'])) {
+	if(!empty($_POST['action_add_user'])) {
 
 		$migration->wp_add_user($_POST['user'], $_POST['pass']);
 
@@ -204,8 +204,8 @@ if(isset($_POST['add_user'])) {
 	}
 }
 
-if(isset($_POST['migration'])) {
-	if(!empty($_POST['migration'])) {
+if(isset($_POST['action_migration'])) {
+	if(!empty($_POST['action_migration'])) {
 
 		$opts_migration = array(
 			'www_url' 		=> $_POST['www_url'],
@@ -407,7 +407,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">L'installation est effectuée avec succes</div>
             	<?php endif; ?>
 				<form method="post">
-					<input type="hidden" class="form-control" id="migration" name="migration" placeholder="" value="test">
+					<input type="hidden" id="action_migration" name="action_migration" value="test">
+
 					<h3>Url http du futur site</h3>
 					<div class="form-group">
 						<label for="www_url">Url http du serveur</label>
@@ -493,9 +494,7 @@ if(isset($_POST['api_call'])) {
             		</div>
             	<?php endif; ?>            	
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="dl" name="dl" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_dl" name="action_dl" value="test">
 
 					<div class="checkbox">
 						<label>
@@ -597,6 +596,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">L'ecriture des nouvelles urls a bien ete effectue dans la base de données.</div>
             	<?php endif; ?>
 				<form method="post">
+					<input type="hidden" id="action_change_url" name="action_change_url" value="test">
+
 					<div class="form-group">
 						<label for="old">Ancienne URL</label>
 						<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
@@ -646,12 +647,12 @@ if(isset($_POST['api_call'])) {
                 <?php if($retour_export == TRUE) : ?>
             		<div class="alert alert-success" role="alert">
             		L'export a ete effectue avec succes.
-            			<p><a href="/migration_file.zip">Telecharger le Dump des Fichers</a></p>
+            			<p><a href="/migration_file.zip">Telecharger le zip des fichers</a></p>
             		</div>
             	<?php endif; ?>
 				<form method="post">
 					<div class="form-group">
-						<input type="hidden" class="form-control" id="exporter" name="exporter" placeholder="" value="test">
+						<input type="hidden" class="form-control" id="action_exporter" name="action_exporter" placeholder="" value="test">
 					</div>
 					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
@@ -678,7 +679,7 @@ if(isset($_POST['api_call'])) {
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Un Dump existe deja, telecharger l'existant ? <a href="/migration_file.zip">Telecharger le Dump existant</a></li>
+					    	<li>Un Zip contenant vos fichiers existe deja, telecharger l'existant ? <a href="/migration_file.zip">Telecharger le Zip existant</a></li>
 					    </ul>
 					</div>
 				</div>
@@ -710,9 +711,8 @@ if(isset($_POST['api_call'])) {
             		</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="exporter_sql" name="exporter_sql" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_exporter_sql" name="action_exporter_sql" value="test">
+
 					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Lancer le dump SQL</button>
@@ -758,7 +758,7 @@ if(isset($_POST['api_call'])) {
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Permet d'extraire le fichier exporté precedement</li>
+					    	<li>Extrait l'ensemble de vos fichiers dans le dossier courant</li>
 					    </ul>
 					</div>
 				</div>
@@ -770,7 +770,7 @@ if(isset($_POST['api_call'])) {
             	<?php endif; ?>
 				<form method="post">
 					<div class="form-group">
-						<input type="hidden" class="form-control" id="importer" name="importer" placeholder="" value="test">
+						<input type="hidden" id="action_importer" name="action_importer" value="test">
 					</div>
 					<?php if(file_exists('migration_file.zip')): ?>
 					<div class="form-group">
@@ -804,7 +804,7 @@ if(isset($_POST['api_call'])) {
 					</div>
 					<div class="panel-body">
 					    <ul>
-					    	<li>Permet d'importer la base de données exportée</li>
+					    	<li>Permet d'importer la base de données sur votre serveur</li>
 					    </ul>
 					</div>
 				</div>
@@ -815,9 +815,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">L'importation de la base de données a ete effectue avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="importer_sql" name="importer_sql" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_importer_sql" name="action_importer_sql" value="test">
+
 					<?php if(file_exists('migration_bdd.sql')): ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Importer la base de données</button>
@@ -862,9 +861,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">Le fichier a ete ecrit avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="htaccess" name="htaccess" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_htaccess" name="action_htaccess" value="test">
+
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Creer le fichier HTaccess</button>
 					</div>
@@ -892,9 +890,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">Les revisions ont ete supprimées avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="clean_revision" name="clean_revision" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_clean_revision" name="action_clean_revision" value="test">
+
 					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Effacer les revisions</button>
@@ -935,9 +932,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">Les commentaires ont ete supprimés avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="clean_spam" name="clean_spam" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_clean_spam" name="action_clean_spam"value="test">
+
 					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
 						<button type="submit" class="btn btn-default">Effacer les commentaires non validés</button>
@@ -978,9 +974,7 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">Les plugins ont ete installé avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="plug_install" name="plug_install" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_plug_install" name="action_plug_install" value="test">
 
 					<div class="form-group">
 						<label for="plug_install_liste">Liste des plugins</label>
@@ -1031,9 +1025,7 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">Les themes ont ete desinstallé avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="delete_theme" name="delete_theme" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_delete_theme" name="action_delete_theme" value="test">
 
 					<?php if($wp_exist == TRUE) : ?>
 					<div class="form-group">
@@ -1075,9 +1067,8 @@ if(isset($_POST['api_call'])) {
             		<div class="alert alert-success" role="alert">L'utilisateur a ete ajouté avec succes.</div>
             	<?php endif; ?>
 				<form method="post">
-					<div class="form-group">
-						<input type="hidden" class="form-control" id="add_user" name="add_user" placeholder="" value="test">
-					</div>
+					<input type="hidden" id="action_add_user" name="action_add_user" value="test">
+
 					<div class="form-group">
 						<label for="user">Pseudo</label>
 						<input type="text" class="form-control" id="user" name="user" placeholder="" value="">
