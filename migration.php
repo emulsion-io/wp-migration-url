@@ -113,7 +113,9 @@ if(isset($_POST['action_exporter'])) {
 
 		$retour_export = $migration->wp_export_file();
 
-		$migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.'), $retour_export);		
+		$context = "L'export a ete effectue avec succes.<p><a href=\"/$migration->_file_destination\">Telecharger le zip des fichers</a></p>";
+
+		$migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.', 'context' => $context), $retour_export);		
 	}
 }
 
@@ -125,7 +127,9 @@ if(isset($_POST['action_exporter_sql'])) {
 
 		$retour_export_sql = $migration->wp_export_sql();
 
-		$migration->retour(array('message' => 'Dump SQL effectué avec succes.'), $retour_export_sql);
+		$context = "L'export a ete effectue avec succes.<p><a href=\"/$migration->_file_sql\">Telecharger le Dump</a></p>";
+
+		$migration->retour(array('message' => 'Dump SQL effectué avec succes.', 'context' => $context), $retour_export_sql);
 	}
 }
 
@@ -506,7 +510,7 @@ if(isset($_POST['api_call'])) {
 								user_sql			: $('#user_sql').val(),
 								pass_sql			: $('#pass_sql').val()
 							}
-							sendform('action_migration', donnees);
+							sendform('action_migration', donnees, 'Migration du Wordpress sur un autre serveur');
 							event.preventDefault();
 						});
 					</script>
@@ -627,7 +631,7 @@ if(isset($_POST['api_call'])) {
 								debug_log		: $('#debug_log').val(),
 								blog_public		: $('#blog_public').val()
 							}
-							sendform('action_dl', donnees);
+							sendform('action_dl', donnees, 'Telecharge, extrait et install un Wordpress');
 							event.preventDefault();
 						});
 					</script>
@@ -684,7 +688,7 @@ if(isset($_POST['api_call'])) {
 								'old' 				: $('#old').val(),
 								'new' 				: $('#new').val(),
 							}
-							sendform('action_change_url', donnees);
+							sendform('action_change_url', donnees, 'Ecriture des nouvelles Urls');
 							event.preventDefault();
 						});
 					</script>
@@ -695,7 +699,7 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3>Creation d'une archive avec les fichiers de Wordpress</h3>
+					<h3>Creation d'une archive de vos fichiers</h3>
 					<div class="panel panel-info">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Ce que fait cet assistant</h3> 
@@ -709,12 +713,6 @@ if(isset($_POST['api_call'])) {
 				</div>
 
 	            <div class="col-md-12">
-	                <?php if($retour_export == TRUE) : ?>
-	            		<div class="alert alert-success" role="alert">
-	            		L'export a ete effectue avec succes.
-	            			<p><a href="/<?=$migration->_file_destination;?>">Telecharger le zip des fichers</a></p>
-	            		</div>
-	            	<?php endif; ?>
 					<form id="action_exporter" method="post">
 						<?php if($wp_exist == TRUE) : ?>
 						<div class="form-group">
@@ -738,7 +736,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								'action_exporter'	: 'ok'
 							}
-							sendform('action_exporter', donnees);
+							sendform('action_exporter', donnees, 'Creation d\'une archive de vos fichiers');
 							event.preventDefault();
 						});
 					</script>
@@ -775,12 +773,6 @@ if(isset($_POST['api_call'])) {
 				</div>
 
 	            <div class="col-md-12">
-	                <?php if($retour_export_sql == TRUE) : ?>
-	            		<div class="alert alert-success" role="alert">
-	            			L'export a ete effectue avec succes.
-	            			<p><a href="/<?=$migration->_file_sql;?>">Telecharger le Dump</a></p>
-	            		</div>
-	            	<?php endif; ?>
 					<form id="action_exporter_sql" method="post">
 						<?php if($wp_exist == TRUE) : ?>
 						<div class="form-group">
@@ -804,7 +796,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								'action_exporter_sql'	: 'ok'
 							}
-							sendform('action_exporter_sql', donnees);
+							sendform('action_exporter_sql', donnees, 'Exporte la base de données');
 							event.preventDefault();
 						});
 					</script>
@@ -843,11 +835,8 @@ if(isset($_POST['api_call'])) {
 				</div>
 
 	            <div class="col-md-12">
-	                <?php if($retour_import == TRUE) : ?>
-	            		<div class="alert alert-success" role="alert">L'extraction des fichiers a ete effectue avec succes.</div>
-	            	<?php endif; ?>
 					<form id="action_importer" method="post">
-							<?php if(file_exists($migration->_file_destination)): ?>
+						<?php if(file_exists($migration->_file_destination)): ?>
 						<div class="form-group">
 							<button id="go_action_importer" type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
 						</div>
@@ -858,7 +847,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								action_importer	: 'ok',
 							}
-							sendform('action_importer', donnees);
+							sendform('action_importer', donnees, 'Importation de votre Zip');
 							event.preventDefault();
 						});
 					</script>
@@ -908,7 +897,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								action_importer_sql	: 'ok',
 							}
-							sendform('action_importer_sql', donnees);
+							sendform('action_importer_sql', donnees, 'Importation de votre Base de données');
 							event.preventDefault();
 						});
 					</script>
@@ -946,9 +935,6 @@ if(isset($_POST['api_call'])) {
 				</div>
 
 	            <div class="col-md-12">
-	                <?php if($retour_htaccess == TRUE) : ?>
-	            		<div class="alert alert-success" role="alert">Le fichier a ete ecrit avec succes.</div>
-	            	<?php endif; ?>
 					<form id="action_htaccess" method="post">
 						<div class="form-group">
 							<button id="go_action_htaccess" type="submit" class="btn btn-default">Creer le fichier HTaccess</button>
@@ -959,24 +945,24 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								'action_htaccess'	: 'ok'
 							}
-							sendform('action_htaccess', donnees);
+							sendform('action_htaccess', donnees, 'Creer le fichier HTACCESS');
 							event.preventDefault();
 						});
 					</script>					
-	            </div>
-	        </article>
+				</div>
+			</article>
 
-	        <article class="row">
-	           	<div class="col-md-12">
-	           	    <h2>Efface toutes les revisions de votre wordpress</h2>
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Efface toutes les revisions de votre wordpress</h2>
 					<div class="panel panel-info">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
-						    <ul>
-						    	<li>Efface les revisions des articles et pages et de tous les contenus</li>
-						    </ul>
+							<ul>
+								<li>Efface les revisions des articles, des pages et de tous les contenus</li>
+							</ul>
 						</div>
 					</div>
 				</div>
@@ -1005,7 +991,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								'action_clean_revision'	: 'ok'
 							}
-							sendform('action_clean_revision', donnees);
+							sendform('action_clean_revision', donnees, 'Efface toutes les revisions');
 							event.preventDefault();
 						});
 					</script>
@@ -1051,7 +1037,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								'action_clean_spam'	: 'ok'
 							}
-							sendform('action_clean_spam', donnees);
+							sendform('action_clean_spam', donnees, 'Efface tous les commentaires non validés');
 							event.preventDefault();
 						});
 					</script>
@@ -1103,7 +1089,7 @@ if(isset($_POST['api_call'])) {
 								action_plug_install	: 'ok',
 								plug_install_liste 	: $('#plug_install_liste').val(),
 							}
-							sendform('action_plug_install', donnees);
+							sendform('action_plug_install', donnees, 'Installe les plugins');
 							event.preventDefault();
 						});
 					</script>
@@ -1153,7 +1139,7 @@ if(isset($_POST['api_call'])) {
 							var donnees = {
 								'action_delete_theme'	: 'ok'
 							}
-							sendform('action_delete_theme', donnees);
+							sendform('action_delete_theme', donnees, 'Supprime les themes defaut de Wordpress');
 							event.preventDefault();
 						});
 					</script>
@@ -1162,7 +1148,7 @@ if(isset($_POST['api_call'])) {
 
 	         <article class="row">
 	           	<div class="col-md-12">
-	           	    <h2>Ajoute un utilisateur</h2>
+	           	    <h2>Ajouter un utilisateur</h2>
 					<div class="panel panel-info">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Ce que fait cet assistant</h3> 
@@ -1209,7 +1195,7 @@ if(isset($_POST['api_call'])) {
 								user 			: $('#user').val(),
 								pass 			: $('#pass').val(),
 							}
-							sendform('action_add_user', donnees);
+							sendform('action_add_user', donnees, 'Ajouter un utilisateur');
 							event.preventDefault();
 						});
 					</script>
@@ -1221,10 +1207,10 @@ if(isset($_POST['api_call'])) {
 			</footer>
 		</div>
 		<script>
-			function sendform(id, donnees) {
+			function sendform(id, donnees, title) {
 				$("#go_"+id).button('loading');
 				swal({
-					title: "Ecriture des nouvelles Urls",
+					title: title,
 					text: "Ete-vous sur de vouloir effectuer cette action ?",
 					type: "info",
 					showCancelButton: true,
