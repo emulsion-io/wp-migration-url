@@ -370,11 +370,11 @@ if(isset($_POST['action_migration'])) {
 
 		$retour_api = json_decode($retour_migration);
 
-		if($retour_api['success'] === TRUE) {
-			$migration->retour(array('message' => 'Migration effectuée avec succes.', 'context' => $retour_migration_log), TRUE);
+		if($retour_api->success === TRUE) {
+			$migration->retour(array('message' => $retour_api->data->message, 'context' => nl2br($retour_migration_log)), TRUE);
 		} else {
-			$migration->retour(array('message' => 'Le processus de migration a échoué, nous vous invitons a regarder le log sur le serveur de destination.'), FALSE);
-		}		
+			$migration->retour(array('message' => $retour_api->data->message, 'context' => nl2br($retour_migration_log)), FALSE);
+		}
 	}
 }
 
@@ -396,11 +396,11 @@ if(isset($_POST['api_call'])) {
 
 		// extraction des fichiers
 		$retour = $migration->wp_import_file();
-		$migration->wp_log('Extraction des fichiers : '.$retour);
+		$migration->wp_log('Extraction des fichiers : '.($retour)? 'Ok' : 'Nok');
 
 		// modifie le fichier wordpress avec les infos du nouveau serveur
 		$retour = $migration->wp_configfile($opts);
-		$migration->wp_log('Configuration du wp-config.php : '.$retour);
+		$migration->wp_log('Configuration du wp-config.php : '.($retour)? 'Ok' : 'Nok');
 
 		// Assigne les variables du WP courant a la class
 		$options = array(
@@ -423,7 +423,7 @@ if(isset($_POST['api_call'])) {
 
 		// Effectue l'importation du SQL
 		$retour = $migration->wp_import_sql();
-		$migration->wp_log('Importation du SQL : '.$retour);
+		$migration->wp_log('Importation du SQL : '.($retour)? 'Ok' : 'Nok');
 
 		// Recupere les informations sur le WP courant
 		$site_url = $migration->wp_get_info();
@@ -432,15 +432,15 @@ if(isset($_POST['api_call'])) {
 		$oldurl = $site_url['option_value'];
 		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
 		$retour = $migration->wp_url($oldurl, $newurl);
-		$migration->wp_log('Modification des URLs : '.$retour);
+		$migration->wp_log('Modification des URLs : '.($retour)? 'Ok' : 'Nok');
 
 		// creation du .htaccess
 		$retour = $migration->wp_htaccess();
-		$migration->wp_log('Creation du htaccess : '.$retour);
+		$migration->wp_log('Creation du htaccess : '.($retour)? 'Ok' : 'Nok');
 
 		// nettoie les fichiers sql et zip
 		$retour = $migration->wp_clean_ftp_migration();
-		$migration->wp_log('Netoyage des fichiers temporaire de migration : '.$retour);
+		$migration->wp_log('Netoyage des fichiers temporaire de migration : '.($retour)? 'Ok' : 'Nok');
 
 		$migration->retour(array('message' => 'La migration a ete effectuée avec succes.'), TRUE);
 	}
@@ -1472,6 +1472,7 @@ Class Wp_Migration {
 		$remote_file 	= $this->_file_destination;
 
 		$conn_id = ftp_connect($opts['ftp_url']);
+		//$conn_id = ftp_ssl_connect($opts['ftp_url']);
 		if($conn_id == FALSE){
 
 			return FALSE;
@@ -1611,21 +1612,6 @@ Class Wp_Migration {
 							$line .= "define('WP_DEBUG_LOG', 'true');\r\n";
 						}
 					}
-
-					//if ( (int) $this->conf_post_revisions >= 0 ) {
-					//	$line .= "\r\n\n " . "/** Désactivation des révisions d'articles */" . "\r\n";
-					//	$line .= "define('WP_POST_REVISIONS', " . (int) $this->conf_post_revisions . ");";
-					//}
-
-					//if ( (int) $this->conf_disallow_file_edit == 1 ) {
-					//	$line .= "\r\n\n " . "/** Désactivation de l'éditeur de thème et d'extension */" . "\r\n";
-					//	$line .= "define('DISALLOW_FILE_EDIT', true);";
-					//}
-
-					//if ( (int) $this->conf_autosave_interval >= 60 ) {
-					//	$line .= "\r\n\n " . "/** Intervalle des sauvegardes automatique */" . "\r\n";
-					//	$line .= "define('AUTOSAVE_INTERVAL', " . (int) $this->conf_autosave_interval . ");";
-					//}
 					
 					$line .= "\r\n\n " . "/** On augmente la mémoire limite */" . "\r\n";
 					$line .= "define('WP_MEMORY_LIMIT', '256M');" . "\r\n";
@@ -1720,43 +1706,6 @@ Class Wp_Migration {
 		update_option( 'siteurl', $newurl);
 		update_option( 'home', $newurl);
 		
-		//	We remove the default content
-		/*
-		if ( $this->default_content == '1' ) {
-			wp_delete_post( 1, true ); // We remove the article "Hello World"
-			wp_delete_post( 2, true ); // We remove the "Exemple page"
-		}
-		*/
-
-		//	We update permalinks
-		/*
-		if ( ! empty( $this->permalink_structure ) ) {
-			update_option( 'permalink_structure', $this->permalink_structure );
-		}
-		*/
-
-		//	We update the media settings
-		/*
-		if ( ! empty( $this->thumbnail_size_w ) || !empty($this->thumbnail_size_h ) ) {
-			update_option( 'thumbnail_size_w', (int) $this->thumbnail_size_w );
-			update_option( 'thumbnail_size_h', (int) $this->thumbnail_size_h );
-			update_option( 'thumbnail_crop', (int) $this->thumbnail_crop );
-		}
-
-		if ( ! empty( $_POST['medium_size_w'] ) || !empty( $this->medium_size_h ) ) {
-			update_option( 'medium_size_w', (int) $this->medium_size_w );
-			update_option( 'medium_size_h', (int) $this->medium_size_h );
-		}
-
-		if ( ! empty( $_POST['large_size_w'] ) || !empty( $this->large_size_h ) ) {
-			update_option( 'large_size_w', (int) $this->large_size_w );
-			update_option( 'large_size_h', (int) $this->large_size_h );
-		}
-
-		update_option( 'uploads_use_yearmonth_folders', (int) $this->uploads_use_yearmonth_folders );
-
-		*/
-
 		return TRUE;
 	}
 
