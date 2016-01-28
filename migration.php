@@ -89,7 +89,11 @@ if(isset($_POST['action_change_url'])) {
 
 		$retour_url = $migration->wp_url($oldurl, $newurl);
 
-		$migration->retour(array('message' => 'Les urls sont modifiées avec succes.'), $retour_url);
+		if($retour_url === TRUE) {
+			$migration->retour(array('message' => 'Les urls sont modifiées avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier les urls.'), FALSE);
+		}
 	}
 }
 
@@ -101,7 +105,11 @@ if(isset($_POST['action_htaccess'])) {
 
 		$retour_htaccess = $migration->wp_htaccess();
 
-		$migration->retour(array('message' => 'Fichier Htaccess crée avec succes.'), $retour_htaccess);	
+		if($retour_htaccess === TRUE) {
+			$migration->retour(array('message' => 'Fichier Htaccess crée avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de creer le Htaccess.'), FALSE);
+		}
 	}
 }
 
@@ -115,7 +123,11 @@ if(isset($_POST['action_exporter'])) {
 
 		$context = "L'export a ete effectue avec succes.<p><a href=\"/$migration->_file_destination\">Telecharger le zip des fichers</a></p>";
 
-		$migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.', 'context' => $context), $retour_export);		
+		if($retour_export === TRUE) {
+			$migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.', 'context' => $context), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de creer le Zip.'), FALSE);
+		}			
 	}
 }
 
@@ -129,7 +141,11 @@ if(isset($_POST['action_exporter_sql'])) {
 
 		$context = "L'export a ete effectue avec succes.<p><a href=\"/$migration->_file_sql\">Telecharger le Dump</a></p>";
 
-		$migration->retour(array('message' => 'Dump SQL effectué avec succes.', 'context' => $context), $retour_export_sql);
+		if($retour_export_sql === TRUE) {
+			$migration->retour(array('message' => 'Dump SQL effectué avec succes.', 'context' => $context), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'effectuer le Dump SQL.'), FALSE);
+		}
 	}
 }
 
@@ -141,7 +157,11 @@ if(isset($_POST['action_importer'])) {
 
 		$retour_import = $migration->wp_import_file();
 
-		$migration->retour(array('message' => 'Votre zip est extrait avec succes.'), $retour_import);
+		if($retour_import === TRUE) {
+			$migration->retour(array('message' => 'Votre zip est extrait avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'extraire le Zip.'), FALSE);
+		}
 	}
 }
 
@@ -153,7 +173,11 @@ if(isset($_POST['action_importer_sql'])) {
 
 		$retour_import_sql = $migration->wp_import_sql();
 
-		$migration->retour(array('message' => 'La base de donnée est injecté sur votre serveur.'), $retour_import_sql);
+		if($retour_import_sql === TRUE) {
+			$migration->retour(array('message' => 'La base de donnée est injecté sur votre serveur.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter votre base de données.'), FALSE);
+		}
 	}
 }
 
@@ -163,36 +187,45 @@ if(isset($_POST['action_importer_sql'])) {
 if(isset($_POST['action_dl'])) {
 	if(!empty($_POST['action_dl'])) {
 
-		$retour_action_dl = $migration->wp_download();
+		if($_POST['install_full'] == "false") {
 
-		if($retour_action_dl == FALSE){
-			$migration->retour(array('message' => ''), FALSE);
-		}
+			$retour_action_dl = $migration->wp_download();
 
-		if($_POST['install_full'] == "true") {
+			if($retour_action_dl === TRUE) {
+				$migration->retour(array('message' => 'Telechargement de WordPress effectué.'), TRUE);
+			} else {
+				$migration->retour(array('message' => 'Impossible de telecharger Wordpress.'), FALSE);
+			}
 
-	 		$opts['prefix'] 		= $_POST['prefix'];
-	 		$opts['debug'] 			= ($_POST['debug'] == 'true')? 1 : 0 ;
-	 		$opts['debug_display'] 	= ($_POST['debug_display'] == 'true')? 1 : 0 ;
-	 		$opts['debug_log'] 		= ($_POST['debug_log'] == 'true')? 1 : 0 ;
-	 		$opts['dbname'] 		= $_POST['dbname'];
-	 		$opts['uname'] 			= $_POST['uname'];
-	 		$opts['pwd'] 			= $_POST['pwd'];
-	 		$opts['dbhost']	 		= $_POST['dbhost'];
-	 		$opts['weblog_title'] 	= $_POST['weblog_title'];
-	 		$opts['user_login'] 	= $_POST['user_login'];
-	 		$opts['admin_email'] 	= $_POST['admin_email'];
-	 		$opts['blog_public'] 	= ($_POST['blog_public'] == 'true')? 1 : 0 ;
-	 		$opts['admin_password'] = $_POST['admin_password'];
+		} elseif($_POST['install_full'] == "true") {
 
+			$opts['prefix'] 		= $_POST['prefix'];
+			$opts['debug'] 			= ($_POST['debug'] == 'true')? 1 : 0 ;
+			$opts['debug_display'] 	= ($_POST['debug_display'] == 'true')? 1 : 0 ;
+			$opts['debug_log'] 		= ($_POST['debug_log'] == 'true')? 1 : 0 ;
+			$opts['dbname'] 		= $_POST['dbname'];
+			$opts['uname'] 			= $_POST['uname'];
+			$opts['pwd'] 			= $_POST['pwd'];
+			$opts['dbhost']	 		= $_POST['dbhost'];
+			$opts['weblog_title'] 	= $_POST['weblog_title'];
+			$opts['user_login'] 	= $_POST['user_login'];
+			$opts['admin_email'] 	= $_POST['admin_email'];
+			$opts['blog_public'] 	= ($_POST['blog_public'] == 'true')? 1 : 0 ;
+			$opts['admin_password'] = $_POST['admin_password'];
+
+			$retour_action_bdd_existe = $migration->wp_install_bdd($opts);
+
+			if($retour_action_bdd_existe === FALSE) {
+				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
+			}
+
+			$migration->wp_download();
 			$migration->wp_install_config($opts);
-			$migration->wp_install_bdd($opts);
 			$migration->wp_install_wp($opts);
 
 			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
 		} else {
-
-			$migration->retour(array('message' => 'Telechargement de WordPress effectué.'), TRUE);
+			$migration->retour(array('message' => 'Action inconnue'), FALSE);
 		}
 	}
 }
@@ -205,7 +238,11 @@ if(isset($_POST['action_clean_revision'])) {
 
 		$retour_clean_revision = $migration->wp_sql_clean_revision();
 
-		$migration->retour(array('message' => 'Revision supprimée avec succes.'), $retour_clean_revision);
+		if($retour_clean_revision === TRUE) {
+			$migration->retour(array('message' => 'Revision supprimée avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les revisions.'), FALSE);
+		}
 	}
 }
 
@@ -217,7 +254,11 @@ if(isset($_POST['action_clean_spam'])) {
 
 		$retour_clean_spam = $migration->wp_sql_clean_spam();
 
-		$migration->retour(array('message' => 'Spam supprimé avec succes.'), $retour_clean_spam);
+		if($retour_clean_spam === TRUE) {
+			$migration->retour(array('message' => 'Spam supprimé avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les spams.'), FALSE);
+		}
 	}
 }
 
@@ -229,7 +270,11 @@ if(isset($_POST['action_plug_install'])) {
 
 		$retour_plug_install = $migration->wp_install_plugins($_POST['plug_install_liste']);
 
-		$migration->retour(array('message' => 'Plugins installés avec succes.'), $retour_plug_install);
+		if($retour_plug_install === TRUE) {
+			$migration->retour(array('message' => 'Plugins installés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'installer les plugins.'), FALSE);
+		}
 	}
 }
 
@@ -241,7 +286,11 @@ if(isset($_POST['action_delete_theme'])) {
 
 		$retour_delete_theme = $migration->wp_delete_theme();
 
-		$migration->retour(array('message' => 'Themes supprimés avec succes.'), $retour_delete_theme);	
+		if($retour_delete_theme === TRUE) {
+			$migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
+		}
 	}
 }
 
@@ -253,7 +302,11 @@ if(isset($_POST['action_add_user'])) {
 
 		$retour_add_user = $migration->wp_add_user($_POST['user'], $_POST['pass']);
 
-		$migration->retour(array('message' => 'Utilisateur ajouté avec succes.'), $retour_add_user);	
+		if($retour_add_user === TRUE) {
+			$migration->retour(array('message' => 'Utilisateur ajouté avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter un utilisateur.'), FALSE);
+		}	
 	}
 }
 
@@ -299,7 +352,11 @@ if(isset($_POST['action_migration'])) {
 		$retour_migration 		= $migration->wp_migration($opts_migration);
 		$retour_migration_log 	= $migration->wp_migration_log($opts_migration);
 
-		$migration->retour(array('message' => 'Migration effectuée avec succes.', 'context' => $retour_migration_log), $retour_migration);
+		if($retour_migration === TRUE) {
+			$migration->retour(array('message' => 'Migration effectuée avec succes.', 'context' => $retour_migration_log), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter un utilisateur.'), FALSE);
+		}			
 	}
 }
 
@@ -1242,15 +1299,16 @@ if(isset($_POST['api_call'])) {
 						dataType: 'json',
 						success: function(retour){
 							$("#go_"+id).button('reset');
+							
 							if(retour.success == true)
 							{
 								swal("Good job!", retour.data.message, "success");
+							} else {
+								swal("Error!", retour.data.message, "error");
+							}
 
-								if (typeof retour.data.context != 'undefined') {
-									$( "#"+id ).prepend( '<div class="alert alert-success" role="alert">' + retour.data.context + '</div>' );
-								}
-							}else{
-								swal("Error!", "Une erreur est intervenu dans le traitement de la requête, renter votre chance.", "error");
+							if (typeof retour.data.context != 'undefined') {
+								$( "#"+id ).prepend( '<div class="alert alert-success" role="alert">' + retour.data.context + '</div>' );
 							}
 						}, 
 						timeout: function(){
@@ -1562,32 +1620,34 @@ Class Wp_Migration {
 		// We set the good rights to the wp-config file
 		chmod( 'wp-config.php', 0666 );
 		unlink('wp-config-sample.php' );
+
+		return TRUE;
 	}
 
 	/**
-	 * Tente de creer la base de donnée demandé si elle n'existe pas
+	 * On test si la base de donnée est accessible ou existante
 	 *
 	 * @param mixed[] $opts information de connexion a la base de donnée
 	 *
 	 * @return bool true|false
 	 */
 	public function wp_install_bdd($opts){
-		$bdd = Bdd::getInstance();
 
-        $queryBDD    = $bdd->dbh->query('SHOW TABLES'); 
-        while($row = $queryBDD->fetch()) 
-        { 
-            $target_BDD[] = $row[0];
-        }
+		// assignation des variables de connexion pour effectuer un test si la bdd existe
+		$this->set_var_wp(array($opts['dbhost'], $opts['dbname'], $opts['uname'], $opts['pwd'], $opts['prefix']));
 
-        if(in_array($target_BDD, $opts['dbname'])){
+		try{
+			$bdd = Bdd::getInstance();
 
-        	return TRUE;
-        }
+			$sql = $bdd->dbh->prepare('SHOW TABLES');
+			$sql->execute();
+			$row = $sql->fetchAll();
+			
+			return TRUE;
+        }catch(PDOException $e){
 
-		$retour = $bdd->dbh->query("CREATE DATABASE ".$opts['dbname']);
-
-		return $retour;
+        	return FALSE;
+		}
 	}
 
 	/**
