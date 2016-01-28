@@ -338,7 +338,8 @@ if(isset($_POST['action_migration'])) {
 			'name_sql' 		=> $_POST['name_sql'],
 			'user_sql' 		=> $_POST['user_sql'],
 			'pass_sql' 		=> $_POST['pass_sql'],
-			'table_prefix' 	=> $table_prefix
+			'table_prefix' 	=> $table_prefix,
+			'type_ftp' 		=> 'ftp'
 		);
 
 		// Test si le dossier distant existe
@@ -1471,8 +1472,22 @@ Class Wp_Migration {
 		$file 			= $this->_file_destination;
 		$remote_file 	= $this->_file_destination;
 
-		$conn_id = ftp_connect($opts['ftp_url']);
-		//$conn_id = ftp_ssl_connect($opts['ftp_url']);
+		if($type_ftp === 'sftp'){
+			$connection = ssh2_connect($opts['ftp_url'], 22);
+			ssh2_auth_password($connection, $opts['user_ftp'], $opts['ftp_pass']);
+
+			ssh2_scp_send($connection, 'migration.php', rtrim($opts['ftp_folder'], '/').'/migration.php', 0644);
+			ssh2_scp_send($connection, $file, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, 0644);
+
+			return TRUE;
+		}
+
+		if($type_ftp === 'ftp'){
+			$conn_id = ftp_connect($opts['ftp_url']);
+		}elseif ($type_ftp === 'ftps') {
+			$conn_id = ftp_ssl_connect($opts['ftp_url']);
+		}
+
 		if($conn_id == FALSE){
 
 			return FALSE;
@@ -1485,7 +1500,7 @@ Class Wp_Migration {
 		}
 
 		// Envoie le fichier migration.php qui sert d'api distante
-		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.'migration.php', 'migration.php', FTP_ASCII);
+		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/migration.php', 'migration.php', FTP_ASCII);
 		// Envoie le fichier contenant le site a migrer
 		if (ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, $file, FTP_ASCII)) {
 			ftp_close($conn_id);
