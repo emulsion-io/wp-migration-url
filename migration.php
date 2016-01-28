@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://viky.fr
  *
- * @version 1.5.1 codename Eulalie
+ * @version 2.5 codename Eulalie
 */
 
 /**
@@ -2318,15 +2318,17 @@ Class Wp_Migration {
 	}
 
 	/**
-	 *  @param string 	$str
+	 * Nettoie les chaines de caraceteres avant d'etre utilisées par Wordpress
+	 * @param string 	$str
 	 */
 	private function sanit( $str ) {
 		return addcslashes( str_replace( array( ';', "\n" ), '', $str ), '\\' );
 	}
 
 	/**
-	 *  @param string 	$data 
-	 *  @param bool 	$success
+	 * Formate un array php sous forme de json
+	 * @param string 	$data 
+	 * @param bool 	$success
 	 */
     public function retour($data = '', $success = TRUE)
     {
