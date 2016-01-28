@@ -182,55 +182,6 @@ if(isset($_POST['action_importer_sql'])) {
 }
 
 /**
- * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
- */
-if(isset($_POST['action_dl'])) {
-	if(!empty($_POST['action_dl'])) {
-
-		if($_POST['install_full'] == "false") {
-
-			$retour_action_dl = $migration->wp_download();
-
-			if($retour_action_dl === TRUE) {
-				$migration->retour(array('message' => 'Telechargement de WordPress effectué.'), TRUE);
-			} else {
-				$migration->retour(array('message' => 'Impossible de telecharger Wordpress.'), FALSE);
-			}
-
-		} elseif($_POST['install_full'] == "true") {
-
-			$opts['prefix'] 		= $_POST['prefix'];
-			$opts['debug'] 			= ($_POST['debug'] == 'true')? 1 : 0 ;
-			$opts['debug_display'] 	= ($_POST['debug_display'] == 'true')? 1 : 0 ;
-			$opts['debug_log'] 		= ($_POST['debug_log'] == 'true')? 1 : 0 ;
-			$opts['dbname'] 		= $_POST['dbname'];
-			$opts['uname'] 			= $_POST['uname'];
-			$opts['pwd'] 			= $_POST['pwd'];
-			$opts['dbhost']	 		= $_POST['dbhost'];
-			$opts['weblog_title'] 	= $_POST['weblog_title'];
-			$opts['user_login'] 	= $_POST['user_login'];
-			$opts['admin_email'] 	= $_POST['admin_email'];
-			$opts['blog_public'] 	= ($_POST['blog_public'] == 'true')? 1 : 0 ;
-			$opts['admin_password'] = $_POST['admin_password'];
-
-			$retour_action_bdd_existe = $migration->wp_install_bdd($opts);
-
-			if($retour_action_bdd_existe === FALSE) {
-				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
-			}
-
-			$migration->wp_download();
-			$migration->wp_install_config($opts);
-			$migration->wp_install_wp($opts);
-
-			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Action inconnue'), FALSE);
-		}
-	}
-}
-
-/**
  * ACTION : Permet de supprimer toutes les revisions qui ne servent pas
  */
 if(isset($_POST['action_clean_revision'])) {
@@ -311,6 +262,64 @@ if(isset($_POST['action_add_user'])) {
 }
 
 /**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
+ */
+if(isset($_POST['action_dl'])) {
+	if(!empty($_POST['action_dl'])) {
+
+		if($_POST['install_full'] == "false") {
+
+			$retour_action_dl = $migration->wp_download();
+
+			if($retour_action_dl === TRUE) {
+				$migration->retour(array('message' => 'Telechargement de WordPress effectué.'), TRUE);
+			} else {
+				$migration->retour(array('message' => 'Impossible de telecharger Wordpress.'), FALSE);
+			}
+
+		} elseif($_POST['install_full'] == "true") {
+
+			$opts['prefix'] 		= $_POST['prefix'];
+			$opts['debug'] 			= ($_POST['debug'] == 'true')? 1 : 0 ;
+			$opts['debug_display'] 	= ($_POST['debug_display'] == 'true')? 1 : 0 ;
+			$opts['debug_log'] 		= ($_POST['debug_log'] == 'true')? 1 : 0 ;
+			$opts['dbname'] 		= $_POST['dbname'];
+			$opts['uname'] 			= $_POST['uname'];
+			$opts['pwd'] 			= $_POST['pwd'];
+			$opts['dbhost']	 		= $_POST['dbhost'];
+			$opts['weblog_title'] 	= $_POST['weblog_title'];
+			$opts['user_login'] 	= $_POST['user_login'];
+			$opts['admin_email'] 	= $_POST['admin_email'];
+			$opts['blog_public'] 	= ($_POST['blog_public'] == 'true')? 1 : 0 ;
+			$opts['admin_password'] = $_POST['admin_password'];
+
+			// assignation des variables de connexion pour effectuer un test si la bdd existe
+			$options = array(
+				$opts['dbhost'],
+				$opts['dbname'],
+				$opts['uname'],
+				$opts['pwd'],
+				$opts['prefix']
+			);
+			$migration->set_var_wp($options);
+
+			$retour_action_bdd_existe = $migration->wp_test_bdd();
+			if($retour_action_bdd_existe === FALSE) {
+				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
+			}
+
+			$migration->wp_download();
+			$migration->wp_install_config($opts);
+			$migration->wp_install_wp($opts);
+
+			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Action inconnue'), FALSE);
+		}
+	}
+}
+
+/**
  * ACTION : Effectue un Dump SQL, creer le zip des fichiers locaux avec le dump sql, 
  * envoie le zip et le fichier migration.php sur le serveur distant, 
  * lance un appel distant sur migration.php pour effectuer l'export du zip, 
@@ -332,6 +341,13 @@ if(isset($_POST['action_migration'])) {
 			'table_prefix' 	=> $table_prefix
 		);
 
+		// Test si le dossier distant existe
+		$ftp_exist_retour = $migration->wp_ftp_is_existedir($opts_migration);
+
+		if($ftp_exist_retour === FALSE){
+			$migration->retour(array('message' => 'Erreur FTP : Le dossier cible n\'existe pas.'), FALSE);
+		}
+		
 		// Exporte le SQL
 		$migration->wp_export_sql();
 
@@ -344,19 +360,21 @@ if(isset($_POST['action_migration'])) {
 		// Supprime les fichiers locaux
 		$migration->wp_clean_ftp_migration();
 
-		if($ftp_migration_retour == FALSE){
-			echo "erreur FTP, connexion impossible"; exit;
+		if($ftp_migration_retour === FALSE){
+			$migration->retour(array('message' => 'Erreur FTP : Connexion impossible.'), FALSE);
 		}
 
 		// Contact le site distant pour activer la methode api_call
 		$retour_migration 		= $migration->wp_migration($opts_migration);
 		$retour_migration_log 	= $migration->wp_migration_log($opts_migration);
 
-		if($retour_migration === TRUE) {
+		$retour_api = json_decode($retour_migration);
+
+		if($retour_api['success'] === TRUE) {
 			$migration->retour(array('message' => 'Migration effectuée avec succes.', 'context' => $retour_migration_log), TRUE);
 		} else {
-			$migration->retour(array('message' => 'Impossible d\'ajouter un utilisateur.'), FALSE);
-		}			
+			$migration->retour(array('message' => 'Le processus de migration a échoué, nous vous invitons a regarder le log sur le serveur de destination.'), FALSE);
+		}		
 	}
 }
 
@@ -377,12 +395,12 @@ if(isset($_POST['api_call'])) {
 		//$migration->wp_log(json_encode($_POST));
 
 		// extraction des fichiers
-		$migration->wp_import_file();
-		$migration->wp_log('Extraction des fichiers');
+		$retour = $migration->wp_import_file();
+		$migration->wp_log('Extraction des fichiers : '.$retour);
 
 		// modifie le fichier wordpress avec les infos du nouveau serveur
-		$migration->wp_configfile($opts);
-		$migration->wp_log('Configuration du wp-config.php');
+		$retour = $migration->wp_configfile($opts);
+		$migration->wp_log('Configuration du wp-config.php : '.$retour);
 
 		// Assigne les variables du WP courant a la class
 		$options = array(
@@ -394,12 +412,18 @@ if(isset($_POST['api_call'])) {
 		);
 		$migration->set_var_wp($options);
 		//------- 
-
 		$migration->wp_log('Rechargement des infos du nouveau WP');
 
+		// Test de l'existance de la base de données
+		$retour_action_bdd_existe = $migration->wp_test_bdd($options);
+		if($retour_action_bdd_existe === FALSE) {
+			$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
+		}
+		$migration->wp_log('Test de la base de données : '.$retour_action_bdd_existe);
+
 		// Effectue l'importation du SQL
-		$migration->wp_import_sql();
-		$migration->wp_log('Importation du SQL');
+		$retour = $migration->wp_import_sql();
+		$migration->wp_log('Importation du SQL : '.$retour);
 
 		// Recupere les informations sur le WP courant
 		$site_url = $migration->wp_get_info();
@@ -407,18 +431,18 @@ if(isset($_POST['api_call'])) {
 		// modification des urls
 		$oldurl = $site_url['option_value'];
 		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
-		$migration->wp_url($oldurl, $newurl);
-		$migration->wp_log('Modification des URLs');
+		$retour = $migration->wp_url($oldurl, $newurl);
+		$migration->wp_log('Modification des URLs : '.$retour);
 
 		// creation du .htaccess
-		$migration->wp_htaccess();
-		$migration->wp_log('Creation du htaccess');
+		$retour = $migration->wp_htaccess();
+		$migration->wp_log('Creation du htaccess : '.$retour);
 
 		// nettoie les fichiers sql et zip
-		$migration->wp_clean_ftp_migration();
-		$migration->wp_log('Netoyage des fichiers temporaire de migration');
+		$retour = $migration->wp_clean_ftp_migration();
+		$migration->wp_log('Netoyage des fichiers temporaire de migration : '.$retour);
 
-		return TRUE;
+		$migration->retour(array('message' => 'La migration a ete effectuée avec succes.'), TRUE);
 	}
 }
 
@@ -514,10 +538,10 @@ if(isset($_POST['api_call'])) {
 					<form id="action_migration" method="post">
 						<h3>Url http du futur site</h3>
 						<div class="form-group">
-							<label for="www_url">Url http du serveur</label>
+							<label for="www_url">Url ou sera installé le futur site apres migration</label>
 							<input type="text" class="form-control" id="www_url" name="www_url" placeholder="http://" value="">
 						</div>
-						<h3>Information du FTP cible</h3>
+						<h3>Information du FTP distant</h3>
 						<div class="form-group">
 							<label for="ftp_url">Url du serveur FTP</label>
 							<input type="text" class="form-control" id="ftp_url" name="ftp_url" placeholder="" value="">
@@ -533,6 +557,7 @@ if(isset($_POST['api_call'])) {
 						<div class="form-group">
 							<label for="ftp_folder">Dossier d'installation ( doit exister )</label>
 							<input type="text" class="form-control" id="ftp_folder" name="ftp_folder" placeholder="" value="">
+							<span id="helpBlock" class="help-block">Exemple : /web/clients/monclient</span>
 						</div>
 
 						<h3>Information de la base de données du serveur cible</h3>
@@ -553,9 +578,22 @@ if(isset($_POST['api_call'])) {
 							<label for="pass_sql">Mot de passe MySQL</label>
 							<input type="text" class="form-control" id="pass_sql" name="pass_sql" placeholder="" value="">
 						</div>
-						<div class="form-group">
-							<button id="go_action_migration" type="submit" class="btn btn-default">Lancer la migration</button>
-						</div>
+						<?php if($wp_exist == TRUE) : ?>
+							<div class="form-group">
+								<button id="go_action_migration" type="submit" class="btn btn-default">Lancer la migration</button>
+							</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+								<ul>
+									<li>Wordpress n'est pas installé sur ce serveur.</li>
+								</ul>
+							</div>
+						</div>					
+						<?php endif; ?>
 					</form>
 					<script>
 						$( "#action_migration" ).submit(function( event ) {
@@ -749,7 +787,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Wordpress n'est pas installé sur le serveur</li>
+									<li>Wordpress n'est pas installé sur ce serveur.</li>
 								</ul>
 							</div>
 						</div>					
@@ -1412,6 +1450,16 @@ Class Wp_Migration {
 		return TRUE;
 	}
 
+	/**
+	 * Test si le dossier donné par l'utilisateur existe reelement
+	 *
+	 * @param mixed[] $opts Array informations de connexion au FTP distant
+	 */
+	public function wp_ftp_is_existedir($opts){	
+		$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']"".rtrim($opts['ftp_folder'], '/'));
+
+		return $folder_exists
+	}
 
 	/**
 	 * Envoie les fichiers zip et migration sur le serveur distant en FTP
@@ -1456,6 +1504,8 @@ Class Wp_Migration {
 
 		unlink($this->_file_destination);
 		unlink($this->_file_sql);
+
+		return TRUE;
 	}
 
 	/**
@@ -1631,10 +1681,7 @@ Class Wp_Migration {
 	 *
 	 * @return bool true|false
 	 */
-	public function wp_install_bdd($opts){
-
-		// assignation des variables de connexion pour effectuer un test si la bdd existe
-		$this->set_var_wp(array($opts['dbhost'], $opts['dbname'], $opts['uname'], $opts['pwd'], $opts['prefix']));
+	public function wp_test_bdd($opts){
 
 		try{
 			$bdd = Bdd::getInstance();
@@ -1746,6 +1793,8 @@ Class Wp_Migration {
 
 		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
 		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
+
+		return $result;
 	}
 
 	/**
