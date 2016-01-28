@@ -347,7 +347,7 @@ if(isset($_POST['action_migration'])) {
 		if($ftp_exist_retour === FALSE){
 			$migration->retour(array('message' => 'Erreur FTP : Le dossier cible n\'existe pas.'), FALSE);
 		}
-		
+
 		// Exporte le SQL
 		$migration->wp_export_sql();
 
@@ -1456,9 +1456,9 @@ Class Wp_Migration {
 	 * @param mixed[] $opts Array informations de connexion au FTP distant
 	 */
 	public function wp_ftp_is_existedir($opts){	
-		$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']"".rtrim($opts['ftp_folder'], '/'));
+		$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']."".rtrim($opts['ftp_folder'], '/'));
 
-		return $folder_exists
+		return $folder_exists;
 	}
 
 	/**
