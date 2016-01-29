@@ -310,6 +310,35 @@ if(isset($_POST['action_purge_sql'])) {
 }
 
 /**
+ * ACTION : 
+ */
+if(isset($_POST['action_test_hash'])) {
+	if(!empty($_POST['action_test_hash'])) {
+
+		$retour_test_hash 	= $migration->wp_test_hash();
+
+		if($retour_test_hash !== FALSE) {
+			$migration->retour(array('message' => 'Nous avons analysé vos fichiers.', 'context' => $retour_test_hash), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Nous n\'avons pas pu analyser vos fichiers.'), FALSE);
+		}	
+	}
+}
+
+if(isset($_POST['action_creation_hash'])) {
+	if(!empty($_POST['action_creation_hash'])) {
+
+		$retour_crea_hash 	= $migration->wp_create_hash();
+
+		if($retour_crea_hash === TRUE) {
+			$migration->retour(array('message' => 'La creation du fichier de hash a ete realisé sans probleme.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de creer le fichier de hashs.'), FALSE);
+		}	
+	}
+}
+
+/**
  * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
  */
 if(isset($_POST['action_dl'])) {
@@ -1481,6 +1510,85 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</article>
 
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Creation du Hashs des fichiers</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Creer un fichier de hash du dossier courant</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-12">
+					<form id="action_creation_hash" method="post">
+						<div class="form-group">
+							<button id="go_action_creation_hash" type="submit" class="btn btn-default">Creer le hashs</button>
+						</div>
+					</form>
+					<script>
+						$( "#action_creation_hash" ).submit(function( event ) {
+							var donnees = {
+								action_creation_hash	: 'ok',
+							}
+							sendform('action_creation_hash', donnees, 'Creation du Hashs des fichiers');
+							event.preventDefault();
+						});
+					</script>
+				</div>
+			</article>
+
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Testes du Hashs des fichiers</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Compare tous les fichiers</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-12">
+					<form id="action_test_hash" method="post">
+						<?php if(file_exists('migration-hash.php')) : ?>
+						<div class="form-group">
+							<button id="go_action_test_hash" type="submit" class="btn btn-default">Tester le hashs</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Le fichier migration-hash.php n'existe pas sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>
+					</form>
+					<script>
+						$( "#action_test_hash" ).submit(function( event ) {
+							var donnees = {
+								action_test_hash	: 'ok',
+							}
+							sendform('action_test_hash', donnees, 'Teste du Hashs des fichiers');
+							event.preventDefault();
+						});
+					</script>
+				</div>
+			</article>			
+
 			<footer class="row">
 				<div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
 			</footer>
@@ -1538,7 +1646,8 @@ Class Wp_Migration {
 		$_wp_dir_core,
 		$_file_destination,
 		$_file_sql,
-		$_file_log;
+		$_file_log,
+		$_current_rep;
 
 	var $_dbhost,
 		$_dbname,
@@ -1562,6 +1671,7 @@ Class Wp_Migration {
 		$this->_file_destination 	= 'migration_file.zip';
 		$this->_file_sql 			= 'migration_bdd.sql';
 		$this->_file_log 			= 'logfile.log';
+		$this->_current_rep 		= getcwd();
 	}
 
 	/**
@@ -2510,6 +2620,96 @@ Class Wp_Migration {
 		}
 
 		return TRUE;
+	}
+
+	/**
+	 * 
+	 */
+	public function wp_test_hash()
+	{
+
+		if(file_exists('migration-hash.php')){
+			include('migration-hash.php');
+
+			$retour = '';
+			foreach ($fileswp as $key => $value) {
+				if(md5_file($key) != $value){
+					$retour .= "Le fichier : ".$key." ne correspond plus a la version initial.<br>";
+				}
+			}
+
+			return $retour;
+		}
+
+		return FALSE;
+	}	
+
+	/**
+	 * 
+	 */
+	public function wp_create_hash()
+	{
+		if(file_exists('migration-hash.php')){
+			unlink('migration-hash.php');
+		}
+
+		$hashfiles = '<?php '."\n";
+		$hashfiles .= $this->wp_hashs_files(getcwd(), 0, FALSE);
+		$hashfiles .= "\n".'?>';
+
+		file_put_contents('migration-hash.php', $hashfiles);
+
+		return TRUE;
+	}
+
+	/**
+	 * Create a Directory Map and hash file md5 to php array
+	 *
+	 * Reads the specified directory and builds an array
+	 * representation of it. Sub-folders contained with the
+	 * directory will be mapped as well.
+	 *
+	 * @param	string	$source_dir		Path to source
+	 * @param	int	$directory_depth	Depth of directories to traverse
+	 *						(0 = fully recursive, 1 = current dir, etc)
+	 * @param	bool	$hidden			Whether to show hidden files
+	 * @return	array
+	 */
+	public function wp_hashs_files($source_dir, $directory_depth = 0, $hidden = FALSE)
+	{
+		if ($fp = @opendir($source_dir))
+		{
+			$hashs		= '';
+			$new_depth	= $directory_depth - 1;
+			$source_dir	= rtrim($source_dir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
+
+			while (FALSE !== ($file = readdir($fp)))
+			{
+				// Remove '.', '..', and hidden files [optional]
+				if ($file === '.' OR $file === '..' OR ($hidden === FALSE && $file[0] === '.'))
+				{
+					continue;
+				}
+
+				is_dir($source_dir.$file) && $file .= DIRECTORY_SEPARATOR;
+
+				if (($directory_depth < 1 OR $new_depth > 0) && is_dir($source_dir.$file))
+				{	
+					$hashs .= $this->wp_hashs_files($source_dir.$file, $new_depth, $hidden);
+				}
+				else
+				{
+					$file_current = substr_replace($source_dir.$file, '', 0, strlen($this->_current_rep)+1);
+					$hashs .= '$fileswp["'.$file_current.'"] = "'.md5_file($source_dir.$file).'";'."\n";
+				}
+			}
+						
+			closedir($fp);
+			
+			return $hashs;
+		}
+
+		return FALSE;
 	}
 
 	/**
