@@ -278,6 +278,38 @@ if(isset($_POST['action_prefix_edit'])) {
 }
 
 /**
+ * ACTION : Pruge l'installation courante de WP  (fichiers)
+ */
+if(isset($_POST['action_purge'])) {
+	if(!empty($_POST['action_purge'])) {
+
+		$retour_clean_files = $migration->wp_clean_files();
+
+		if($retour_clean_files === TRUE) {
+			$migration->retour(array('message' => 'Installation de WP purgée.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les fichiers.'), FALSE);
+		}	
+	}
+}
+
+/**
+ * ACTION : Pruge l'installation courante de WP (SQL)
+ */
+if(isset($_POST['action_purge_sql'])) {
+	if(!empty($_POST['action_purge_sql'])) {
+
+		$retour_clean_sql 	= $migration->wp_clean_sql();
+
+		if($retour_clean_sql === TRUE) {
+			$migration->retour(array('message' => 'Installation de WP purgée.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les tables.'), FALSE);
+		}	
+	}
+}
+
+/**
  * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
  */
 if(isset($_POST['action_dl'])) {
@@ -327,6 +359,7 @@ if(isset($_POST['action_dl'])) {
 			$migration->wp_download();
 			$migration->wp_install_config($opts);
 			$migration->wp_install_wp($opts);
+			$migration->wp_htaccess();
 
 			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
 		} else {
@@ -1354,7 +1387,7 @@ if(isset($_POST['api_call'])) {
 						</div>
 						<?php if($wp_exist == TRUE) : ?>
 						<div class="form-group">
-							<button id="go_action_add_user" type="submit" class="btn btn-default">Modifier le prefix des tables</button>
+							<button id="go_action_prefix_edit" type="submit" class="btn btn-default">Modifier le prefix des tables</button>
 						</div>
 						<?php else: ?>
 						<div class="panel panel-warning">
@@ -1376,6 +1409,72 @@ if(isset($_POST['api_call'])) {
 								prefix_edit 		: $('#prefix_edit').val(),
 							}
 							sendform('action_prefix_edit', donnees, 'Modifier le prefix des tables');
+							event.preventDefault();
+						});
+					</script>
+				</div>
+			</article>
+
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Purger Fichiers Wordpress</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Supprime tous les fichiers</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-12">
+					<form id="action_purge" method="post">
+						<div class="form-group">
+							<button id="go_action_purge" type="submit" class="btn btn-default">Purger les fichiers</button>
+						</div>
+					</form>
+					<script>
+						$( "#action_purge" ).submit(function( event ) {
+							var donnees = {
+								action_purge	: 'ok',
+							}
+							sendform('action_purge', donnees, 'Purger Fichiers Wordpress');
+							event.preventDefault();
+						});
+					</script>
+				</div>
+			</article>			
+
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Purger SQL Wordpress</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Supprime toutes les tables</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-12">
+					<form id="action_purge_sql" method="post">
+						<div class="form-group">
+							<button id="go_action_purge_sql" type="submit" class="btn btn-default">Purger les tables</button>
+						</div>
+					</form>
+					<script>
+						$( "#action_purge_sql" ).submit(function( event ) {
+							var donnees = {
+								action_purge_sql	: 'ok',
+							}
+							sendform('action_purge_sql', donnees, 'Purger SQL Wordpress');
 							event.preventDefault();
 						});
 					</script>
@@ -1785,7 +1884,9 @@ Class Wp_Migration {
 		$newurl = 'http://'.$_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
 		update_option( 'siteurl', $newurl);
 		update_option( 'home', $newurl);
-		
+
+		update_option( 'permalink_structure', '/%postname%/');
+
 		return TRUE;
 	}
 
@@ -2332,7 +2433,7 @@ Class Wp_Migration {
 		$tables = $sql->fetchAll();
 
 		$changed_tables = array();
-		foreach ($tables as $k=>$table)	{
+		foreach ($tables as $table)	{
 			$table_old_name = $table[0];
 
 			// To rename the table
@@ -2350,6 +2451,63 @@ Class Wp_Migration {
 		$query = 'UPDATE '.$new_prefix.'usermeta set meta_key = CONCAT(replace(left(meta_key, ' . strlen($old_prefix) . "), '{$old_prefix}', '{$new_prefix}'), SUBSTR(meta_key, " . (strlen($old_prefix) + 1) . ")) where meta_key in ('{$old_prefix}autosave_draft_ids', '{$old_prefix}capabilities', '{$old_prefix}metaboxorder_post', '{$old_prefix}user_level', '{$old_prefix}usersettings','{$old_prefix}usersettingstime', '{$old_prefix}user-settings', '{$old_prefix}user-settings-time', '{$old_prefix}dashboard_quick_press_last_post_id')";
 		$sql3 = $bdd->dbh->prepare($query);
 		$sql3->execute();
+
+		return TRUE;
+	}
+
+	/**
+	 * Efface les fichiers de l'installation Wordpress
+	 */
+	public function wp_clean_files()
+	{
+		$this->rrmdir('wp-admin');
+		$this->rrmdir('wp-content');
+		$this->rrmdir('wp-includes');
+		$this->rrmdir('wordpress');
+
+		$files = array(
+			'wp-activate.php',
+			'wp-blog-header.php',
+			'wp-comments-post.php',
+			'wp-config.php',
+			'wp-cron.php',
+			'wp-links-opml.php',
+			'wp-load.php',
+			'wp-login.php',
+			'wp-mail.php',
+			'wp-settings.php',
+			'wp-signup.php',
+			'wp-trackback.php',
+			'xmlrpc.php',
+			'index.php',
+			'.htaccess'
+		);
+
+		foreach ($files as $file) {
+			@unlink($file);
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Efface les tables de WP
+	 */
+	public function wp_clean_sql()
+	{
+		$bdd = Bdd::getInstance();
+
+		$sql = $bdd->dbh->prepare("SHOW TABLES LIKE '".$this->_table_prefix."%'");
+		$sql->execute();
+		$tables = $sql->fetchAll();
+
+		foreach ($tables as $table)	{
+			$table_name = $table[0];
+
+			// To rename the table
+			$sql1 = $bdd->dbh->prepare("DROP TABLE `{$table_name}`");
+			$sql1->execute();
+		}
 
 		return TRUE;
 	}
@@ -2502,7 +2660,7 @@ Class Wp_Migration {
 	    	$objects = scandir($dir);
 	    	foreach ($objects as $object) {
 	       		if ($object != "." && $object != "..") {
-	         		if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
+	         		if (filetype($dir."/".$object) == "dir") $this->rrmdir($dir."/".$object); else unlink($dir."/".$object);
 	       		}
 	     	}
 	    	reset($objects);
