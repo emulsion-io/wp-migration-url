@@ -262,6 +262,22 @@ if(isset($_POST['action_add_user'])) {
 }
 
 /**
+ * ACTION : Permet de modifier le prefix des tables de WP
+ */
+if(isset($_POST['action_prefix_edit'])) {
+	if(!empty($_POST['action_prefix_edit'])) {
+
+		$retour_prefix_edit = $migration->wp_rename_prefix($_POST['prefix_edit']);
+
+		if($retour_prefix_edit === TRUE) {
+			$migration->retour(array('message' => 'Tables modifiées avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier le prefix des tables.'), FALSE);
+		}	
+	}
+}
+
+/**
  * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
  */
 if(isset($_POST['action_dl'])) {
@@ -1259,22 +1275,22 @@ if(isset($_POST['api_call'])) {
 	            </div>
 	        </article>       
 
-	         <article class="row">
-	           	<div class="col-md-12">
-	           	    <h2>Ajouter un utilisateur</h2>
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Ajouter un utilisateur</h2>
 					<div class="panel panel-info">
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
 						<div class="panel-body">
-						    <ul>
-						    	<li>Ajouter un Super Admin</li>
-						    </ul>
+							<ul>
+								<li>Ajouter un Super Admin</li>
+							</ul>
 						</div>
 					</div>
 				</div>
 
-	            <div class="col-md-12">         	
+				<div class="col-md-12">
 					<form id="action_add_user" method="post">
 						<div class="form-group">
 							<label for="user">Pseudo</label>
@@ -1313,7 +1329,58 @@ if(isset($_POST['api_call'])) {
 						});
 					</script>
 				</div>
-			</article> 
+			</article>
+
+			<article class="row">
+				<div class="col-md-12">
+					<h2>Modifier le prefix des tables</h2>
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Permet de modifier le prefix wp_ des tables par un de votre choix</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-12">
+					<form id="action_prefix_edit" method="post">
+						<div class="form-group">
+							<label for="prefix_edit">Prefix</label>
+							<input type="text" class="form-control" id="prefix_edit" name="prefix_edit" placeholder="wp_" value="">
+						</div>
+						<?php if($wp_exist == TRUE) : ?>
+						<div class="form-group">
+							<button id="go_action_add_user" type="submit" class="btn btn-default">Modifier le prefix des tables</button>
+						</div>
+						<?php else: ?>
+						<div class="panel panel-warning">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Information</h3> 
+							</div>
+							<div class="panel-body">
+							    <ul>
+							    	<li>Wordpress n'est pas installé sur le serveur</li>
+							    </ul>
+							</div>
+						</div>
+						<?php endif; ?>	
+					</form>
+					<script>
+						$( "#action_prefix_edit" ).submit(function( event ) {
+							var donnees = {
+								action_prefix_edit	: 'ok',
+								prefix_edit 		: $('#prefix_edit').val(),
+							}
+							sendform('action_prefix_edit', donnees, 'Modifier le prefix des tables');
+							event.preventDefault();
+						});
+					</script>
+				</div>
+			</article>
 
 			<footer class="row">
 				<div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
@@ -1678,11 +1745,9 @@ Class Wp_Migration {
 	/**
 	 * On test si la base de donnée est accessible ou existante
 	 *
-	 * @param mixed[] $opts information de connexion a la base de donnée
-	 *
 	 * @return bool true|false
 	 */
-	public function wp_test_bdd($opts){
+	public function wp_test_bdd(){
 
 		try{
 			$bdd = Bdd::getInstance();
@@ -2229,6 +2294,65 @@ Class Wp_Migration {
 
 		return FALSE;
 	}	
+
+	/**
+	 * 
+	 */
+	public function wp_rename_prefix($new_prefix)
+	{
+
+		$old_prefix = $this->_table_prefix;
+
+		if( ! is_writable('wp-config.php')){
+			return FALSE;
+		}
+
+		// Modifier le fichier config
+		$file = file('wp-config.php');
+		$content = '';
+		foreach($file as $line)
+		{
+			$line = ltrim($line);
+			if (!empty($line)){
+				if (strpos($line, '$table_prefix') !== false){
+					$line = preg_replace("/=(.*)\;/", "= '".$new_prefix."';", $line);
+				}
+			}
+			$content .= $line;
+		}
+		if (!empty($content)){
+			file_put_contents('wp-config.php', $content);
+		}
+
+		// Modifier la base de données
+		$bdd = Bdd::getInstance();
+		
+		$sql = $bdd->dbh->prepare("SHOW TABLES LIKE '".$old_prefix."%'");
+		$sql->execute();
+		$tables = $sql->fetchAll();
+
+		$changed_tables = array();
+		foreach ($tables as $k=>$table)	{
+			$table_old_name = $table[0];
+
+			// To rename the table
+			$table_new_name = substr_replace($table_old_name, $new_prefix, 0, strlen($old_prefix));
+
+			$sql1 = $bdd->dbh->prepare("RENAME TABLE `{$table_old_name}` TO `{$table_new_name}`");
+			$sql1->execute();
+
+			array_push($changed_tables, $table_new_name);
+		}
+		
+		$sql2 = $bdd->dbh->prepare("UPDATE {$new_prefix}options SET option_name='{$new_prefix}user_roles' WHERE option_name='{$old_prefix}user_roles';");
+		$sql2->execute();
+
+		$query = 'UPDATE '.$new_prefix.'usermeta set meta_key = CONCAT(replace(left(meta_key, ' . strlen($old_prefix) . "), '{$old_prefix}', '{$new_prefix}'), SUBSTR(meta_key, " . (strlen($old_prefix) + 1) . ")) where meta_key in ('{$old_prefix}autosave_draft_ids', '{$old_prefix}capabilities', '{$old_prefix}metaboxorder_post', '{$old_prefix}user_level', '{$old_prefix}usersettings','{$old_prefix}usersettingstime', '{$old_prefix}user-settings', '{$old_prefix}user-settings-time', '{$old_prefix}dashboard_quick_press_last_post_id')";
+		$sql3 = $bdd->dbh->prepare($query);
+		$sql3->execute();
+
+		return TRUE;
+	}
 
 	/**
 	 * Creer des Zip recursivement en utilisant les fonctions systemes
