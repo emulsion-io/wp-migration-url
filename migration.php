@@ -398,6 +398,22 @@ if(isset($_POST['action_dl'])) {
 }
 
 /**
+ * ACTION : Test de l'existance du site de destiation
+ */
+if(isset($_POST['action_migration_testsite'])) {
+	if(!empty($_POST['action_migration_testsite'])) {
+
+		$retour = $migration->test_url_exist($_POST['www_url']);
+
+		if($retour === TRUE) {
+			$migration->retour(array('message' => 'Merci, ce site existe bel et bien.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'L\'url recherchée n\'exist pas.'), FALSE);
+		}
+	}
+}
+
+/**
  * ACTION : Effectue un Dump SQL, creer le zip des fichiers locaux avec le dump sql, 
  * envoie le zip et le fichier migration.php sur le serveur distant, 
  * lance un appel distant sur migration.php pour effectuer l'export du zip, 
@@ -428,10 +444,18 @@ if(isset($_POST['action_migration'])) {
 		}
 
 		// Exporte le SQL
-		$migration->wp_export_sql();
+		$retour_export_sql = $migration->wp_export_sql();
+
+		if($retour_export_sql === FALSE) {
+			$migration->retour(array('message' => 'Erreur SQL : Impossible d\'effectuer le Dump SQL.'), FALSE);
+		}		
 
 		// Exporte Les fichiers dans le Zip avec le SQL
-		$migration->wp_export_file();
+		$retour_export_zip = $migration->wp_export_file();
+
+		if($retour_export_zip === FALSE) {
+			$migration->retour(array('message' => 'Erreur ZIP : Impossible d\'effectuer le ZIP.'), FALSE);
+		}
 
 		// Envoie les fichiers sur le serveur FTP distant
 		$ftp_migration_retour = $migration->wp_ftp_migration($opts_migration);
@@ -614,12 +638,29 @@ if(isset($_POST['api_call'])) {
 					</div>
 				</div>
 				<div class="col-md-12">
-					<form id="action_migration" method="post">
-						<h3>Url http du futur site</h3>
+					<form id="action_migration_testsite" method="post">
+						<h3>Url du site de destination</h3>
 						<div class="form-group">
 							<label for="www_url">Url ou sera installé le futur site apres migration</label>
 							<input type="text" class="form-control" id="www_url" name="www_url" placeholder="http://" value="">
+							<span class="help-block">Exemple : http://test.com/web/clients/monclient</span>
 						</div>
+						<div class="form-group">
+							<button id="go_action_migration_testsite" type="submit" class="btn btn-default">Tester l'existance du site</button>
+						</div>
+					</form>
+					<script>
+						$( "#action_migration_testsite" ).submit(function( event ) {
+							var donnees = {
+								action_migration_testsite	: 'ok',
+								www_url						: $('#www_url').val(),
+							}
+							sendform('action_migration_testsite', donnees, 'Test de l\'url du site de destination.');
+							event.preventDefault();
+						});
+					</script>
+
+					<form id="action_migration" style="display:none;" method="post">
 						<h3>Information du FTP distant</h3>
 						<div class="form-group">
 							<label for="ftp_url">Url du serveur FTP</label>
@@ -636,7 +677,7 @@ if(isset($_POST['api_call'])) {
 						<div class="form-group">
 							<label for="ftp_folder">Dossier d'installation ( doit exister )</label>
 							<input type="text" class="form-control" id="ftp_folder" name="ftp_folder" placeholder="" value="">
-							<span id="helpBlock" class="help-block">Exemple : /web/clients/monclient</span>
+							<span class="help-block">Exemple : /web/clients/monclient</span>
 						</div>
 
 						<h3>Information de la base de données du serveur cible</h3>
@@ -1616,6 +1657,15 @@ if(isset($_POST['api_call'])) {
 							if(retour.success == true)
 							{
 								swal("Good job!", retour.data.message, "success");
+
+								// condition particuliaire d'actions a realiser en fonction des forms
+								
+								//-- Affiche la zone d'info pour la migration
+								if(id == 'action_migration_testsite') {
+									$('#action_migration').show();
+								}
+
+
 							} else {
 								swal("Error!", retour.data.message, "error");
 							}
@@ -1625,9 +1675,11 @@ if(isset($_POST['api_call'])) {
 							}
 						}, 
 						timeout: function(){
+							$("#go_"+id).button('reset');
 							swal("Timeout!", "Le temps d'attente est trop long, demande expiré, renter votre chance.", "error");
 						},
 						error: function(){
+							$("#go_"+id).button('reset');
 							swal("Error!", "Une erreur est intervenu dans le traitement de la requête, renter votre chance.", "error");
 						}
 					});
@@ -1647,7 +1699,8 @@ Class Wp_Migration {
 		$_file_destination,
 		$_file_sql,
 		$_file_log,
-		$_current_rep;
+		$_current_rep,
+		$_fileswp;
 
 	var $_dbhost,
 		$_dbname,
@@ -1672,6 +1725,26 @@ Class Wp_Migration {
 		$this->_file_sql 			= 'migration_bdd.sql';
 		$this->_file_log 			= 'logfile.log';
 		$this->_current_rep 		= getcwd();
+		$this->_fileswp				= array(
+			'wp-activate.php',
+			'wp-blog-header.php',
+			'wp-comments-post.php',
+			'wp-config.php',
+			'wp-cron.php',
+			'wp-links-opml.php',
+			'wp-load.php',
+			'wp-login.php',
+			'wp-mail.php',
+			'wp-settings.php',
+			'wp-signup.php',
+			'wp-trackback.php',
+			'xmlrpc.php',
+			'index.php',
+			'wp-admin',
+			'wp-content',
+			'wp-includes',
+			'.htaccess'
+		);
 	}
 
 	/**
@@ -1733,8 +1806,8 @@ Class Wp_Migration {
 	 * @param mixed[] $opts Array informations de connexion au FTP distant
 	 */
 	public function wp_ftp_is_existedir($opts){	
-		$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']."".rtrim($opts['ftp_folder'], '/'));
-
+		$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']."".$opts['ftp_folder']);
+		//$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']."".rtrim($opts['ftp_folder'], '/'));
 		return $folder_exists;
 	}
 
@@ -1743,7 +1816,7 @@ Class Wp_Migration {
 	 *
 	 * @param mixed[] $opts Array informations de connexion au FTP distant
 	 */
-	public function wp_ftp_migration($opts){
+	public function wp_ftp_migration($opts, $type_ftp = 'ftp'){
 
 		$file 			= $this->_file_destination;
 		$remote_file 	= $this->_file_destination;
@@ -1794,8 +1867,8 @@ Class Wp_Migration {
 	 */
 	public function wp_clean_ftp_migration(){
 
-		unlink($this->_file_destination);
-		unlink($this->_file_sql);
+		@unlink($this->_file_destination);
+		@unlink($this->_file_sql);
 
 		return TRUE;
 	}
@@ -2176,6 +2249,21 @@ Class Wp_Migration {
 	}
 
 	/**
+	 * Test si l'url existe
+	 */
+	public function test_url_exist($url) {
+
+		$headers = @get_headers($url);
+
+		if ($headers === FALSE) {
+
+			return FALSE;
+		} else {
+
+			return TRUE;
+		}
+	}
+	/**
 	 * Exporte les fichiers de WP
 	 */
 	public function wp_export_file() {
@@ -2183,19 +2271,26 @@ Class Wp_Migration {
 		if(file_exists($this->_file_destination)){
 			unlink($this->_file_destination);
 		}
-		
-		if(function_exists('exec')){
 
-			$this->Zip_soft('./', $this->_file_destination, 'exec');
-		} elseif(function_exists('system')){
+		try {
+			$this->Zip($this->_fileswp, $this->_file_destination);
 
-			$this->Zip_soft('./', $this->_file_destination, 'system');
-		} else {
+		} catch (Exception $e) {
+			
+			if(function_exists('exec')){
 
-			$this->Zip('./', $this->_file_destination);
+				$this->Zip_soft('./', $this->_file_destination, 'exec');
+			} elseif(function_exists('system')){
+
+				$this->Zip_soft('./', $this->_file_destination, 'system');
+			}
 		}
-	
-		return TRUE;
+
+		if(file_exists($this->_file_destination)){
+			return TRUE;
+		}		
+
+		return FALSE;
 	}
 
 	/**
@@ -2214,23 +2309,10 @@ Class Wp_Migration {
 			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > '.$this->_file_sql;
 			exec($command, $output = array(), $worked);
 
-			switch($worked){
-				case 0:
-					return TRUE;
-				break;
-				case 1:
-					return FALSE;
-				break;
-				case 2:
-					return FALSE;
-				break;
-			}
-
 		} elseif(function_exists('system')){
 
 			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > ".$this->_file_sql);
 
-			return TRUE;
 		} else {
 			
 		    $bdd = Bdd::getInstance();
@@ -2310,9 +2392,13 @@ Class Wp_Migration {
         	}
 
         	file_put_contents($this->_file_sql , $content);
-
-        	return TRUE;
 		}
+
+		if(file_exists($this->_file_sql )){
+			return TRUE;
+		}
+
+		return FALSE;
 	}
 
 	/**
@@ -2570,31 +2656,13 @@ Class Wp_Migration {
 	 */
 	public function wp_clean_files()
 	{
-		$this->rrmdir('wp-admin');
-		$this->rrmdir('wp-content');
-		$this->rrmdir('wp-includes');
-		$this->rrmdir('wordpress');
 
-		$files = array(
-			'wp-activate.php',
-			'wp-blog-header.php',
-			'wp-comments-post.php',
-			'wp-config.php',
-			'wp-cron.php',
-			'wp-links-opml.php',
-			'wp-load.php',
-			'wp-login.php',
-			'wp-mail.php',
-			'wp-settings.php',
-			'wp-signup.php',
-			'wp-trackback.php',
-			'xmlrpc.php',
-			'index.php',
-			'.htaccess'
-		);
-
-		foreach ($files as $file) {
-			@unlink($file);
+		foreach ($this->_fileswp as $key => $file) {
+			if(is_dir($file)) {
+				$this->rrmdir($file);
+			} else {
+				@unlink($file);
+			}
 		}
 
 		return TRUE;
@@ -2713,6 +2781,35 @@ Class Wp_Migration {
 	}
 
 	/**
+	 * 
+	 * @link
+	 */
+	public function excludefilesfolderin_zip($serialize = FALSE) {
+		$files_current = scandir('.');
+		unset($files_current[0]);
+		unset($files_current[1]);
+
+		$result = array_diff($files_current, $this->_fileswp);
+		
+		$listefiles = '';
+		if($serialize = TRUE) {
+			if (count($result) > 0) {
+				foreach ($result as $file) {
+					$ext = '';
+					if(is_dir($file)) {
+						$ext = '/*';
+					}
+					$listefiles .= ' "'.$file.$ext.'" ';
+				}
+			}
+
+			return $listefiles;
+		}
+
+		return $result;
+	}	
+
+	/**
 	 * Creer des Zip recursivement en utilisant les fonctions systemes
 	 *
 	 * @param string $source 		Source des fichiers
@@ -2726,6 +2823,7 @@ Class Wp_Migration {
 		if (!is_readable($source) || ! is_writeable(dirname($destination)) || (file_exists($destination) && !is_file($destination))) {
 			// really you should capture some more specific information
 			// in your excaption handling
+
 			return false;
 		}
 
@@ -2733,12 +2831,12 @@ Class Wp_Migration {
 		$returnv 	= true;
 
 		if($soft == 'exec') {
-			exec("zip -r $destination $source", $output, $returnv);
+			exec('zip -r '.$destination.' '.$source.' -x '.$this->excludefilesfolderin_zip(TRUE).' >/dev/null', $output, $returnv);
 		} else {
-			system("zip -r $destination $source", $output, $returnv);
+			system('zip -r '.$destination.' '.$source.' -x '.$this->excludefilesfolderin_zip(TRUE).' >/dev/null', $output);
 		}
 
-		return !$returnv;
+		return TRUE;
 	}
 
 	/**
@@ -2746,14 +2844,15 @@ Class Wp_Migration {
 	 *
 	 * @link : http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php methode php issus de cette doc
 	 *
-	 * @param string $source 		Source des fichiers
+	 * @param array $source 		Listes des fichiers et dossier wp a save dans le zip
 	 * @param string $destination 	Fichier de destinations ( zip )
 	 *
 	 * @return bool true|false
 	 */
 	public function Zip($source, $destination)
 	{
-	    if (!extension_loaded('zip') || !file_exists($source)) {
+	    if (!extension_loaded('zip')) {
+	    //if (!extension_loaded('zip') || !file_exists($source)) {
 
 	        return false;
 	    }
@@ -2764,42 +2863,47 @@ Class Wp_Migration {
 	        return false;
 	    }
 
-	    $source = str_replace('\\', '/', realpath($source));
+	    $sources = str_replace('\\', '/', realpath('.'));
 
-	    if (is_dir($source) === true)
-	    {
-	        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source), RecursiveIteratorIterator::SELF_FIRST);
+	    foreach ($source as $key => $value) {
 
-	        foreach ($files as $file)
-	        {
-	            $file = str_replace('\\', '/', $file);
+			if (is_dir($value) === true)
+			{
+			    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($value), RecursiveIteratorIterator::SELF_FIRST);
 
-	            // Ignore "." and ".." folders
-	            if( in_array(substr($file, strrpos($file, '/')+1), array('.', '..')) )
-	                continue;
+			    foreach ($files as $file)
+			    {
+			        $file = str_replace('\\', '/', $file);
 
-	            $file = realpath($file);
+			        // Ignore "." and ".." folders
+			        if( in_array(substr($file, strrpos($file, '/')+1), array('.', '..')) )
+			            continue;
 
-	            if (is_dir($file) === true)
-	            {
-	                if( ! $zip->addEmptyDir(str_replace($source . '/', '', $file . '/')))
-					{
-						throw new Exception("La memoire alouée par le serveur n'est pas sufisante");
-					}
-	            }
-	            else if (is_file($file) === true)
-	            {
-	                if( ! $zip->addFromString(str_replace($source . '/', '', $file), file_get_contents($file)))
-					{
-						throw new Exception("La memoire alouée par le serveur n'est pas sufisante");
-					}
-	            }
-	        }
-	    }
-	    else if (is_file($source) === true)
-	    {
-	        $zip->addFromString(basename($source), file_get_contents($source));
-	    }
+			        $file = realpath($file);
+
+			        if (is_dir($file) === true)
+			        {
+			            if( ! $zip->addEmptyDir(str_replace($sources . '/', '', $file . '/')))
+						{
+							@unlink($this->_file_destination);
+							throw new Exception("La memoire alouée par le serveur n'est pas sufisante.");
+						}
+			        }
+			        else if (is_file($file) === true)
+			        {
+			            if( ! $zip->addFromString(str_replace($sources . '/', '', $file), file_get_contents($file)))
+						{
+							@unlink($this->_file_destination);
+							throw new Exception("La memoire alouée par le serveur n'est pas sufisante.");
+						}
+			        }
+			    }
+			}
+			else if (is_file($value) === true)
+			{
+			    $zip->addFromString(basename($value), file_get_contents($value));
+			}
+		}
 
 	    return $zip->close();
 	}
