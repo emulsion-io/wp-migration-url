@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://viky.fr
  *
- * @version 2.5 codename Eulalie
+ * @version 2.5.1 codename Eulalie
 */
 
 /**
@@ -46,6 +46,8 @@ $retour_delete_theme 	= FALSE;
 $retour_add_user 		= FALSE;
 
 $migration = new Wp_Migration();
+
+$update = $migration->wp_check_update();
 
 /**
  * Si un fichier wp-config.php existe, le script comprend que WP est deja installé
@@ -343,7 +345,7 @@ if(isset($_POST['action_update'])) {
 
 		$retour_update 	= $migration->wp_update();
 
-		if($retour_update TRUE) {
+		if($retour_update === TRUE) {
 			$migration->retour(array('message' => 'La mise a jour du script s\'est effectué avec succes.'), TRUE);
 		} else {
 			$migration->retour(array('message' => 'Impossible d\'effectuer la mise a jour.'), FALSE);
@@ -627,6 +629,38 @@ if(isset($_POST['api_call'])) {
 					</div>
 				</div>
 			</article>
+
+			<article class="row">
+				<div class="col-md-12">
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Info Script</h3> 
+						</div>
+						<div class="panel-body">
+							<ul>
+								<li>Votre version : <?php echo $update['version_courante']; ?></li>
+								<li>Derniere version disponnible : <?php echo $update['version_enligne']; ?></li>
+								<li>
+									<?php if($update['maj_dipso'] == TRUE): ?>
+									<form id="action_update" method="post">
+										<button type="submit" id="go_action_update" class="btn btn-default">Effecuer la mise a jour</button>
+									</form>
+									<script>
+										$( "#action_update" ).submit(function( event ) {
+											var donnees = {
+												'action_update'	: 'ok'
+											}
+											sendform('action_update', donnees, 'Effecuer la mise a jour du script');
+											event.preventDefault();
+										});
+									</script>
+								<?php endif; ?>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			</article>			
 
 			<h2>Processus de migration automatique d'un Wordpress d'un serveur A vers un serveur B en FTP</h2>
 
@@ -2730,13 +2764,28 @@ Class Wp_Migration {
 	public function wp_update()
 	{
 
+		$content = file_get_contents('https://github.com/Aigleblanc/wp-migration-url/raw/master/migration.php');
 
+		file_put_contents('migration.php', $content);
+
+		return TRUE;
 	}
 
 	public function wp_check_update()
 	{
+		$content = file_get_contents('https://github.com/Aigleblanc/wp-migration-url/raw/master/version.json');
+		$version = json_decode($content);
 
+		$retour['version_courante'] = $this->_version;
+		$retour['version_enligne'] 	= $version->version;
 
+		if($retour['version_courante'] != $retour['version_enligne']) {
+			$retour['maj_dipso'] = TRUE;
+		} else {
+			$retour['maj_dipso'] = FALSE;
+		}
+
+		return $retour;
 	}	
 
 	/**
