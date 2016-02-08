@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://viky.fr
  *
- * @version 2.5.1 codename Eulalie
+ * @version 2.5 codename Eulalie
 */
 
 /**
@@ -640,8 +640,8 @@ if(isset($_POST['api_call'])) {
 							<ul>
 								<li>Votre version : <?php echo $update['version_courante']; ?></li>
 								<li>Derniere version disponnible : <?php echo $update['version_enligne']; ?></li>
+								<?php if($update['maj_dipso'] == TRUE): ?>
 								<li>
-									<?php if($update['maj_dipso'] == TRUE): ?>
 									<form id="action_update" method="post">
 										<button type="submit" id="go_action_update" class="btn btn-default">Effecuer la mise a jour</button>
 									</form>
@@ -652,10 +652,13 @@ if(isset($_POST['api_call'])) {
 											}
 											sendform('action_update', donnees, 'Effecuer la mise a jour du script');
 											event.preventDefault();
+											$(document).ajaxSuccess(function() {
+												setTimeout(function(){ window.location.reload(); }, 2000);
+											});
 										});
 									</script>
-								<?php endif; ?>
 								</li>
+								<?php endif; ?>
 							</ul>
 						</div>
 					</div>
