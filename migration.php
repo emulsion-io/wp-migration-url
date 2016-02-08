@@ -338,6 +338,19 @@ if(isset($_POST['action_creation_hash'])) {
 	}
 }
 
+if(isset($_POST['action_update'])) {
+	if(!empty($_POST['action_update'])) {
+
+		$retour_update 	= $migration->wp_update();
+
+		if($retour_update TRUE) {
+			$migration->retour(array('message' => 'La mise a jour du script s\'est effectué avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'effectuer la mise a jour.'), FALSE);
+		}	
+	}
+}
+
 /**
  * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
  */
@@ -1696,6 +1709,7 @@ Class Wp_Migration {
 	var $_wp_lang,
 		$_wp_api,
 		$_wp_dir_core,
+		$_version,
 		$_file_destination,
 		$_file_sql,
 		$_file_log,
@@ -1718,6 +1732,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
+		$this->_version 			= '2.5.1';
 		$this->_wp_lang 			= 'fr_FR';
 		$this->_wp_api 				= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core 		= 'core/';
@@ -2710,6 +2725,18 @@ Class Wp_Migration {
 		}
 
 		return FALSE;
+	}
+
+	public function wp_update()
+	{
+
+
+	}
+
+	public function wp_check_update()
+	{
+
+
 	}	
 
 	/**
