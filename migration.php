@@ -465,7 +465,7 @@ if(isset($_POST['action_migration'])) {
 			$migration->retour(array('message' => 'Erreur SQL : Impossible d\'effectuer le Dump SQL.'), FALSE);
 		}		
 
-		// Exporte Les fichiers dans le Zip avec le SQL
+		// Exporte Les fichiers dans le Zip
 		$retour_export_zip = $migration->wp_export_file();
 
 		if($retour_export_zip === FALSE) {
@@ -1878,6 +1878,7 @@ Class Wp_Migration {
 			ssh2_auth_password($connection, $opts['user_ftp'], $opts['ftp_pass']);
 
 			ssh2_scp_send($connection, 'migration.php', rtrim($opts['ftp_folder'], '/').'/migration.php', 0644);
+			ssh2_scp_send($connection, $this->_file_sql, rtrim($opts['ftp_folder'], '/').'/'.$this->_file_sql, 0644);
 			ssh2_scp_send($connection, $file, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, 0644);
 
 			return TRUE;
@@ -1902,6 +1903,7 @@ Class Wp_Migration {
 
 		// Envoie le fichier migration.php qui sert d'api distante
 		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/migration.php', 'migration.php', FTP_ASCII);
+		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$this->_file_sql, $this->_file_sql, FTP_ASCII);
 		// Envoie le fichier contenant le site a migrer
 		if (ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, $file, FTP_ASCII)) {
 			ftp_close($conn_id);
