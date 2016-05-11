@@ -465,12 +465,14 @@ if(isset($_POST['action_migration'])) {
 			$migration->retour(array('message' => 'Erreur SQL : Impossible d\'effectuer le Dump SQL.'), FALSE);
 		}		
 
-		// Exporte Les fichiers dans le Zip
+		// Exporte Les fichiers dans le Zip (La migration ne se fait plus via zip mais directement en FTP)
+		/*		
 		$retour_export_zip = $migration->wp_export_file();
 
 		if($retour_export_zip === FALSE) {
 			$migration->retour(array('message' => 'Erreur ZIP : Impossible d\'effectuer le ZIP.'), FALSE);
 		}
+		*/
 
 		// Envoie les fichiers sur le serveur FTP distant
 		$ftp_migration_retour = $migration->wp_ftp_migration($opts_migration);
@@ -589,6 +591,14 @@ if(isset($_POST['api_call'])) {
 		<![endif]-->
 		<style type="text/css">
 			.menushow { cursor: pointer; }
+			div.col-md-12 > h3:first-child {
+				border-style: solid;
+    			border-width: 1px;
+    			border-color: #ffccbc;
+    			padding: 3px;
+    			background-color: #fbe9e7;
+    			border-radius: 5px;
+			}
 		</style>
 	</head>
 	<body>
@@ -596,7 +606,7 @@ if(isset($_POST['api_call'])) {
 			<header class="row">
 				<div class="col-md-12">
 					<div class="jumbotron">
-						<h1>Migration Wordpress Easy</h1>
+						<h1>ToolBox Wordpress</h1>
 						<p>La boite a outils pour Wordpress</p>
 					</div>
 				</div>
@@ -609,7 +619,7 @@ if(isset($_POST['api_call'])) {
 							<h3 class="panel-title">Important</h3> 
 						</div>
 						<div class="panel-body">
-						Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectuer vos modifications.
+						Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectué vos modifications.
 						</div>
 					</div>
 				</div>
@@ -619,7 +629,7 @@ if(isset($_POST['api_call'])) {
 				<div class="col-md-12">
 					<div class="panel panel-warning">
 						<div class="panel-heading"> 
-							<h3 class="panel-title">Info Serveur</h3> 
+							<h3 class="panel-title">Information serveur</h3> 
 						</div>
 						<div class="panel-body">
 							<ul>
@@ -637,7 +647,7 @@ if(isset($_POST['api_call'])) {
 				<div class="col-md-12">
 					<div class="panel panel-warning">
 						<div class="panel-heading"> 
-							<h3 class="panel-title">Info Script</h3> 
+							<h3 class="panel-title">Information sur ce script</h3> 
 						</div>
 						<div class="panel-body">
 							<ul>
@@ -699,7 +709,7 @@ if(isset($_POST['api_call'])) {
 								<span class="help-block">Exemple : http://test.com/web/clients/monclient</span>
 							</div>
 							<div class="form-group">
-								<button id="go_action_migration_testsite" type="submit" class="btn btn-default">Tester l'existance du site</button>
+								<button id="go_action_migration_testsite" type="submit" class="btn btn-default">Tester la validité de l'url</button>
 							</div>
 						</form>
 						<script>
@@ -790,11 +800,11 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</article>
 
-			<h2>Outils de manipulation et de realisation de tache pour Wordpress.</h2>
+			<h2>Télécharger et/ou installer une nouvelle version de Wordpress sur votre serveur</h2>
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Telecharge et extrait une installation de Wordpress avec possibilité de l'installer</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Telecharger et extraire un Wordpress avec possibilité de l'installer</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -802,7 +812,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Telecharge, extrait et installe un Wordpress derniere version en date depuis le site officiel</li>
+									<li>Telecharge, extrait et instale un Wordpress dans la derniere version du site officiel</li>
 								</ul>
 							</div>
 						</div>
@@ -924,69 +934,11 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</article>
 
-			<article class="row">
-				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Ecriture des nouvelles Urls</h3>
-					<div style="display:none;">
-						<div class="panel panel-info">
-							<div class="panel-heading"> 
-								<h3 class="panel-title">Ce que fait cet assistant</h3> 
-							</div>
-							<div class="panel-body">
-								<ul>
-									<li>Modification des URLs dans la table wp_option, home et siteurl sont affectés</li>
-									<li>Modification des URLs dans la table wp_posts, guid et post_content sont affectés</li>
-									<li>Modification des URLs dans la table wp_postmeta, toutes les meta_value auront la nouvelle URL</li>
-								</ul>
-							</div>
-						</div>
-
-						<form id="action_change_url" method="post">
-							<div class="form-group">
-								<label for="old">Ancienne URL</label>
-								<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
-							</div>
-							<div class="form-group">
-								<label for="new">Nouvelle URL</label>
-								<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>">
-							</div>
-							<?php if($wp_exist == TRUE) : ?>
-							<div class="form-group">
-								<button type="submit" id="go_action_change_url" class="btn btn-default">Mettre a jour</button>
-							</div>
-							<?php else: ?>
-							<div class="panel panel-warning">
-								<div class="panel-heading"> 
-									<h3 class="panel-title">Information</h3> 
-								</div>
-								<div class="panel-body">
-									<ul>
-										<li>Wordpress n'est pas installé sur ce serveur.</li>
-									</ul>
-								</div>
-							</div>					
-							<?php endif; ?>
-						</form>
-						<script>
-							$( "#action_change_url" ).submit(function( event ) {
-								var donnees = {
-									'action_change_url'	: 'ok',
-									'old' 				: $('#old').val(),
-									'new' 				: $('#new').val(),
-								}
-								sendform('action_change_url', donnees, 'Ecriture des nouvelles Urls');
-								event.preventDefault();
-							});
-						</script>
-					</div>
-				</div>
-			</article>
-
 	        <h2>Export</h2>
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Creation d'une archive de vos fichiers</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Créer une archive des fichiers du repertoire courant</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1002,7 +954,7 @@ if(isset($_POST['api_call'])) {
 						<form id="action_exporter" method="post">
 							<?php if($wp_exist == TRUE) : ?>
 							<div class="form-group">
-								<button id="go_action_exporter" type="submit" class="btn btn-default">Creer le Zip des fichiers</button>
+								<button id="go_action_exporter" type="submit" class="btn btn-default">Creer le Zip</button>
 							</div>
 							<?php else: ?>
 							<div class="panel panel-warning">
@@ -1045,7 +997,7 @@ if(isset($_POST['api_call'])) {
 
 	        <article class="row">
 	           	<div class="col-md-12">
-	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Exporte la base de données de votre Wordpress</h3>
+	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Exporter la base de données de votre installation Wordpress</h3>
 	           	    <div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1053,7 +1005,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 							    <ul>
-							    	<li>Extrait la base données</li>
+							    	<li>Extrait la base données de votre installation courante</li>
 							    </ul>
 							</div>
 						</div>
@@ -1114,7 +1066,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 							    <ul>
-							    	<li>Extrait l'ensemble de vos fichiers dans le dossier courant</li>
+							    	<li>Importe et extrait l'ensemble de vos fichiers dans le dossier courant</li>
 							    </ul>
 							</div>
 						</div>
@@ -1122,7 +1074,7 @@ if(isset($_POST['api_call'])) {
 						<form id="action_importer" method="post">
 							<?php if(file_exists($migration->_file_destination)): ?>
 							<div class="form-group">
-								<button id="go_action_importer" type="submit" class="btn btn-default">Extraire les fichiers dans le dossier courant</button>
+								<button id="go_action_importer" type="submit" class="btn btn-default">Importer et extraire les fichiers</button>
 							</div>
 							<?php endif; ?>
 						</form>
@@ -1203,6 +1155,64 @@ if(isset($_POST['api_call'])) {
 
 			<h2>Outils</h2>
 
+			<article class="row">
+				<div class="col-md-12">
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Modifier les Urls de votre installation Wordpress</h3>
+					<div style="display:none;">
+						<div class="panel panel-info">
+							<div class="panel-heading"> 
+								<h3 class="panel-title">Ce que fait cet assistant</h3> 
+							</div>
+							<div class="panel-body">
+								<ul>
+									<li>Modifie les URLs dans la table wp_option, home et siteurl sont affectés</li>
+									<li>Modifie les URLs dans la table wp_posts, guid et post_content sont affectés</li>
+									<li>Modifie les URLs dans la table wp_postmeta, toutes les meta_value auront la nouvelle URL</li>
+								</ul>
+							</div>
+						</div>
+
+						<form id="action_change_url" method="post">
+							<div class="form-group">
+								<label for="old">Ancienne URL</label>
+								<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>">
+							</div>
+							<div class="form-group">
+								<label for="new">Nouvelle URL</label>
+								<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>">
+							</div>
+							<?php if($wp_exist == TRUE) : ?>
+							<div class="form-group">
+								<button type="submit" id="go_action_change_url" class="btn btn-default">Mettre a jour</button>
+							</div>
+							<?php else: ?>
+							<div class="panel panel-warning">
+								<div class="panel-heading"> 
+									<h3 class="panel-title">Information</h3> 
+								</div>
+								<div class="panel-body">
+									<ul>
+										<li>Wordpress n'est pas installé sur ce serveur.</li>
+									</ul>
+								</div>
+							</div>					
+							<?php endif; ?>
+						</form>
+						<script>
+							$( "#action_change_url" ).submit(function( event ) {
+								var donnees = {
+									'action_change_url'	: 'ok',
+									'old' 				: $('#old').val(),
+									'new' 				: $('#new').val(),
+								}
+								sendform('action_change_url', donnees, 'Ecriture des nouvelles Urls');
+								event.preventDefault();
+							});
+						</script>
+					</div>
+				</div>
+			</article>
+
 	        <article class="row">
 	           	<div class="col-md-12">
 	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Creer le fichier HTACCESS wordpress</h3>
@@ -1239,7 +1249,7 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Efface toutes les revisions de votre wordpress</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Effacer toutes les revisions de votre Wordpress</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1285,7 +1295,7 @@ if(isset($_POST['api_call'])) {
 
 	        <article class="row">
 	           	<div class="col-md-12">
-	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Efface tous les commentaires non validés</h3>
+	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Effacer tous les commentaires non validés ( spam )</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1293,7 +1303,8 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 							    <ul>
-							    	<li>Efface tous les commentaires non validés</li>
+							    	<li>Efface tous les commentaires que vous n'avez pas validés</li>
+							    	<li>Permet de supprimer tres simplement une vague de spam</li>
 							    </ul>
 							</div>
 						</div>
@@ -1331,7 +1342,7 @@ if(isset($_POST['api_call'])) {
 
 	        <article class="row">
 	           	<div class="col-md-12">
-	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Installe les plugins de votre choix</h3>
+	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Installer les plugins de votre choix</h3>
 	           	    <div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1339,7 +1350,9 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 							    <ul>
-							    	<li>Installe les plugins listé par une virgule</li>
+							    	<li>Instale tous les plugins public de votre choix</li>
+							    	<li>vous retrouverez tous les plugins Wordpress public sur ce site : https://fr.wordpress.org/plugins/</li>
+							    	<li>Merci de séparer les noms par une virgule</li>
 							    </ul>
 							</div>
 						</div>
@@ -1347,7 +1360,7 @@ if(isset($_POST['api_call'])) {
 						<form id="action_plug_install" method="post">
 							<div class="form-group">
 								<label for="plug_install_liste">Liste des plugins</label>
-								<input type="text" class="form-control" id="plug_install_liste" name="plug_install_liste" placeholder="" value="">
+								<input type="text" class="form-control" id="plug_install_liste" name="plug_install_liste" placeholder="Merci de séparer les noms par une virgule" value="">
 							</div>
 
 							<?php if($wp_exist == TRUE) : ?>
@@ -1383,7 +1396,7 @@ if(isset($_POST['api_call'])) {
 
 	         <article class="row">
 	           	<div class="col-md-12">
-	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Supprime les themes defaut de Wordpress</h3>
+	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Supprime les themes installé par defaut de Wordpress</h3>
 	           	    <div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1391,6 +1404,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 							    <ul>
+							    	<li>Supprime l'ensemble des themes suivant : </li>
 							    	<li>twentyfourteen</li>
 							    	<li>twentythirteen</li>
 							    	<li>twentytwelve</li>
@@ -1433,7 +1447,7 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Ajouter un utilisateur</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Ajouter un administrateur a votre installation</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1441,7 +1455,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Ajouter un Super Admin</li>
+									<li>Ajouter un Super Admin dans la base de donnees de votre installation courante</li>
 								</ul>
 							</div>
 						</div>
@@ -1540,7 +1554,7 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Purger Fichiers Wordpress</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Supprimer toutes les traces de fichiers de Wordpress</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1548,14 +1562,14 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Supprime tous les fichiers</li>
+									<li>Efface tous les fichiers correspondant a l'installation d'un Wordpress</li>
 								</ul>
 							</div>
 						</div>
 
 						<form id="action_purge" method="post">
 							<div class="form-group">
-								<button id="go_action_purge" type="submit" class="btn btn-default">Purger les fichiers</button>
+								<button id="go_action_purge" type="submit" class="btn btn-default">Effacer les fichiers</button>
 							</div>
 						</form>
 						<script>
@@ -1573,7 +1587,7 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Purger SQL Wordpress</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Supprime toutes les tables de la base de données de Wordpress</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1581,14 +1595,14 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Supprime toutes les tables</li>
+									<li>Supprime toutes les tables de Wordpress de votre base de données</li>
 								</ul>
 							</div>
 						</div>
 
 						<form id="action_purge_sql" method="post">
 							<div class="form-group">
-								<button id="go_action_purge_sql" type="submit" class="btn btn-default">Purger les tables</button>
+								<button id="go_action_purge_sql" type="submit" class="btn btn-default">Effacer les tables</button>
 							</div>
 						</form>
 						<script>
@@ -1614,7 +1628,9 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Creer un fichier de hash du dossier courant</li>
+									<li>Creer un fichier contenant le hash de tous les fichiers presents dans le dossier courant</li>
+									<li>Ce fichier permet de comparer l'etat des fichiers entre le moment de la creation du hash et celle de la comparaison</li>
+									<li>Ceci permet de savoir si des fichiers ont été modifié</li>
 								</ul>
 							</div>
 						</div>
@@ -1639,7 +1655,7 @@ if(isset($_POST['api_call'])) {
 
 			<article class="row">
 				<div class="col-md-12">
-					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Test du Hashs des fichiers</h3>
+					<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Comparaison du Hashs des fichiers</h3>
 					<div style="display:none;">
 						<div class="panel panel-info">
 							<div class="panel-heading"> 
@@ -1647,7 +1663,7 @@ if(isset($_POST['api_call'])) {
 							</div>
 							<div class="panel-body">
 								<ul>
-									<li>Compare tous les fichiers</li>
+									<li>Compare les fichiers actuels au precedent hash réaslisé</li>
 								</ul>
 							</div>
 						</div>
@@ -1762,6 +1778,7 @@ Class Wp_Migration {
 		$_file_destination,
 		$_file_sql,
 		$_file_log,
+		$_file_log_ftp,
 		$_current_rep,
 		$_fileswp;
 
@@ -1781,13 +1798,14 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version 			= '2.5.1';
+		$this->_version 			= '2.6.0';
 		$this->_wp_lang 			= 'fr_FR';
 		$this->_wp_api 				= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core 		= 'core/';
 		$this->_file_destination 	= 'migration_file.zip';
 		$this->_file_sql 			= 'migration_bdd.sql';
 		$this->_file_log 			= 'logfile.log';
+		$this->_file_log_ftp 		= 'ftp.log';
 		$this->_current_rep 		= getcwd();
 		$this->_fileswp				= array(
 			'wp-activate.php',
@@ -1913,19 +1931,12 @@ Class Wp_Migration {
 			return FALSE;
 		}
 
-		// Envoie le fichier migration.php qui sert d'api distante
-		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/migration.php', 'migration.php', FTP_ASCII);
-		ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$this->_file_sql, $this->_file_sql, FTP_ASCII);
-		// Envoie le fichier contenant le site a migrer
-		if (ftp_put($conn_id, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, $file, FTP_ASCII)) {
-			ftp_close($conn_id);
+		// Envoie de tous les fichiers en FTP
+		$this->ftp_putAll($conn_id, '.', rtrim($opts['ftp_folder'], '/'));
+		
+		ftp_close($conn_id);
 
-			return TRUE;
-		} else {
-			ftp_close($conn_id);
-
-			return FALSE;
-		}
+		return TRUE;
 	}
 
 	/**
@@ -1935,6 +1946,7 @@ Class Wp_Migration {
 
 		@unlink($this->_file_destination);
 		@unlink($this->_file_sql);
+		@unlink($this->_file_log_ftp);
 
 		return TRUE;
 	}
@@ -2901,6 +2913,25 @@ Class Wp_Migration {
 
 		return $result;
 	}	
+
+	public function ftp_putAll($conn_id, $src_dir, $dst_dir) {
+	   $d = dir($src_dir);
+	   while($file = $d->read()) { // do this for each file in the directory
+	       if ($file != "." && $file != "..") { // to prevent an infinite loop
+	           if (is_dir($src_dir."/".$file)) { // do the following if it is a directory
+	               if (!@ftp_nlist($conn_id, $dst_dir."/".$file)) {
+	                   ftp_mkdir($conn_id, $dst_dir."/".$file); // create directories that do not yet exist
+	               }
+	               $this->ftp_putAll($conn_id, $src_dir."/".$file, $dst_dir."/".$file); // recursive part
+	           } else {
+	               $upload = ftp_put($conn_id, $dst_dir."/".$file, $src_dir."/".$file, FTP_BINARY); // put the files
+	           }
+	           // ecrit dans le fichier ftp.log le fichier en court d'up
+	           file_put_contents($this->_file_log_ftp, date('d-m-Y h:i:s')." : ".$src_dir."/".$file, FILE_APPEND);
+	       }
+	   }
+	   $d->close();
+	}
 
 	/**
 	 * Creer des Zip recursivement en utilisant les fonctions systemes
