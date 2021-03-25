@@ -6,9 +6,12 @@ wp-*.php
 wp-content/
 wp-admin/
 wp-includes/
+core/
 /index.php
 /xmlrpc.php
 /readme.html
 /license.txt
 /migration_file.zip
 /migration_bdd.sql
+vendor/
+composer.lock

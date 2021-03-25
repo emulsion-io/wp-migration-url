@@ -1,0 +1,7 @@
+{
+   "require": {
+      "codeless/jugglecode": "1.0.0",
+      "nikic/php-parser": "0.9.5",
+      "codeless/logmore": ">=0.8.3"
+   }
+}
