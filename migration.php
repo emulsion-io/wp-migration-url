@@ -585,18 +585,13 @@ if(isset($_POST['api_call'])) {
 
 		<title>Migration Wordpress Easy</title>
 
-		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">		<link href='https://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" href="/css/bootstrap.css" crossorigin="anonymous">
 
 		<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 		<script src="//cdn.jsdelivr.net/npm/sweetalert2@10"></script>
-		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
-
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
+		
 		<style type="text/css">
-			body {
-				color: #a2a2a2;
-				background-color: #171717;
-			}
-
 			.menushow { cursor: pointer; }
 			div.col-md-12 > h3:first-child {
 				border-style: solid;
@@ -610,9 +605,50 @@ if(isset($_POST['api_call'])) {
 	</head>
 	<body>
 		<div class="container">
+
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+			<a class="navbar-brand" href="#">Navbar</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+			<div class="collapse navbar-collapse" id="navbarColor02">
+				<ul class="navbar-nav mr-auto">
+					<li class="nav-item active">
+					<a class="nav-link" href="#">Home
+						<span class="sr-only">(current)</span>
+					</a>
+					</li>
+					<li class="nav-item">
+					<a class="nav-link" href="#">Features</a>
+					</li>
+					<li class="nav-item">
+					<a class="nav-link" href="#">Pricing</a>
+					</li>
+					<li class="nav-item">
+					<a class="nav-link" href="#">About</a>
+					</li>
+					<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Dropdown</a>
+					<div class="dropdown-menu">
+						<a class="dropdown-item" href="#">Action</a>
+						<a class="dropdown-item" href="#">Another action</a>
+						<a class="dropdown-item" href="#">Something else here</a>
+						<div class="dropdown-divider"></div>
+						<a class="dropdown-item" href="#">Separated link</a>
+					</div>
+					</li>
+				</ul>
+				<form class="form-inline my-2 my-lg-0">
+					<input class="form-control mr-sm-2" type="text" placeholder="Search">
+					<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
+				</form>
+			</div>
+			</nav>
+
 			<header class="row">
-				<div class="col-md-12">
-					<div class="jumbotron">
+				<div class="col-12">
+					<div class="jumbotron mt-5">
 						<h1>ToolBox Wordpress</h1>
 						<p>La boite a outils pour Wordpress</p>
 					</div>
@@ -620,70 +656,66 @@ if(isset($_POST['api_call'])) {
 			</header>
 
 			<article class="row">
-				<div class="col-md-12">
-					<div class="panel panel-warning">
-						<div class="panel-heading"> 
-							<h3 class="panel-title">Important</h3> 
-						</div>
-						<div class="alert alert-secondary" role="alert">
+				<div class="col-12">
+					<div class="alert alert-dismissible alert-primary" role="alert">
 						Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectué vos modifications.
-						</div>
 					</div>
 				</div>
 			</article>
 
 			<article class="row">
-				<div class="col-md-12">
-					<div class="panel panel-warning">
-						<div class="panel-heading"> 
-							<h3 class="panel-title">Information serveur</h3> 
-						</div>
-						<div class="panel-body">
-							<ul>
-								<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
-								<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
-								<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
-								<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
-							</ul>
+				<div class="col-6">
+					<div class="card border-info mb-3" >
+						<div class="card-header">Serveur</div>
+						<div class="card-body">
+							<h4 class="card-title">Informations : </h4>
+							<div class="card-text">
+								<ul>
+									<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
+									<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
+									<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
+									<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
+								</ul>
+							</div>
 						</div>
 					</div>
 				</div>
-			</article>
 
-			<article class="row">
-				<div class="col-md-12">
-					<div class="panel panel-warning">
-						<div class="panel-heading"> 
-							<h3 class="panel-title">Information sur ce script</h3> 
-						</div>
-						<div class="panel-body">
-							<ul>
-								<li>Votre version : <?php echo $update['version_courante']; ?></li>
-								<li>Derniere version disponnible : <?php echo $update['version_enligne']; ?></li>
-								<?php if($update['maj_dipso'] == TRUE): ?>
-								<li>
-									<form id="action_update" method="post">
-										<button type="submit" id="go_action_update" class="btn btn-default">Effecuer la mise a jour</button>
-									</form>
-									<script>
-										$( "#action_update" ).submit(function( event ) {
-											var donnees = {
-												'action_update'	: 'ok'
-											}
-											sendform('action_update', donnees, 'Effecuer la mise a jour du script');
-											event.preventDefault();
-											$(document).ajaxSuccess(function() {
-												setTimeout(function(){ window.location.reload(); }, 2000);
+				<div class="col-6">
+					<div class="card border-info mb-3" >
+						<div class="card-header">Script</div>
+						<div class="card-body">
+							<h4 class="card-title">Informations : </h4>
+							<div class="card-text">
+								<ul>
+									<li>Votre version : <?php echo $update['version_courante']; ?></li>
+									<li>Derniere version disponnible : <?php echo $update['version_enligne']; ?></li>
+									<?php if($update['maj_dipso'] == TRUE): ?>
+									<li>
+										<form id="action_update" method="post">
+											<button type="submit" id="go_action_update" class="btn btn-default">Effecuer la mise a jour</button>
+										</form>
+										<script>
+											$( "#action_update" ).submit(function( event ) {
+												var donnees = {
+													'action_update'	: 'ok'
+												}
+												sendform('action_update', donnees, 'Effecuer la mise a jour du script');
+												event.preventDefault();
+												$(document).ajaxSuccess(function() {
+													setTimeout(function(){ window.location.reload(); }, 2000);
+												});
 											});
-										});
-									</script>
-								</li>
-								<?php endif; ?>
-							</ul>
+										</script>
+									</li>
+									<?php endif; ?>
+								</ul>
+							</div>
 						</div>
 					</div>
 				</div>
-			</article>			
+
+			</article>
 
 			<h2>Processus de migration automatique d'un Wordpress d'un serveur A vers un serveur B en FTP</h2>
 
