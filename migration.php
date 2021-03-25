@@ -1752,55 +1752,71 @@ if(isset($_POST['api_call'])) {
 
 				$( this ).parent().next().toggle();
 			});
+			
 			function sendform(id, donnees, title) {
 				$("#go_"+id).button('loading');
-				swal({
-					title: title,
-					text: "Ete-vous sur de vouloir effectuer cette action ?",
-					type: "info",
-					showCancelButton: true,
-					closeOnConfirm: false,
-					showLoaderOnConfirm: true,
-				},
-				function(){
-					$.ajax({
-						url: "migration.php",
-						type : 'post',
-						data : donnees,
-						dataType: 'json',
-						success: function(retour){
-							$("#go_"+id).button('reset');
-							
-							if(retour.success == true)
-							{
-								swal("Good job!", retour.data.message, "success");
 
-								// condition particuliaire d'actions a realiser en fonction des forms
+				Swal.queue([{
+					title: 'Etes-vous sur de vouloir effectuer cette action ?',
+					confirmButtonText: 'Effectuer l\'action',
+					text:	'',
+					showLoaderOnConfirm: true,
+					preConfirm: () => {
+
+						$.ajax({
+							url: "migration.php",
+							type : 'post',
+							data : donnees,
+							dataType: 'json',
+							success: function(retour){
+								$("#go_"+id).button('reset');
 								
-								//-- Affiche la zone d'info pour la migration
-								if(id == 'action_migration_testsite') {
-									$('#action_migration').show();
+								if(retour.success == true)
+								{
+									Swal.insertQueueStep({
+										icon: 'success',
+										title: 'Good job!',
+										text: retour.data.message
+									})
+									// condition particuliaire d'actions a realiser en fonction des forms
+									
+									//-- Affiche la zone d'info pour la migration
+									if(id == 'action_migration_testsite') {
+										$('#action_migration').show();
+									}
+
+								} else {
+									Swal.insertQueueStep({
+										icon: 'error',
+										title: 'Error!',
+										text: retour.data.message
+									})
 								}
 
-
-							} else {
-								swal("Error!", retour.data.message, "error");
+								if (typeof retour.data.context != 'undefined') {
+									$( "#"+id ).prepend( '<div class="alert alert-success" role="alert">' + retour.data.context + '</div>' );
+								}
+							}, 
+							timeout: function(){
+								$("#go_"+id).button('reset');
+								Swal.insertQueueStep({
+										icon: 'error',
+										title: 'Timeout!',
+										text: "Le temps d'attente est trop long, demande expiré, renter votre chance."
+									})
+							},
+							error: function(){
+								$("#go_"+id).button('reset');
+								Swal.insertQueueStep({
+										icon: 'error',
+										title: 'Error!',
+										text: "Une erreur est intervenu dans le traitement de la requête, renter votre chance."
+								})
 							}
+						});
+					}
+				}])
 
-							if (typeof retour.data.context != 'undefined') {
-								$( "#"+id ).prepend( '<div class="alert alert-success" role="alert">' + retour.data.context + '</div>' );
-							}
-						}, 
-						timeout: function(){
-							$("#go_"+id).button('reset');
-							swal("Timeout!", "Le temps d'attente est trop long, demande expiré, renter votre chance.", "error");
-						},
-						error: function(){
-							$("#go_"+id).button('reset');
-							swal("Error!", "Une erreur est intervenu dans le traitement de la requête, renter votre chance.", "error");
-						}
-					});
-				});
 			}
 		</script>
    </body>
