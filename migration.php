@@ -1758,7 +1758,7 @@ if(isset($_POST['api_call'])) {
 
 				Swal.queue([{
 					title: 'Etes-vous sur de vouloir effectuer cette action ?',
-					confirmButtonText: 'Effectuer l\'action',
+					confirmButtonText: 'Oui',
 					text:	'',
 					showLoaderOnConfirm: true,
 					preConfirm: () => {
