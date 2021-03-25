@@ -973,7 +973,7 @@ if(isset($_POST['api_call'])) {
 				</div>
 			</article>
 
-	        <h2>Export</h2>
+	      <h2>Export</h2>
 
 			<article class="row">
 				<div class="col-md-12">
@@ -1095,102 +1095,102 @@ if(isset($_POST['api_call'])) {
 
 			<h2>Import</h2>
 
-	        <article class="row">
-	           	<div class="col-md-12">
-	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Importation de votre Zip</h3>
-	           	    <div style="display:none;">
-						<div class="panel panel-info">
-							<div class="panel-heading"> 
-								<h3 class="panel-title">Ce que fait cet assistant</h3> 
-							</div>
-							<div class="panel-body">
-							    <ul>
-							    	<li>Importe et extrait l'ensemble de vos fichiers dans le dossier courant</li>
-							    </ul>
-							</div>
+			<article class="row">
+				<div class="col-md-12">
+						<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Importation de votre Zip</h3>
+						<div style="display:none;">
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
 						</div>
+						<div class="panel-body">
+								<ul>
+								<li>Importe et extrait l'ensemble de vos fichiers dans le dossier courant</li>
+								</ul>
+						</div>
+					</div>
 
-						<form id="action_importer" method="post">
-							<?php if(file_exists($migration->_file_destination)): ?>
-							<div class="form-group">
-								<button id="go_action_importer" type="submit" class="btn btn-default">Importer et extraire les fichiers</button>
-							</div>
-							<?php endif; ?>
-						</form>
-						<script>
-							$( "#action_importer" ).submit(function( event ) {
-								var donnees = {
-									action_importer	: 'ok',
-								}
-								sendform('action_importer', donnees, 'Importation de votre Zip');
-								event.preventDefault();
-							});
-						</script>
-
-						<?php if(!file_exists($migration->_file_destination)): ?>
-						<div class="panel panel-warning">
-							<div class="panel-heading"> 
-								<h3 class="panel-title">Information</h3> 
-							</div>
-							<div class="panel-body">
-							    <ul>
-							    	<li>Le fichier <?=$migration->_file_destination;?> n'est pas present sur le serveur</li>
-							    </ul>
-							</div>
+					<form id="action_importer" method="post">
+						<?php if(file_exists($migration->_file_destination)): ?>
+						<div class="form-group">
+							<button id="go_action_importer" type="submit" class="btn btn-default">Importer et extraire les fichiers</button>
 						</div>
 						<?php endif; ?>
-					</div>
-	            </div>
-	        </article>
-			
-	        <article class="row">
-	           	<div class="col-md-12">
-	           	    <h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Importation de votre Base de données</h3>
-					<div style="display:none;">
-						<div class="panel panel-info">
-							<div class="panel-heading"> 
-								<h3 class="panel-title">Ce que fait cet assistant</h3> 
-							</div>
-							<div class="panel-body">
-							    <ul>
-							    	<li>Permet d'importer les données de votre dump dans base de données sur votre serveur</li>
-							    	<li>La base de données indiquée dans le fichier de configuration doit exister</li>
-							    </ul>
-							</div>
+					</form>
+					<script>
+						$( "#action_importer" ).submit(function( event ) {
+							var donnees = {
+								action_importer	: 'ok',
+							}
+							sendform('action_importer', donnees, 'Importation de votre Zip');
+							event.preventDefault();
+						});
+					</script>
+
+					<?php if(!file_exists($migration->_file_destination)): ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
 						</div>
+						<div class="panel-body">
+								<ul>
+								<li>Le fichier <?=$migration->_file_destination;?> n'est pas present sur le serveur</li>
+								</ul>
+						</div>
+					</div>
+					<?php endif; ?>
+				</div>
+				</div>
+			</article>
+		
+			<article class="row">
+				<div class="col-md-12">
+						<h3><span class="menushow glyphicon glyphicon-menu-down" aria-hidden="true"></span> Importation de votre Base de données</h3>
+				<div style="display:none;">
+					<div class="panel panel-info">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Ce que fait cet assistant</h3> 
+						</div>
+						<div class="panel-body">
+								<ul>
+								<li>Permet d'importer les données de votre dump dans base de données sur votre serveur</li>
+								<li>La base de données indiquée dans le fichier de configuration doit exister</li>
+								</ul>
+						</div>
+					</div>
 
-						<form id="action_importer_sql" method="post">
-							<?php if(file_exists($migration->_file_sql)): ?>
-							<div class="form-group">
-								<button id="go_action_importer_sql" type="submit" class="btn btn-default">Importer la base de données</button>
-							</div>
-							<?php endif; ?>
-						</form>
-						<script>
-							$( "#action_importer_sql" ).submit(function( event ) {
-								var donnees = {
-									action_importer_sql	: 'ok',
-								}
-								sendform('action_importer_sql', donnees, 'Importation de votre Base de données');
-								event.preventDefault();
-							});
-						</script>
-
-						<?php if(!file_exists($migration->_file_sql)): ?>
-						<div class="panel panel-warning">
-							<div class="panel-heading"> 
-								<h3 class="panel-title">Information</h3> 
-							</div>
-							<div class="panel-body">
-							    <ul>
-							    	<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
-							    </ul>
-							</div>
+					<form id="action_importer_sql" method="post">
+						<?php if(file_exists($migration->_file_sql)): ?>
+						<div class="form-group">
+							<button id="go_action_importer_sql" type="submit" class="btn btn-default">Importer la base de données</button>
 						</div>
 						<?php endif; ?>
+					</form>
+					<script>
+						$( "#action_importer_sql" ).submit(function( event ) {
+							var donnees = {
+								action_importer_sql	: 'ok',
+							}
+							sendform('action_importer_sql', donnees, 'Importation de votre Base de données');
+							event.preventDefault();
+						});
+					</script>
+
+					<?php if(!file_exists($migration->_file_sql)): ?>
+					<div class="panel panel-warning">
+						<div class="panel-heading"> 
+							<h3 class="panel-title">Information</h3> 
+						</div>
+						<div class="panel-body">
+								<ul>
+								<li>Le fichier <?=$migration->_file_sql;?> n'est pas present sur le serveur</li>
+								</ul>
+						</div>
 					</div>
-	            </div>
-	        </article>
+					<?php endif; ?>
+				</div>
+				</div>
+			</article>
 
 			<h2>Outils</h2>
 
@@ -1837,16 +1837,16 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version 			= '2.6.0';
-		$this->_wp_lang 			= 'fr_FR';
-		$this->_wp_api 				= 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
-		$this->_wp_dir_core 		= 'core/';
-		$this->_file_destination 	= 'migration_file.zip';
-		$this->_file_sql 			= 'migration_bdd.sql';
-		$this->_file_log 			= 'logfile.log';
-		$this->_file_log_ftp 		= 'ftp.log';
-		$this->_current_rep 		= getcwd();
-		$this->_fileswp				= array(
+		$this->_version          = '2.6.0';
+		$this->_wp_lang          = 'fr_FR';
+		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
+		$this->_wp_dir_core      = 'core/';
+		$this->_file_destination = 'migration_file.zip';
+		$this->_file_sql         = 'migration_bdd.sql';
+		$this->_file_log         = 'logfile.log';
+		$this->_file_log_ftp     = 'ftp.log';
+		$this->_current_rep      = getcwd();
+		$this->_fileswp          = array(
 			'wp-activate.php',
 			'wp-blog-header.php',
 			'wp-comments-post.php',
