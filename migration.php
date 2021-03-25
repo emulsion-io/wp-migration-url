@@ -592,6 +592,11 @@ if(isset($_POST['api_call'])) {
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
 
 		<style type="text/css">
+			body {
+				color: #a2a2a2;
+				background-color: #171717;
+			}
+
 			.menushow { cursor: pointer; }
 			div.col-md-12 > h3:first-child {
 				border-style: solid;
@@ -620,7 +625,7 @@ if(isset($_POST['api_call'])) {
 						<div class="panel-heading"> 
 							<h3 class="panel-title">Important</h3> 
 						</div>
-						<div class="panel-body">
+						<div class="alert alert-secondary" role="alert">
 						Pensez a supprimer le fichier migration.php de votre installation Wordpress apres avoir effectué vos modifications.
 						</div>
 					</div>
@@ -1702,7 +1707,7 @@ if(isset($_POST['api_call'])) {
 			</article>			
 
 			<footer class="row">
-				<div class="col-md-12">Developpé par Fabrice Simonet || Interface de Matthieu Andre</div>
+				<div class="col-md-12">Developpé par Fabrice Simonet || https://emulsion.io</div>
 			</footer>
 		</div>
 		<script>
@@ -2792,23 +2797,31 @@ Class Wp_Migration {
 		return FALSE;
 	}
 
+	/**
+	 * Telecharge la nouvelle version de migration.php
+	 */
 	public function wp_update()
 	{
 
-		$content = file_get_contents('https://github.com/Aigleblanc/wp-migration-url/raw/master/migration.php');
+		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/migration.php');
 
 		file_put_contents('migration.php', $content);
 
 		return TRUE;
 	}
 
+	/**
+	 * 
+	 * Verifie si une nouvelle version est dispo.
+	 * 
+	 */
 	public function wp_check_update()
 	{
-		$content = file_get_contents('https://github.com/Aigleblanc/wp-migration-url/raw/master/version.json');
+		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/version.json');
 		$version = json_decode($content);
 
 		$retour['version_courante'] = $this->_version;
-		$retour['version_enligne'] 	= $version->version;
+		$retour['version_enligne']  = $version->version;
 
 		if($retour['version_courante'] != $retour['version_enligne']) {
 			$retour['maj_dipso'] = TRUE;
