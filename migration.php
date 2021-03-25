@@ -2,13 +2,13 @@
 
 /**
  * @author Fabrice Simonet
- * @link http://viky.fr
+ * @link http://emulsion.io
  *
- * @version 2.5 codename Eulalie
+ * @version 2.6
 */
 
 /**
- * Copyright (c) 2016 Fabrice Simonet, Matthieu Andre
+ * Copyright (c) 2021 Fabrice Simonet
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -28,22 +28,22 @@
 /**
  * Variable de status d'execution du script
  */
-$retour_url 			= FALSE;
-$retour_migration 		= FALSE;
-$retour_migration_api 	= FALSE;
-$retour_migration_log 	= FALSE;
-$retour_export 			= FALSE;
-$retour_import 			= FALSE;
-$retour_export_sql 		= FALSE;
-$retour_import_sql 		= FALSE;
-$retour_htaccess 		= FALSE;
-$retour_dl 				= FALSE;
-$retour_dl_full			= FALSE;
-$retour_clean_revision 	= FALSE;
-$retour_clean_spam 		= FALSE;
-$retour_plug_install 	= FALSE;
-$retour_delete_theme 	= FALSE;
-$retour_add_user 		= FALSE;
+$retour_url            = FALSE;
+$retour_migration      = FALSE;
+$retour_migration_api  = FALSE;
+$retour_migration_log  = FALSE;
+$retour_export         = FALSE;
+$retour_import         = FALSE;
+$retour_export_sql     = FALSE;
+$retour_import_sql     = FALSE;
+$retour_htaccess       = FALSE;
+$retour_dl             = FALSE;
+$retour_dl_full        = FALSE;
+$retour_clean_revision = FALSE;
+$retour_clean_spam     = FALSE;
+$retour_plug_install   = FALSE;
+$retour_delete_theme   = FALSE;
+$retour_add_user       = FALSE;
 
 $migration = new Wp_Migration();
 
