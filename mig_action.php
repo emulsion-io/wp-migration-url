@@ -294,12 +294,33 @@ if(isset($_POST['action_update'])) {
 if(isset($_POST['action_dl_zip'])) {
 	if(!empty($_POST['action_dl_zip'])) {
 
-		$retour_action_dl = $migration->wp_download_zip();
+		$retour_action_dl_zip = $migration->wp_download_zip();
 
-		if($retour_action_dl === TRUE) {
+		if($retour_action_dl_zip === TRUE) {
 			$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
 		} else {
 			$migration->retour(array('message' => 'Le Zip existe deja, ou impossible d\'ecrire sur le serveur.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
+ * 
+ * 2021/03/24
+ * 
+ * Status : En cours de test
+ * 
+ */
+if(isset($_POST['action_dl_zip_extract'])) {
+	if(!empty($_POST['action_dl_zip_extract'])) {
+
+		$retour_action_dl_zip_extract = $migration->wp_download();
+
+		if($retour_action_dl_zip_extract === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
 		}
 	}
 }

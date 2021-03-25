@@ -191,11 +191,7 @@ Class Wp_Migration {
 		// Get WordPress data
 		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
 
-		if( ! mkdir($this->_wp_dir_core, 0775)){
-			return FALSE;
-		}
-
-		file_put_contents( $this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents( $wp->download ) );
+		file_put_contents( 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents( $wp->download ) );
 
 		return TRUE;
 	}

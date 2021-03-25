@@ -56,10 +56,11 @@ $retour_delete_theme   = FALSE;
 $retour_add_user       = FALSE;
 
 include('mig_class.php');
-include('mig_action.php');
 
 $migration = new Wp_Migration();
 $update    = $migration->wp_check_update();
+
+include('mig_action.php');
 
 /**
  * Si un fichier wp-config.php existe, le script comprend que WP est deja installé
@@ -186,7 +187,7 @@ if(file_exists('wp-config.php')) {
 					<div class="card border-info mb-3" >
 						<div class="card-header">Serveur</div>
 						<div class="card-body">
-							<h4 class="card-title">Informations : </h4>
+							<h4 class="card-title"></h4>
 							<div class="card-text">
 								<ul>
 									<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
@@ -203,7 +204,7 @@ if(file_exists('wp-config.php')) {
 					<div class="card border-info mb-3" >
 						<div class="card-header">Script</div>
 						<div class="card-body">
-							<h4 class="card-title">Informations : </h4>
+							<h4 class="card-title"></h4>
 							<div class="card-text">
 								<ul>
 									<li>Votre version : <?php echo $update['version_courante']; ?></li>
@@ -240,7 +241,7 @@ if(file_exists('wp-config.php')) {
 					<div class="card border-info mb-3" >
 						<div class="card-header">Wordpress</div>
 						<div class="card-body">
-							<h4 class="card-title">Informations : </h4>
+							<h4 class="card-title"></h4>
 							<div class="card-text">
 								<?php if($wp_exist === false) : ?>
 									Wordpress n'est pas présent sur ce serveur, voulez-vous l'installer ?
@@ -260,9 +261,18 @@ if(file_exists('wp-config.php')) {
 											</script>
 										</div>
 										<div class="col-6">
-											<form id="action_update" method="post">
-												<button type="submit" id="go_action_update" class="btn btn-primary">Télecharger et Installer Wordpress sur le serveur</button>
+											<form id="action_dl_zip_extract" method="post">
+												<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Télecharger et extraire Wordpress sur le serveur</button>
 											</form>
+											<script>
+												$( "#action_dl_zip_extract" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_zip_extract	: 'ok',
+													}
+													sendform('action_dl_zip_extract', donnees, 'Telecharge, extrait et install un Wordpress');
+												});
+											</script>
 										</div>
 									</div>
 							

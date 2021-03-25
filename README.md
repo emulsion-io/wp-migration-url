@@ -1,30 +1,19 @@
-# wp-migration-url
+# wp-migration
 
-## Migration et outils de gestion wordpress
+## Utilisation
 
-Utilisation :
+Pour utiliser le tools, utilisez `migration.php` dans `/dist/`
 
-* Il suffit de placer le fichier migration.php dans le dossier de wordpress la ou ce trouve le fichier wp-config.php
+## Developpement
 
+Pour developper sur le projet, 
 
-### Migration du Wordpress sur un autre serveur
+```
+composer install
+```
 
-### Telecharge, extrait et install un Wordpress officiel depuis le site wordpress.com
+Pour merger les fichiers de dev
 
-### Creation d'une archive avec les fichiers de Wordpress
-
-### Exporte la base de données de votre Wordpress
-
-### Importation de votre Zip
-
-### Importation de votre Base de données
-
-### Creer le fichier HTACCESS wordpress
-
-### Efface toutes les revisions de votre wordpress
-
-### Efface tous les commentaires non validés
-
-### Installe les plugins de votre choix
-
-### Supprime les themes defaut de Wordpress
+```
+php compile.php
+```
