@@ -648,7 +648,7 @@ if(isset($_POST['api_call'])) {
 
 			<header class="row">
 				<div class="col-12">
-					<div class="jumbotron mt-5">
+					<div class="jumbotron mt-4">
 						<h1>ToolBox Wordpress</h1>
 						<p>La boite a outils pour Wordpress</p>
 					</div>
@@ -690,26 +690,26 @@ if(isset($_POST['api_call'])) {
 								<ul>
 									<li>Votre version : <?php echo $update['version_courante']; ?></li>
 									<li>Derniere version disponnible : <?php echo $update['version_enligne']; ?></li>
-									<?php if($update['maj_dipso'] == TRUE): ?>
-									<li>
-										<form id="action_update" method="post">
-											<button type="submit" id="go_action_update" class="btn btn-default">Effecuer la mise a jour</button>
-										</form>
-										<script>
-											$( "#action_update" ).submit(function( event ) {
-												var donnees = {
-													'action_update'	: 'ok'
-												}
-												sendform('action_update', donnees, 'Effecuer la mise a jour du script');
-												event.preventDefault();
-												$(document).ajaxSuccess(function() {
-													setTimeout(function(){ window.location.reload(); }, 2000);
-												});
-											});
-										</script>
-									</li>
-									<?php endif; ?>
 								</ul>
+								<?php if($update['maj_dipso'] == TRUE): ?>
+							
+									<form id="action_update" method="post">
+										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour</button>
+									</form>
+									<script>
+										$( "#action_update" ).submit(function( event ) {
+											var donnees = {
+												'action_update'	: 'ok'
+											}
+											sendform('action_update', donnees, 'Effecuer la mise a jour du script');
+											event.preventDefault();
+											$(document).ajaxSuccess(function() {
+												setTimeout(function(){ window.location.reload(); }, 2000);
+											});
+										});
+									</script>
+								<?php endif; ?>
+
 							</div>
 						</div>
 					</div>
@@ -2849,8 +2849,10 @@ Class Wp_Migration {
 	 */
 	public function wp_check_update()
 	{
-		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/version.json');
+		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/version.json'.'?'.mt_rand());
 		$version = json_decode($content);
+
+		//var_dump($version); exit;
 
 		$retour['version_courante'] = $this->_version;
 		$retour['version_enligne']  = $version->version;
