@@ -1,5 +1,9 @@
 # wp-migration
 
+[![Generic badge](https://img.shields.io/badge/Wokring-No-red.svg)](#)  
+
+DANGER :: Cette refonte n'est pas fonctionnelle pour le moment !  
+
 ## Utilisation
 
 Pour utiliser le tools, utilisez `migration.php` dans `/dist/`

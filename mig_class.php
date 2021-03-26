@@ -185,6 +185,11 @@ Class Wp_Migration {
 
 	/**
 	 * Recupere le Zip de la derniere version en ligne de Wordpress
+	 * 
+	 * 2021/03/25
+	 * 
+	 * Status : Ok
+	 * 
 	 */
 	public function wp_download_zip(){
 
@@ -200,6 +205,11 @@ Class Wp_Migration {
 	 * Recupere le Zip de la derniere version en ligne de Wordpress
 	 * Extrait le Zip de la version telechargé
 	 * Supprime les fichiers telechargés et non utiles
+	 * 
+	 * 2021/03/25
+	 * 
+	 * Status : Ok
+	 * 
 	 */
 	public function wp_download(){
 
@@ -236,7 +246,7 @@ Class Wp_Migration {
 
 			rmdir( 'wordpress' );
 			$this->rrmdir( 'core' );
-			unlink( './license.txt' ); 
+			unlink( './license.txt' );
 			unlink( './readme.html' );
 			unlink( './wp-content/plugins/hello.php' );
 

@@ -1,5 +1,144 @@
 <?php 
 
+
+/**
+ * 
+ * 2021/03/24
+ * 
+ * Status : OK
+ * 
+ */
+if(isset($_POST['action_update'])) {
+	if(!empty($_POST['action_update'])) {
+
+		$retour_update 	= $migration->wp_update();
+
+		if($retour_update === TRUE) {
+			$migration->retour(array('message' => 'La mise a jour du script s\'est effectué avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'effectuer la mise a jour.'), FALSE);
+		}	
+	}
+}
+
+/**
+ * ACTION : Telecharge Le dernier zip a jour de Wordpress
+ * 
+ * 2021/03/24
+ * 
+ * Status : OK
+ * 
+ */
+if(isset($_POST['action_dl_zip'])) {
+	if(!empty($_POST['action_dl_zip'])) {
+
+		$retour_action_dl_zip = $migration->wp_download_zip();
+
+		if($retour_action_dl_zip === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Le Zip existe deja, ou impossible d\'ecrire sur le serveur.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel
+ * 
+ * 2021/03/24
+ * 
+ * Status : OK
+ * 
+ */
+if(isset($_POST['action_dl_zip_extract'])) {
+	if(!empty($_POST['action_dl_zip_extract'])) {
+
+		$retour_action_dl_zip_extract = $migration->wp_download();
+
+		if($retour_action_dl_zip_extract === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
+ * 
+ * 2021/03/24
+ * 
+ * Status : install_full : En cours de test
+ * 
+ */
+if(isset($_POST['action_dl'])) {
+	if(!empty($_POST['action_dl'])) {
+/*
+		if($_POST['install_full'] == "false") {
+
+			$retour_action_dl = $migration->wp_download();
+
+			if($retour_action_dl === TRUE) {
+				$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
+			} else {
+				$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+			}
+
+		} elseif($_POST['install_full'] == "true") {
+
+			$opts['prefix']         = $_POST['prefix'];
+			$opts['dbname']         = $_POST['dbname'];
+			$opts['uname']          = $_POST['uname'];
+			$opts['pwd']            = $_POST['pwd'];
+			$opts['dbhost']         = $_POST['dbhost'];
+			$opts['weblog_title']   = $_POST['weblog_title'];
+			$opts['user_login']     = $_POST['user_login'];
+			$opts['admin_email']    = $_POST['admin_email'];
+			$opts['admin_password'] = $_POST['admin_password'];
+			$opts['debug']          = ($_POST['debug'] == 'true')? 1 : 0 ;
+			$opts['debug_display']  = ($_POST['debug_display'] == 'true')? 1 : 0 ;
+			$opts['debug_log']      = ($_POST['debug_log'] == 'true')? 1 : 0 ;
+			$opts['blog_public']    = ($_POST['blog_public'] == 'true')? 1 : 0 ;
+
+			// assignation des variables de connexion pour effectuer un test si la bdd existe
+			$options = array(
+				$opts['dbhost'],
+				$opts['dbname'],
+				$opts['uname'],
+				$opts['pwd'],
+				$opts['prefix']
+			);
+			$migration->set_var_wp($options);
+
+			$retour_action_bdd_existe = $migration->wp_test_bdd();
+			if($retour_action_bdd_existe === FALSE) {
+				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
+			}
+
+			$migration->wp_download();
+			$migration->wp_install_config($opts);
+			$migration->wp_install_wp($opts);
+			$migration->wp_htaccess();
+
+			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Action inconnue'), FALSE);
+		}
+		*/
+	}
+}
+
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************* EN COURS DE TEST *****************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+
+
 /**
  * ACTION : Permet de changer les Urls dans la config de Wordpress ainsi que dans les articles, pages et tous les contenus
  */
@@ -257,135 +396,6 @@ if(isset($_POST['action_creation_hash'])) {
 		} else {
 			$migration->retour(array('message' => 'Impossible de creer le fichier de hashs.'), FALSE);
 		}	
-	}
-}
-
-
-/**
- * 
- * 2021/03/24
- * 
- * Status : OK
- * 
- */
-if(isset($_POST['action_update'])) {
-	if(!empty($_POST['action_update'])) {
-
-		$retour_update 	= $migration->wp_update();
-
-		if($retour_update === TRUE) {
-			$migration->retour(array('message' => 'La mise a jour du script s\'est effectué avec succes.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Impossible d\'effectuer la mise a jour.'), FALSE);
-		}	
-	}
-}
-
-
-
-/**
- * ACTION : Telecharge Le dernier zip a jour de Wordpress
- * 
- * 2021/03/24
- * 
- * Status : En cours de test
- * 
- */
-if(isset($_POST['action_dl_zip'])) {
-	if(!empty($_POST['action_dl_zip'])) {
-
-		$retour_action_dl_zip = $migration->wp_download_zip();
-
-		if($retour_action_dl_zip === TRUE) {
-			$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Le Zip existe deja, ou impossible d\'ecrire sur le serveur.'), FALSE);
-		}
-	}
-}
-
-/**
- * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
- * 
- * 2021/03/24
- * 
- * Status : En cours de test
- * 
- */
-if(isset($_POST['action_dl_zip_extract'])) {
-	if(!empty($_POST['action_dl_zip_extract'])) {
-
-		$retour_action_dl_zip_extract = $migration->wp_download();
-
-		if($retour_action_dl_zip_extract === TRUE) {
-			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
-		}
-	}
-}
-
-/**
- * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
- * 
- * 2021/03/24
- * 
- * Status : En cours de test
- * 
- */
-if(isset($_POST['action_dl'])) {
-	if(!empty($_POST['action_dl'])) {
-
-		if($_POST['install_full'] == "false") {
-
-			$retour_action_dl = $migration->wp_download();
-
-			if($retour_action_dl === TRUE) {
-				$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
-			} else {
-				$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
-			}
-
-		} elseif($_POST['install_full'] == "true") {
-
-			$opts['prefix']         = $_POST['prefix'];
-			$opts['debug']          = ($_POST['debug'] == 'true')? 1 : 0 ;
-			$opts['debug_display']  = ($_POST['debug_display'] == 'true')? 1 : 0 ;
-			$opts['debug_log']      = ($_POST['debug_log'] == 'true')? 1 : 0 ;
-			$opts['dbname']         = $_POST['dbname'];
-			$opts['uname']          = $_POST['uname'];
-			$opts['pwd']            = $_POST['pwd'];
-			$opts['dbhost']         = $_POST['dbhost'];
-			$opts['weblog_title']   = $_POST['weblog_title'];
-			$opts['user_login']     = $_POST['user_login'];
-			$opts['admin_email']    = $_POST['admin_email'];
-			$opts['blog_public']    = ($_POST['blog_public'] == 'true')? 1 : 0 ;
-			$opts['admin_password'] = $_POST['admin_password'];
-
-			// assignation des variables de connexion pour effectuer un test si la bdd existe
-			$options = array(
-				$opts['dbhost'],
-				$opts['dbname'],
-				$opts['uname'],
-				$opts['pwd'],
-				$opts['prefix']
-			);
-			$migration->set_var_wp($options);
-
-			$retour_action_bdd_existe = $migration->wp_test_bdd();
-			if($retour_action_bdd_existe === FALSE) {
-				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
-			}
-
-			$migration->wp_download();
-			$migration->wp_install_config($opts);
-			$migration->wp_install_wp($opts);
-			$migration->wp_htaccess();
-
-			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Action inconnue'), FALSE);
-		}
 	}
 }
 
