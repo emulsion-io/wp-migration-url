@@ -1,6 +1,6 @@
 # wp-migration
 
-[![Generic badge](https://img.shields.io/badge/Wokring-No-red.svg)](#)  
+[![Generic badge](https://img.shields.io/badge/Working-No-red.svg)](#)  
 
 DANGER :: Cette refonte n'est pas fonctionnelle pour le moment !  
 
