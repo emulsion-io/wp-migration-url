@@ -38,22 +38,24 @@ ini_set('display_errors', '1');
 /**
  * Variable de status d'execution du script
  */
-$retour_url            = FALSE;
-$retour_migration      = FALSE;
-$retour_migration_api  = FALSE;
-$retour_migration_log  = FALSE;
-$retour_export         = FALSE;
-$retour_import         = FALSE;
-$retour_export_sql     = FALSE;
-$retour_import_sql     = FALSE;
-$retour_htaccess       = FALSE;
-$retour_dl             = FALSE;
-$retour_dl_full        = FALSE;
-$retour_clean_revision = FALSE;
-$retour_clean_spam     = FALSE;
-$retour_plug_install   = FALSE;
-$retour_delete_theme   = FALSE;
-$retour_add_user       = FALSE;
+$retour_url                   = FALSE;
+$retour_migration             = FALSE;
+$retour_migration_api         = FALSE;
+$retour_migration_log         = FALSE;
+$retour_export                = FALSE;
+$retour_import                = FALSE;
+$retour_export_sql            = FALSE;
+$retour_import_sql            = FALSE;
+$retour_htaccess              = FALSE;
+$retour_dl                    = FALSE;
+$retour_dl_full               = FALSE;
+$retour_clean_revision        = FALSE;
+$retour_clean_spam            = FALSE;
+$retour_plug_install          = FALSE;
+$retour_delete_theme          = FALSE;
+$retour_add_user              = FALSE;
+$retour_action_dl_zip         = FALSE;
+$retour_action_dl_zip_extract = FALSE;
 
 include('mig_class.php');
 
@@ -83,7 +85,8 @@ if(file_exists('wp-config.php')) {
 	$migration->set_var_wp($options);
 
 	// Recupere les informations sur le WP courant
-	$site_url = $migration->wp_get_info();
+	$site_url = $migration->wp_get_info("siteurl");
+
 	// Annonce 
 	$wp_exist = TRUE;
 
@@ -104,65 +107,59 @@ if(file_exists('wp-config.php')) {
 
 		<title>Migration Wordpress Easy</title>
 
-		<link rel="stylesheet" href="/css/bootstrap.css" crossorigin="anonymous">
-
+		<link rel="stylesheet" href="https://cdn.emulsion.io/wp-migration/css/bootstrap.css">
 		<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 		<script src="//cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/themes@4.0.3/dark/dark.min.css">
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
 		
 		<style type="text/css">
 			.menushow { cursor: pointer; }
-			div.col-md-12 > h3:first-child {
-				border-style: solid;
-    			border-width: 1px;
-    			border-color: #ffccbc;
-    			padding: 3px;
-    			background-color: #fbe9e7;
-    			border-radius: 5px;
-			}
 		</style>
 	</head>
 	<body>
 		<div class="container">
 
-		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-			<a class="navbar-brand" href="#">Navbar</a>
-			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
+			<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+				<a class="navbar-brand" href="#">Toolbox</a>
+				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+					<span class="navbar-toggler-icon"></span>
+				</button>
 
-			<div class="collapse navbar-collapse" id="navbarColor02">
-				<ul class="navbar-nav mr-auto">
-					<li class="nav-item active">
-					<a class="nav-link" href="#">Home
-						<span class="sr-only">(current)</span>
-					</a>
-					</li>
-					<li class="nav-item">
-					<a class="nav-link" href="#">Features</a>
-					</li>
-					<li class="nav-item">
-					<a class="nav-link" href="#">Pricing</a>
-					</li>
-					<li class="nav-item">
-					<a class="nav-link" href="#">About</a>
-					</li>
-					<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Dropdown</a>
-					<div class="dropdown-menu">
-						<a class="dropdown-item" href="#">Action</a>
-						<a class="dropdown-item" href="#">Another action</a>
-						<a class="dropdown-item" href="#">Something else here</a>
-						<div class="dropdown-divider"></div>
-						<a class="dropdown-item" href="#">Separated link</a>
-					</div>
-					</li>
-				</ul>
-				<form class="form-inline my-2 my-lg-0">
-					<input class="form-control mr-sm-2" type="text" placeholder="Search">
-					<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-				</form>
-			</div>
+				<div class="collapse navbar-collapse" id="navbar">
+					<ul class="navbar-nav mr-auto">
+						<li class="nav-item active">
+							<a class="nav-link" href="#">Home</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" href="https://emulsion.io">Emulsion.io</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" href="#about">About</a>
+						</li>
+						<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Outils</a>
+						<div class="dropdown-menu">
+							<a class="dropdown-item open-tools" data-open="#tools-1" data-go="#go-tools-1">Telecharger et extraire un Wordpress avec possibilité de l'installer</a>
+							<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2">Modifier les Urls de votre installation Wordpress</a>
+							<a class="dropdown-item open-tools" data-open="#tools-3" data-go="#go-tools-3">Creer le fichier .htaccess</a>
+							<a class="dropdown-item open-tools" data-open="#tools-4" data-go="#go-tools-4">Effacer toutes les revisions de votre Wordpress</a>
+							<a class="dropdown-item open-tools" data-open="#tools-5" data-go="#go-tools-5">Effacer tous les commentaires non validés (Spam)</a>
+							<a class="dropdown-item open-tools" data-open="#tools-6" data-go="#go-tools-6">Installer les plugins de votre choix</a>
+							<a class="dropdown-item open-tools" data-open="#tools-7" data-go="#go-tools-7">Supprime les themes par defaut de Wordpress</a>
+							<a class="dropdown-item open-tools" data-open="#tools-8" data-go="#go-tools-8">Ajouter un administrateur a votre installation</a>
+							<div class="dropdown-divider"></div>
+							<a class="dropdown-item open-tools" data-open="#tools-9" data-go="#go-tools-9">Modifier le prefix des tables</a>
+							<a class="dropdown-item open-tools" data-open="#tools-10" data-go="#go-tools-10">Supprime toutes les fichiers de Wordpress</a>
+							<a class="dropdown-item open-tools" data-open="#tools-11" data-go="#go-tools-11">Supprime toutes les tables de la base de données de Wordpress</a>
+						</div>
+						</li>
+					</ul>
+					<form class="form-inline my-2 my-lg-0">
+						<input class="form-control mr-sm-2" type="text" placeholder="Search">
+						<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
+					</form>
+				</div>
 			</nav>
 
 			<header class="row">
@@ -183,9 +180,9 @@ if(file_exists('wp-config.php')) {
 			</article>
 
 			<article class="row">
-				<div class="col-6">
+				<div class="col-12 col-md-6">
 					<div class="card border-info mb-3" >
-						<div class="card-header">Serveur</div>
+						<div class="card-header">Votre Serveur</div>
 						<div class="card-body">
 							<h4 class="card-title"></h4>
 							<div class="card-text">
@@ -200,9 +197,9 @@ if(file_exists('wp-config.php')) {
 					</div>
 				</div>
 
-				<div class="col-6">
+				<div class="col-12 col-md-6">
 					<div class="card border-info mb-3" >
-						<div class="card-header">Script</div>
+						<div class="card-header">Ce Script</div>
 						<div class="card-body">
 							<h4 class="card-title"></h4>
 							<div class="card-text">
@@ -213,7 +210,7 @@ if(file_exists('wp-config.php')) {
 								<?php if($update['maj_dipso'] == TRUE): ?>
 							
 									<form id="action_update" method="post">
-										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour</button>
+										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour du script</button>
 									</form>
 									<script>
 										$( "#action_update" ).submit(function( event ) {
@@ -275,9 +272,11 @@ if(file_exists('wp-config.php')) {
 											</script>
 										</div>
 									</div>
-							
 								<?php else: ?>
-									Wordpress est présent sur ce serveur.
+									<ul>
+										<li>Wordpress est présent sur ce serveur.</li>
+										<li>Version installée de WP : <?= $wp_version; ?></li>
+									</ul>
 								<?php endif; ?>
 							</div>
 						</div>
@@ -305,7 +304,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-1" aria-expanded="false" aria-controls="tools-1">
+					<button id="go-tools-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-1" aria-expanded="false" aria-controls="tools-1">
 						Telecharger et extraire un Wordpress avec possibilité de l'installer
 					</button>
 				</div>
@@ -443,7 +442,7 @@ if(file_exists('wp-config.php')) {
 	
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress</button>
+					<buttonn id="go-tools-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress</buttonn>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-2">
@@ -497,21 +496,21 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-3" aria-expanded="false" aria-controls="tools-3">Creer le fichier .htaccess</button>
+					<button id="go-tools-3" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-3" aria-expanded="false" aria-controls="tools-3">Creer le fichier .htaccess</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-3">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Creer le fichier Htaccess avec la configuration de votre serveur automatiquement</li>
+									<li>Creer le fichier .htaccess avec la configuration de votre serveur automatiquement</li>
 									<li>Ajoute des regles de securité pour Wordpress</li>
 								</ul>
 							</div>
 
 							<form id="action_htaccess" method="post">
 								<div class="form-group">
-									<button id="go_action_htaccess" type="submit" class="btn btn-primary">Creer le fichier HTaccess</button>
+									<button id="go_action_htaccess" type="submit" class="btn btn-primary">Creer le fichier .htaccess</button>
 								</div>
 							</form>
 							<script>
@@ -519,7 +518,7 @@ if(file_exists('wp-config.php')) {
 									var donnees = {
 										'action_htaccess'	: 'ok'
 									}
-									sendform('action_htaccess', donnees, 'Creer le fichier HTACCESS');
+									sendform('action_htaccess', donnees, 'Creer le fichier .htaccess');
 									event.preventDefault();
 								});
 							</script>
@@ -530,7 +529,7 @@ if(file_exists('wp-config.php')) {
 			
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-4" aria-expanded="false" aria-controls="tools-4">Effacer toutes les revisions de votre Wordpress</button>
+					<button id="go-tools-4" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-4" aria-expanded="false" aria-controls="tools-4">Effacer toutes les revisions de votre Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-4">
@@ -570,7 +569,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-5" aria-expanded="false" aria-controls="tools-5">Effacer tous les commentaires non validés ( spam )</button>
+					<button id="go-tools-5" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-5" aria-expanded="false" aria-controls="tools-5">Effacer tous les commentaires non validés (Spam)</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-5">
@@ -610,7 +609,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-6" aria-expanded="false" aria-controls="tools-6">Installer les plugins de votre choix</button>
+					<button id="go-tools-6" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-6" aria-expanded="false" aria-controls="tools-6">Installer les plugins de votre choix</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-6">
@@ -657,7 +656,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les themes par defaut de Wordpress</button>
+					<button id="go-tools-7" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les themes par defaut de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7">
@@ -701,7 +700,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-8" aria-expanded="false" aria-controls="tools-8">Ajouter un administrateur a votre installation</button>
+					<button id="go-tools-8" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-8" aria-expanded="false" aria-controls="tools-8">Ajouter un administrateur a votre installation</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-8">
@@ -750,7 +749,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-9" aria-expanded="false" aria-controls="tools-9">Modifier le prefix des tables</button>
+					<button id="go-tools-9" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-9" aria-expanded="false" aria-controls="tools-9">Modifier le prefix des tables</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-9">
@@ -795,7 +794,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-10" aria-expanded="false" aria-controls="tools-10">Supprimer toutes les traces de fichiers de Wordpress</button>
+					<button id="go-tools-10" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-10" aria-expanded="false" aria-controls="tools-10">Supprimer toutes les fichiers de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-10">
@@ -827,7 +826,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-11" aria-expanded="false" aria-controls="tools-11">Supprime toutes les tables de la base de données de Wordpress</button>
+					<button id="go-tools-11" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-11" aria-expanded="false" aria-controls="tools-11">Supprime toutes les tables de la base de données de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-11">
@@ -872,7 +871,19 @@ if(file_exists('wp-config.php')) {
 
 				$( this ).parent().next().toggle();
 			});
+
+			$(".open-tools").on('click', function() {
+
+				$( $(this).attr('data-open') ).collapse();
+				scroll_to_anchor($(this).attr('data-go'));
+
+			});
 			
+			function scroll_to_anchor(anchor_id) {
+				var tag = $(anchor_id);
+				$('html,body').animate({scrollTop: tag.offset().top},'slow');
+			}
+
 			function sendform(id, donnees, title) {
 				$("#go_"+id).button('loading');
 
@@ -931,7 +942,6 @@ if(file_exists('wp-config.php')) {
 					},
  					allowOutsideClick: () => !Swal.isLoading()
 				}).then((result) => {
-					//console.log(result)
 					if (result.isConfirmed) {
 						Swal.fire({
 							icon: 'success',

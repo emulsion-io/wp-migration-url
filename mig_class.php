@@ -83,11 +83,11 @@ Class Wp_Migration {
 	/**
 	 * Recupere les informations sur le WP courant
 	 */
-	public function wp_get_info(){
+	public function wp_get_info(string $option = 'siteurl'){
 
 	    $bdd = Bdd::getInstance();
 
-		$req = $bdd->dbh->prepare('SELECT option_value FROM '.$this->_table_prefix.'options WHERE option_name = \'siteurl\';');
+		$req = $bdd->dbh->prepare('SELECT option_value FROM '.$this->_table_prefix.'options WHERE option_name = "' . $option . '";');
 		$req->execute();
 
 		return $req->fetch();
@@ -1349,20 +1349,20 @@ Class Wp_Migration {
 	 * @return bool true|false
 	 */
 	public function rrmdir($dir) {
-	    if (is_dir($dir)) {
-	    	$objects = scandir($dir);
-	    	foreach ($objects as $object) {
-	       		if ($object != "." && $object != "..") {
-	         		if (filetype($dir."/".$object) == "dir") $this->rrmdir($dir."/".$object); else unlink($dir."/".$object);
-	       		}
-	     	}
-	    	reset($objects);
-	    	rmdir($dir);
+		if (is_dir($dir)) {
+			$objects = scandir($dir);
+			foreach ($objects as $object) {
+				if ($object != "." && $object != "..") {
+					if (filetype($dir."/".$object) == "dir") $this->rrmdir($dir."/".$object); else unlink($dir."/".$object);
+				}
+			}
+			reset($objects);
+			rmdir($dir);
 
-	    	return TRUE;
-	   	}
+			return TRUE;
+		}
 
-	   	return FALSE;
+		return FALSE;
 	}
 
 	/**
@@ -1378,20 +1378,20 @@ Class Wp_Migration {
 	 * @param string 	$data 
 	 * @param bool 	$success
 	 */
-    public function retour($data = '', $success = TRUE)
-    {
+	public function retour($data = '', $success = TRUE)
+	{
 
-        $json = json_encode(array('success' => $success, 'data' => $data));
-        
-	    header('Access-Control-Allow-Origin: *');
-	    header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
-	    header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
-	    header('content-type: text/html; charset=utf-8');
+		$json = json_encode(array('success' => $success, 'data' => $data));
+			
+		header('Access-Control-Allow-Origin: *');
+		header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
+		header('content-type: text/html; charset=utf-8');
 
-	    echo $json;
-		
-        exit;
-    }	
+		echo $json;
+
+		exit;
+	}
 }
 
 class Bdd

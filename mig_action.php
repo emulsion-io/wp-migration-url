@@ -73,7 +73,7 @@ if(isset($_POST['action_dl_zip_extract'])) {
  */
 if(isset($_POST['action_dl'])) {
 	if(!empty($_POST['action_dl'])) {
-/*
+		
 		if($_POST['install_full'] == "false") {
 
 			$retour_action_dl = $migration->wp_download();
@@ -124,7 +124,6 @@ if(isset($_POST['action_dl'])) {
 		} else {
 			$migration->retour(array('message' => 'Action inconnue'), FALSE);
 		}
-		*/
 	}
 }
 

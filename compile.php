@@ -11,5 +11,6 @@ $j = new JuggleCode();
 $j->masterfile   = 'migration.php';
 $j->outfile      = 'dist/migration.php';
 $j->mergeScripts = true;
+$j->comments     = false;
 
 var_dump($j->run());
