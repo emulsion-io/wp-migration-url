@@ -45,6 +45,44 @@ if(isset($_POST['action_dl_zip'])) {
 }
 
 /**
+ * ACTION : Permet de modifier le fichier wp-config.php
+ * 
+ * Status : A tester | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_change_wpconfig'])) {
+	if(!empty($_POST['action_change_wpconfig'])) {
+
+		$retour_change_wpconfig = $migration->wp_change_wpconfig($_POST['db_name'], $_POST['db_user'], $_POST['db_password'], $_POST['db_host'], );
+
+		if($retour_change_wpconfig === TRUE) {
+			$migration->retour(array('message' => 'Le fichier wp-config.php a ete modifie avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier le fichier wp-config.php.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Permet de modifier le fichier wp-config.php en mode dev
+ * 
+ * Status : A tester | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_change_wpconfig_dev'])) {
+	if(!empty($_POST['action_change_wpconfig_dev'])) {
+
+		$retour_change_wpconfig_dev = $migration->wp_change_debug($_POST['debug'], $_POST['debug_display'], $_POST['debug_log']);
+
+		if($retour_change_wpconfig_dev === TRUE) {
+			$migration->retour(array('message' => 'Le fichier wp-config.php a ete modifie avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier le fichier wp-config.php.'), FALSE);
+		}
+	}
+}
+
+/**
  * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel
  * 
  * Status : OK | 2024-10-08

@@ -94,8 +94,6 @@ if(file_exists('wp-config.php')) {
 
 	define( 'WP_INSTALLING', true );
 
-	$migration->set_var_wp();
-
 	$wp_exist = TRUE;
 	$wp_exist_install = TRUE;
 
@@ -389,7 +387,7 @@ if(file_exists('wp-config.php')) {
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
 					<button id="go-tools-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-1" aria-expanded="false" aria-controls="tools-1">
-						Telecharger et extraire un Wordpress avec possibilité de l'installer
+						Télécharger et extraire un Wordpress avec possibilité de l'installer
 					</button>
 				</div>
 				<div class="col-12">
@@ -397,7 +395,7 @@ if(file_exists('wp-config.php')) {
 						<div class="card card-body">
 
 							<div class="text-warning mb-3">
-								Telecharge et extrait Wordpress dans sa derniere version du site officiel, et l'installe en remplissant les options.
+								Télécharge et extrait Wordpress dans sa derniere version du site officiel, et l'installe en remplissant les options.
 							</div>
 						
 							<form id="action_dl" method="post">
@@ -526,7 +524,133 @@ if(file_exists('wp-config.php')) {
 	
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<buttonn id="go-tools-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress</buttonn>
+					<buttonn id="go-tools-2-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2-2" aria-expanded="false" aria-controls="tools-2-2">Editer wp-config.php - Base de données</buttonn>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-2-2">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Modifie les informations de connexion de wp-config.php</li>
+								</ul>
+							</div>
+
+							<form id="action_change_wpconfig" method="post">
+								<div class="form-group">
+									<label for="db_name">DB_NAME</label>
+									<input type="text" class="form-control" id="db_name" name="db_name" placeholder="" value="" required>
+								</div>
+								<div class="form-group">
+									<label for="db_user">DB_USER</label>
+									<input type="text" class="form-control" id="db_user" name="db_user" placeholder="" value="" required>
+								</div>
+								<div class="form-group">
+									<label for="db_password">DB_PASSWORD</label>
+									<input type="text" class="form-control" id="db_password" name="db_password" placeholder="" value="" required>
+								</div>
+								<div class="form-group">
+									<label for="db_host">DB_HOST</label>
+									<input type="text" class="form-control" id="db_host" name="db_host" placeholder="" value="" required>
+								</div>
+								<?php if($wp_exist == TRUE) : ?>
+								<div class="form-group">
+									<button type="submit" id="go_action_change_wpconfig" class="btn btn-primary">Mettre a jour</button>
+								</div>
+								<?php else: ?>
+									<div class="alert alert-dismissible alert-danger mt-3">
+										<button type="button" class="close" data-dismiss="alert">&times;</button>
+										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
+									</div>
+								<?php endif; ?>
+							</form>
+							<script>
+								$( "#action_change_wpconfig" ).submit(function( event ) {
+									event.preventDefault();
+
+									var donnees = {
+										'action_change_wpconfig'	: 'ok',
+										'db_name' 				: $('#db_name').val(),
+										'db_user' 				: $('#db_user').val(),
+										'db_password' 			: $('#db_password').val(),
+										'db_host' 				: $('#db_host').val()
+									}
+									sendform('action_change_wpconfig', donnees, 'Ecriture des nouvelles informations BDD');
+									
+								});
+							</script>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<buttonn id="go-tools-2-3" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2-3" aria-expanded="false" aria-controls="tools-2-3">Editer wp-config.php - Options de développement</buttonn>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-2-3">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Modifie les informations de debug de wp-config.php</li>
+									<li>Debug : Affiche les erreurs PHP</li>
+									<li>Debug_display : Affiche les erreurs PHP a l'ecran</li>
+									<li>Debug_log : Ecrit les erreurs PHP dans un fichier</li>
+								</ul>
+							</div>
+
+							<form id="action_change_wpconfig_dev" method="post">
+
+								<div class="form-group form-check">
+									<input type="checkbox" id="edit_debug" name="debug" class="form-check-input" value="1" <?= ($migration->_debug) ? 'checked' : '' ; ?>> 
+									<label class="form-check-label" for="edit_debug">Debug</label>
+								</div>
+
+								<div class="form-group form-check">
+									<input type="checkbox" id="edit_debug_display" name="debug_display" class="form-check-input" value="1" <?= ($migration->_debug_display) ? 'checked' : '' ; ?>> 
+									<label class="form-check-label" for="edit_debug_display">Debug_display</label>
+								</div>
+
+								<div class="form-group form-check">
+									<input type="checkbox" id="edit_debug_log" name="debug_log" class="form-check-input" value="1" <?= ($migration->_debug_log) ? 'checked' : '' ; ?>> 
+									<label class="form-check-label" for="edit_debug_log">Debug_log</label>
+								</div>
+
+								<?php if($wp_exist == TRUE) : ?>
+								<div class="form-group">
+									<button type="submit" id="go_action_change_wpconfig_dev" class="btn btn-primary">Mettre a jour</button>
+								</div>
+								<?php else: ?>
+									<div class="alert alert-dismissible alert-danger mt-3">
+										<button type="button" class="close" data-dismiss="alert">&times;</button>
+										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
+									</div>
+								<?php endif; ?>
+							</form>
+							<script>
+								$( "#action_change_wpconfig_dev" ).submit(function( event ) {
+									event.preventDefault();
+
+									var donnees = {
+										'action_change_wpconfig_dev'	: 'ok',
+										'debug' 					: $('#edit_debug').is(':checked'),
+										'debug_display' 		: $('#edit_debug_display').is(':checked'),
+										'debug_log' 			: $('#edit_debug_log').is(':checked')
+									}
+									sendform('action_change_wpconfig_dev', donnees, 'Ecriture des nouvelles informations de debug');
+									
+								});
+							</script>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<buttonn id="go-tools-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2" aria-expanded="false" aria-controls="tools-2">Modifier les Urls - Dans la BDD</buttonn>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-2">
@@ -580,7 +704,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<buttonn id="go-tools-2-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2-1" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress en SQL</buttonn>
+					<buttonn id="go-tools-2-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2-1" aria-expanded="false" aria-controls="tools-2">Modifier les Urls - Génération des Rqs SQL</buttonn>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-2-1">
@@ -645,6 +769,7 @@ if(file_exists('wp-config.php')) {
 								<ul>
 									<li>Creer le fichier .htaccess avec la configuration de votre serveur automatiquement</li>
 									<li>Ajoute des regles de securité pour Wordpress</li>
+									<li>/!\ Ecrase le fichier .htaccess existant</li>
 								</ul>
 							</div>
 
@@ -676,15 +801,15 @@ if(file_exists('wp-config.php')) {
 						<div class="card card-body">
 							<div class="text-warning mb-4">
 								<ul>
-									<li>Efface les revisions des articles, des pages et de tous les contenus.</li>
-									<li>Les revisions sont des versions antérieures de vos page qui peuvent etre restaurer.</li>
+									<li>Efface les révisions* des articles, des pages et de tous les contenus.</li>
+									<li>* Les révisions sont des versions antérieures de vos contenus qui peuvent être restaurés.</li>
 								</ul>
 							</div>
 
 							<form id="action_clean_revision" method="post">
 								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
-									<button type="submit" id="go_action_clean_revision" class="btn btn-primary">Effacer les revisions</button>
+									<button type="submit" id="go_action_clean_revision" class="btn btn-primary">Effacer les révisions</button>
 								</div>
 								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
@@ -717,7 +842,7 @@ if(file_exists('wp-config.php')) {
 							<div class="text-warning mb-3">
 								<ul>
 									<li>Efface tous les commentaires que vous n'avez pas validés</li>
-									<li>Permet de supprimer tres simplement une vague de spam</li>
+									<li>Permet de supprimer très simplement une vague de spam</li>
 								</ul>
 							</div>
 
@@ -758,7 +883,7 @@ if(file_exists('wp-config.php')) {
 								<ul>
 									<li>Instale tous les plugins public de votre choix</li>
 									<li>vous retrouverez tous les plugins Wordpress public sur ce site : https://fr.wordpress.org/plugins/</li>
-									<li>Merci de séparer les noms par une virgule</li>
+									<li>Merci de séparer les noms par une virgule, utiliser le slug d'url en guise de nom.</li>
 								</ul>
 							</div>
 
@@ -816,7 +941,7 @@ if(file_exists('wp-config.php')) {
 							<form id="action_delete_theme" method="post">
 								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
-									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les themes</button>
+									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thêmes</button>
 								</div>
 								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
@@ -831,7 +956,7 @@ if(file_exists('wp-config.php')) {
 									var donnees = {
 										'action_delete_theme'	: 'ok'
 									}
-									sendform('action_delete_theme', donnees, 'Supprime les themes defaut de Wordpress');
+									sendform('action_delete_theme', donnees, 'Supprime les thêmes defaut de Wordpress');
 								});
 							</script>
 						</div>
@@ -848,7 +973,7 @@ if(file_exists('wp-config.php')) {
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Ajouter un Super Admin dans la base de donnees de votre installation</li>
+									<li>Ajouter un Super Admin dans la base de données de votre installation</li>
 								</ul>
 							</div>
 

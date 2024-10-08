@@ -17,6 +17,10 @@ Class Wp_Migration {
 		$_dbpassword,
 		$_table_prefix;
 
+	var $_debug,
+		$_debug_display,
+		$_debug_log;
+
 	/**
 	 * @var string $this->_wp_lang 				Langue Wordpress
 	 * @var string $this->_wp_api 				Url de l'api Wordpress
@@ -26,7 +30,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.0';
+		$this->_version          = '2.7.1';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
@@ -85,12 +89,23 @@ Class Wp_Migration {
 		preg_match("/define\(\s*'DB_COLLATE'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_collate);
 		preg_match("/\\\$table_prefix\s*=\s*'(.+?)'\s*;/", $config_content, $table_prefix_matches);
 
+		// chercher les lignes de debug
+		preg_match("/define\(\s*'WP_DEBUG'\s*,\s*'(.+?)'\s*\);/", $config_content, $debug);
+		preg_match("/define\(\s*'WP_DEBUG_DISPLAY'\s*,\s*'(.+?)'\s*\);/", $config_content, $debug_display);
+		preg_match("/define\(\s*'WP_DEBUG_LOG'\s*,\s*'(.+?)'\s*\);/", $config_content, $debug_log);
+
 		$this->_dbhost 			= $db_host[1];
+
 		$this->_dbname 			= $db_name[1];
 		$this->_dbuser 			= $db_user[1];
 		$this->_dbpassword 		= $db_password[1];
 		$this->_table_prefix 	= $table_prefix_matches[1];
 
+
+		$this->_debug = isset($debug[1]) ? filter_var($debug[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+		$this->_debug_display = isset($debug_display[1]) ? filter_var($debug_display[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+		$this->_debug_log = isset($debug_log[1]) ? filter_var($debug_log[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
+		
 		Config::write('db.host', $this->_dbhost);
 		Config::write('db.basename', $this->_dbname);
 		Config::write('db.user', $this->_dbuser);
@@ -112,6 +127,85 @@ Class Wp_Migration {
 		$req->execute();
 
 		return $req->fetch();
+	}
+
+	/**
+	 * Change les informations de la base de données dans le fichier de configuration
+	 * 
+	 * @param string $dbname 	Nom de la base de données
+	 * @param string $dbuser 	Nom de l'utilisateur de la base de données
+	 * @param string $dbpass 	Mot de passe de l'utilisateur de la base de données
+	 * @param string $dbhost 	Adresse du serveur de la base de données
+	 * 
+	 * @return bool true|false
+	 */
+	public function wp_change_wpconfig($dbname, $dbuser, $dbpass, $dbhost){
+		
+		// Chemin vers le fichier wp-config.php
+		$wp_config_file = 'wp-config.php';
+
+		// Si le fichier n'existe pas, on retourne une erreur
+		if (!file_exists($wp_config_file)) {
+			return false;
+		}
+
+		// Lire le contenu du fichier sans l'inclure
+		$config_content = file_get_contents($wp_config_file);
+
+		// Expression régulière pour capturer les constantes
+		preg_match("/define\(\s*'DB_NAME'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_name);
+		preg_match("/define\(\s*'DB_USER'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_user);
+		preg_match("/define\(\s*'DB_PASSWORD'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_password);
+		preg_match("/define\(\s*'DB_HOST'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_host);
+
+		// Remplacer les valeurs
+		$config_content = preg_replace("/define\(\s*'DB_NAME'\s*,\s*'(.+?)'\s*\);/", "define('DB_NAME', '".$dbname."');", $config_content);
+		$config_content = preg_replace("/define\(\s*'DB_USER'\s*,\s*'(.+?)'\s*\);/", "define('DB_USER', '".$dbuser."');", $config_content);
+		$config_content = preg_replace("/define\(\s*'DB_PASSWORD'\s*,\s*'(.+?)'\s*\);/", "define('DB_PASSWORD', '".$dbpass."');", $config_content);
+		$config_content = preg_replace("/define\(\s*'DB_HOST'\s*,\s*'(.+?)'\s*\);/", "define('DB_HOST', '".$dbhost."');", $config_content);
+
+		// Ecrire le contenu dans le fichier
+		file_put_contents($wp_config_file, $config_content);
+
+		return true;
+	}
+
+	/**
+	 * Change les informations de la base de données dans le fichier de configuration
+	 * 
+	 * @param string $debug 			Mode debug
+	 * @param string $debug_display 	Affichage des erreurs
+	 * @param string $debug_log 		Ecriture des erreurs dans un fichier log
+	 * 
+	 */
+	public function wp_change_debug($_debug, $_debug_display, $_debug_log){
+		
+
+		// Chemin vers le fichier wp-config.php
+		$wp_config_file = 'wp-config.php';
+
+		// Si le fichier n'existe pas, on retourne une erreur
+		if (!file_exists($wp_config_file)) {
+			return false;
+		}
+
+		// Lire le contenu du fichier sans l'inclure
+		$config_content = file_get_contents($wp_config_file);
+
+		// Expression régulière pour capturer les constantes
+		preg_match("/define\(\s*'WP_DEBUG'\s*,\s*(.+?)\s*\);/", $config_content, $debug);
+		preg_match("/define\(\s*'WP_DEBUG_DISPLAY'\s*,\s*(.+?)\s*\);/", $config_content, $debug_display);
+		preg_match("/define\(\s*'WP_DEBUG_LOG'\s*,\s*(.+?)\s*\);/", $config_content, $debug_log);
+
+		// Remplacer les valeurs
+		$config_content = preg_replace("/define\(\s*'WP_DEBUG'\s*,\s*(.+?)\s*\);/", "define('WP_DEBUG', '".$_debug."');", $config_content);
+		$config_content = preg_replace("/define\(\s*'WP_DEBUG_DISPLAY'\s*,\s*(.+?)\s*\);/", "define('WP_DEBUG_DISPLAY', '".$_debug_display."');", $config_content);
+		$config_content = preg_replace("/define\(\s*'WP_DEBUG_LOG'\s*,\s*(.+?)\s*\);/", "define('WP_DEBUG_LOG', '".$_debug_log."');", $config_content);
+
+		// Ecrire le contenu dans le fichier
+		file_put_contents($wp_config_file, $config_content);
+
+		return true;
 	}
 
 	/**
