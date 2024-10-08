@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://emulsion.io
  *
- * @version 2.7.0
+ * @version 2.7.2
 */
 
 /**	
@@ -957,6 +957,118 @@ if(file_exists('wp-config.php')) {
 										'action_delete_theme'	: 'ok'
 									}
 									sendform('action_delete_theme', donnees, 'Supprime les thêmes defaut de Wordpress');
+								});
+							</script>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des themes</button>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-7-1">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Supprime les thêmes suivant : </li>
+								</ul>
+							</div>
+
+							<form id="action_delete_theme_choix" method="post">
+
+								<?php if($wp_exist == TRUE) : ?>
+									<?php foreach($migration->_themes as $theme) : ?>
+										<div class="form-group">
+											<div class="custom-control custom-checkbox">
+												<input type="checkbox" id="theme_<?= $theme ?>" name="theme" class="custom-control-input" value="<?= $theme ?>"> 
+												<label class="custom-control-label" for="theme_<?= $theme ?>"><?= $theme ?></label>
+											</div>
+										</div>
+									<?php endforeach; ?>
+								<?php endif; ?>
+
+								<?php if($wp_exist == TRUE) : ?>
+								<div class="form-group">
+									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thêmes</button>
+								</div>
+								<?php else: ?>
+									<div class="alert alert-dismissible alert-danger mt-3">
+										<button type="button" class="close" data-dismiss="alert">&times;</button>
+										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
+									</div>
+								<?php endif; ?>	
+							</form>
+							<script>
+								$( "#action_delete_theme_choix" ).submit(function( event ) {
+									event.preventDefault();
+									var donnees = {
+										'action_delete_theme_choix'	: 'ok',
+										'themes': []
+									}
+
+									$('input[name="theme"]:checked').each(function() {
+										donnees['themes'].push($(this).val());
+									});
+									sendform('action_delete_theme_choix', donnees, 'Supprime les thêmes');
+								});
+							</script>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-7-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-2" aria-expanded="false" aria-controls="tools-7-2">Clone des themes</button>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-7-2">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Clone les thêmes suivant : </li>
+								</ul>
+							</div>
+
+							<form id="action_clone_theme_choix" method="post">
+
+								<?php if($wp_exist == TRUE) : ?>
+									<?php foreach($migration->_themes as $theme) : ?>
+										<div class="form-group">
+											<div class="custom-control custom-checkbox">
+												<input type="checkbox" id="clone_theme_<?= $theme ?>" name="clone_theme" class="custom-control-input" value="<?= $theme ?>"> 
+												<label class="custom-control-label" for="clone_theme_<?= $theme ?>"><?= $theme ?></label>
+											</div>
+										</div>
+									<?php endforeach; ?>
+								<?php endif; ?>
+
+								<?php if($wp_exist == TRUE) : ?>
+								<div class="form-group">
+									<button id="go_action_clone_theme_choix" type="submit" class="btn btn-primary">Clone les thêmes</button>
+								</div>
+								<?php else: ?>
+									<div class="alert alert-dismissible alert-danger mt-3">
+										<button type="button" class="close" data-dismiss="alert">&times;</button>
+										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
+									</div>
+								<?php endif; ?>	
+							</form>
+							<script>
+								$( "#action_clone_theme_choix" ).submit(function( event ) {
+									event.preventDefault();
+									var donnees = {
+										'action_clone_theme_choix'	: 'ok',
+										'themes': []
+									}
+
+									$('input[name="clone_theme"]:checked').each(function() {
+										donnees['themes'].push($(this).val());
+									});
+									sendform('action_clone_theme_choix', donnees, 'Clone les thêmes');
 								});
 							</script>
 						</div>

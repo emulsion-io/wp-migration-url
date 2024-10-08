@@ -21,6 +21,9 @@ Class Wp_Migration {
 		$_debug_display,
 		$_debug_log;
 
+	var $_themes,
+		$_plugins;
+
 	/**
 	 * @var string $this->_wp_lang 				Langue Wordpress
 	 * @var string $this->_wp_api 				Url de l'api Wordpress
@@ -30,7 +33,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.1';
+		$this->_version          = '2.7.2';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
@@ -101,7 +104,6 @@ Class Wp_Migration {
 		$this->_dbpassword 		= $db_password[1];
 		$this->_table_prefix 	= $table_prefix_matches[1];
 
-
 		$this->_debug = isset($debug[1]) ? filter_var($debug[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 		$this->_debug_display = isset($debug_display[1]) ? filter_var($debug_display[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 		$this->_debug_log = isset($debug_log[1]) ? filter_var($debug_log[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
@@ -110,6 +112,21 @@ Class Wp_Migration {
 		Config::write('db.basename', $this->_dbname);
 		Config::write('db.user', $this->_dbuser);
 		Config::write('db.password', $this->_dbpassword);
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+
+		// Lister les themes installés
+		$themes = wp_get_themes();
+		$themes = array_keys($themes);
+
+		$this->_themes = $themes;
+
+		// Lister les plugins installés
+		require_once( 'wp-admin/includes/plugin.php');
+		$plugins = get_option('active_plugins');
+
+		$this->_plugins = $plugins;
 	}
 
 	/**
@@ -818,6 +835,38 @@ Class Wp_Migration {
 	}
 
 	/**
+	 * Supprime les themes de Wordpress
+	 *
+	 * @param array $themes Nom des themes
+	 */
+	public function wp_delete_theme_choix($themes){
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/upgrade.php' );
+
+		foreach ($themes as $theme_name) {
+			delete_theme( $theme_name );
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Clone les themes de Wordpress
+	 */
+	public function wp_clone_theme_choix($themes){
+		
+		// copie les dossiers existants avec -clone a la fin du dossier
+		foreach ($themes as $theme) {
+			$theme_clone = $theme . '-clone';
+			recurse_copy( 'wp-content/themes/' . $theme, 'wp-content/themes/' . $theme_clone );
+		}
+
+		return TRUE;
+	}
+
+	/**
 	 * Ajoute un utilisateur a Wordpress
 	 *
 	 * @param string $user_login 	Nom utilisateur
@@ -1251,10 +1300,28 @@ class Config
 }
 
 /** 
- * Helper function to display the status of a function
+ * Helper : function to display the status of a function
  */
 function displayFunctionStatus($functionName, $condition) {
 	echo "<li>Fonction {$functionName} : ";
 	echo $condition ? "<span class='text-green'>is enabled</span>" : "<span class='text-red'>is disabled</span>";
 	echo "</li>";
+}
+
+/**
+ * Helper : Copie un dossier et son contenu
+ */
+function recurse_copy($src, $dst) {
+	$dir = opendir($src);
+	@mkdir($dst);
+	while (false !== ($file = readdir($dir))) {
+		if (($file != '.') && ($file != '..')) {
+			if (is_dir($src . '/' . $file)) {
+				recurse_copy($src . '/' . $file, $dst . '/' . $file);
+			} else {
+				copy($src . '/' . $file, $dst . '/' . $file);
+			}
+		}
+	}
+	closedir($dir);
 }

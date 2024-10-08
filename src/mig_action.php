@@ -47,7 +47,7 @@ if(isset($_POST['action_dl_zip'])) {
 /**
  * ACTION : Permet de modifier le fichier wp-config.php
  * 
- * Status : A tester | 2024-10-08
+ * Status : Ok | 2024-10-08
  * 
  */
 if(isset($_POST['action_change_wpconfig'])) {
@@ -64,9 +64,41 @@ if(isset($_POST['action_change_wpconfig'])) {
 }
 
 /**
+ * ACTION : Supprime les themes WP 
+ */
+if(isset($_POST['action_delete_theme_choix'])) {
+	if(!empty($_POST['action_delete_theme_choix'])) {
+
+		$retour_delete_theme_choix = $migration->wp_delete_theme_choix($_POST['themes']);
+
+		if($retour_delete_theme_choix === TRUE) {
+			$migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Clone les themes WP 
+ */
+if(isset($_POST['action_clone_theme_choix'])) {
+	if(!empty($_POST['action_clone_theme_choix'])) {
+
+		$retour_clone_theme_choix = $migration->wp_clone_theme_choix($_POST['themes']);
+
+		if($retour_clone_theme_choix === TRUE) {
+			$migration->retour(array('message' => 'Themes clonés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de cloner les themes.'), FALSE);
+		}
+	}
+}
+
+/**
  * ACTION : Permet de modifier le fichier wp-config.php en mode dev
  * 
- * Status : A tester | 2024-10-08
+ * Status : Ok | 2024-10-08
  * 
  */
 if(isset($_POST['action_change_wpconfig_dev'])) {

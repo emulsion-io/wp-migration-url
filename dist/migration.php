@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://emulsion.io
  *
- * @version 2.7.0
+ * @version 2.7.2
 */
 
 /**	
@@ -103,6 +103,9 @@ Class Wp_Migration {
 		$_debug_display,
 		$_debug_log;
 
+	var $_themes,
+		$_plugins;
+
 	/**
 	 * @var string $this->_wp_lang 				Langue Wordpress
 	 * @var string $this->_wp_api 				Url de l'api Wordpress
@@ -112,7 +115,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.1';
+		$this->_version          = '2.7.2';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
@@ -183,7 +186,6 @@ Class Wp_Migration {
 		$this->_dbpassword 		= $db_password[1];
 		$this->_table_prefix 	= $table_prefix_matches[1];
 
-
 		$this->_debug = isset($debug[1]) ? filter_var($debug[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 		$this->_debug_display = isset($debug_display[1]) ? filter_var($debug_display[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
 		$this->_debug_log = isset($debug_log[1]) ? filter_var($debug_log[1], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) : null;
@@ -192,6 +194,21 @@ Class Wp_Migration {
 		Config::write('db.basename', $this->_dbname);
 		Config::write('db.user', $this->_dbuser);
 		Config::write('db.password', $this->_dbpassword);
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+
+		// Lister les themes installés
+		$themes = wp_get_themes();
+		$themes = array_keys($themes);
+
+		$this->_themes = $themes;
+
+		// Lister les plugins installés
+		require_once( 'wp-admin/includes/plugin.php');
+		$plugins = get_option('active_plugins');
+
+		$this->_plugins = $plugins;
 	}
 
 	/**
@@ -900,6 +917,38 @@ Class Wp_Migration {
 	}
 
 	/**
+	 * Supprime les themes de Wordpress
+	 *
+	 * @param array $themes Nom des themes
+	 */
+	public function wp_delete_theme_choix($themes){
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/upgrade.php' );
+
+		foreach ($themes as $theme_name) {
+			delete_theme( $theme_name );
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Clone les themes de Wordpress
+	 */
+	public function wp_clone_theme_choix($themes){
+		
+		// copie les dossiers existants avec -clone a la fin du dossier
+		foreach ($themes as $theme) {
+			$theme_clone = $theme . '-clone';
+			recurse_copy( 'wp-content/themes/' . $theme, 'wp-content/themes/' . $theme_clone );
+		}
+
+		return TRUE;
+	}
+
+	/**
 	 * Ajoute un utilisateur a Wordpress
 	 *
 	 * @param string $user_login 	Nom utilisateur
@@ -1333,12 +1382,30 @@ class Config
 }
 
 /** 
- * Helper function to display the status of a function
+ * Helper : function to display the status of a function
  */
 function displayFunctionStatus($functionName, $condition) {
 	echo "<li>Fonction {$functionName} : ";
 	echo $condition ? "<span class='text-green'>is enabled</span>" : "<span class='text-red'>is disabled</span>";
 	echo "</li>";
+}
+
+/**
+ * Helper : Copie un dossier et son contenu
+ */
+function recurse_copy($src, $dst) {
+	$dir = opendir($src);
+	@mkdir($dst);
+	while (false !== ($file = readdir($dir))) {
+		if (($file != '.') && ($file != '..')) {
+			if (is_dir($src . '/' . $file)) {
+				recurse_copy($src . '/' . $file, $dst . '/' . $file);
+			} else {
+				copy($src . '/' . $file, $dst . '/' . $file);
+			}
+		}
+	}
+	closedir($dir);
 }
 
 $migration = new Wp_Migration();
@@ -1393,7 +1460,7 @@ if(isset($_POST['action_dl_zip'])) {
 /**
  * ACTION : Permet de modifier le fichier wp-config.php
  * 
- * Status : A tester | 2024-10-08
+ * Status : Ok | 2024-10-08
  * 
  */
 if(isset($_POST['action_change_wpconfig'])) {
@@ -1410,9 +1477,41 @@ if(isset($_POST['action_change_wpconfig'])) {
 }
 
 /**
+ * ACTION : Supprime les themes WP 
+ */
+if(isset($_POST['action_delete_theme_choix'])) {
+	if(!empty($_POST['action_delete_theme_choix'])) {
+
+		$retour_delete_theme_choix = $migration->wp_delete_theme_choix($_POST['themes']);
+
+		if($retour_delete_theme_choix === TRUE) {
+			$migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Clone les themes WP 
+ */
+if(isset($_POST['action_clone_theme_choix'])) {
+	if(!empty($_POST['action_clone_theme_choix'])) {
+
+		$retour_clone_theme_choix = $migration->wp_clone_theme_choix($_POST['themes']);
+
+		if($retour_clone_theme_choix === TRUE) {
+			$migration->retour(array('message' => 'Themes clonés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de cloner les themes.'), FALSE);
+		}
+	}
+}
+
+/**
  * ACTION : Permet de modifier le fichier wp-config.php en mode dev
  * 
- * Status : A tester | 2024-10-08
+ * Status : Ok | 2024-10-08
  * 
  */
 if(isset($_POST['action_change_wpconfig_dev'])) {
@@ -2621,6 +2720,118 @@ if(file_exists('wp-config.php')) {
 										'action_delete_theme'	: 'ok'
 									}
 									sendform('action_delete_theme', donnees, 'Supprime les thêmes defaut de Wordpress');
+								});
+							</script>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des themes</button>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-7-1">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Supprime les thêmes suivant : </li>
+								</ul>
+							</div>
+
+							<form id="action_delete_theme_choix" method="post">
+
+								<?php if($wp_exist == TRUE) : ?>
+									<?php foreach($migration->_themes as $theme) : ?>
+										<div class="form-group">
+											<div class="custom-control custom-checkbox">
+												<input type="checkbox" id="theme_<?= $theme ?>" name="theme" class="custom-control-input" value="<?= $theme ?>"> 
+												<label class="custom-control-label" for="theme_<?= $theme ?>"><?= $theme ?></label>
+											</div>
+										</div>
+									<?php endforeach; ?>
+								<?php endif; ?>
+
+								<?php if($wp_exist == TRUE) : ?>
+								<div class="form-group">
+									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thêmes</button>
+								</div>
+								<?php else: ?>
+									<div class="alert alert-dismissible alert-danger mt-3">
+										<button type="button" class="close" data-dismiss="alert">&times;</button>
+										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
+									</div>
+								<?php endif; ?>	
+							</form>
+							<script>
+								$( "#action_delete_theme_choix" ).submit(function( event ) {
+									event.preventDefault();
+									var donnees = {
+										'action_delete_theme_choix'	: 'ok',
+										'themes': []
+									}
+
+									$('input[name="theme"]:checked').each(function() {
+										donnees['themes'].push($(this).val());
+									});
+									sendform('action_delete_theme_choix', donnees, 'Supprime les thêmes');
+								});
+							</script>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-7-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-2" aria-expanded="false" aria-controls="tools-7-2">Clone des themes</button>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-7-2">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Clone les thêmes suivant : </li>
+								</ul>
+							</div>
+
+							<form id="action_clone_theme_choix" method="post">
+
+								<?php if($wp_exist == TRUE) : ?>
+									<?php foreach($migration->_themes as $theme) : ?>
+										<div class="form-group">
+											<div class="custom-control custom-checkbox">
+												<input type="checkbox" id="clone_theme_<?= $theme ?>" name="clone_theme" class="custom-control-input" value="<?= $theme ?>"> 
+												<label class="custom-control-label" for="clone_theme_<?= $theme ?>"><?= $theme ?></label>
+											</div>
+										</div>
+									<?php endforeach; ?>
+								<?php endif; ?>
+
+								<?php if($wp_exist == TRUE) : ?>
+								<div class="form-group">
+									<button id="go_action_clone_theme_choix" type="submit" class="btn btn-primary">Clone les thêmes</button>
+								</div>
+								<?php else: ?>
+									<div class="alert alert-dismissible alert-danger mt-3">
+										<button type="button" class="close" data-dismiss="alert">&times;</button>
+										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
+									</div>
+								<?php endif; ?>	
+							</form>
+							<script>
+								$( "#action_clone_theme_choix" ).submit(function( event ) {
+									event.preventDefault();
+									var donnees = {
+										'action_clone_theme_choix'	: 'ok',
+										'themes': []
+									}
+
+									$('input[name="clone_theme"]:checked').each(function() {
+										donnees['themes'].push($(this).val());
+									});
+									sendform('action_clone_theme_choix', donnees, 'Clone les thêmes');
 								});
 							</script>
 						</div>
