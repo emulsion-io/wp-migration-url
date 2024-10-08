@@ -41,6 +41,20 @@ if(ini_get('allow_url_fopen') == FALSE) {
 
 /**
  * Vos zips d'installation de Wordpress
+ * 
+ * $zips_wp = [
+ * 	[
+ * 		'nom' => 'Mon template WP #1',
+ * 		'fichier' => 'https://site/fichier.zip',
+ * 		'sql' => 'https://site/fichier.zip'
+ * 	],
+ * 	[
+ * 		'nom' => 'Mon template WP #2',
+ * 		'fichier' => 'https://site/fichier.zip',
+ * 		'sql' => 'https://site/fichier.zip'
+ * 	]
+ * ];
+ * 
  */
 $zips_wp = [];
 
