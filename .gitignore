@@ -15,3 +15,4 @@ core/
 /migration_bdd.sql
 vendor/
 composer.lock
+/test/

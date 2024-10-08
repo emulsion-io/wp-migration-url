@@ -1,6 +1,5 @@
 <?php
 
-
 Class Wp_Migration {
 
 	var $_wp_lang,
@@ -9,8 +8,6 @@ Class Wp_Migration {
 		$_version,
 		$_file_destination,
 		$_file_sql,
-		$_file_log,
-		$_file_log_ftp,
 		$_current_rep,
 		$_fileswp;
 
@@ -21,23 +18,18 @@ Class Wp_Migration {
 		$_table_prefix;
 
 	/**
-	 * @var string $this->_wp_lang 			Langue Wordpress
-	 * @var string $this->_wp_api 			Url de l'api Wordpress
-	 * @var string $this->_wp_dir_core 		Dossier temporaire de copie des fichier WP
-	 * @var string $this->_file_destination Nom du fichier Zip créé lors de la sauvegarde
-	 * @var string $this->_file_sql 		Nom du fichier sql créé lors du Cump SQL
-	 * @var string $this->_file_log 		Nom du fichier de log créé lors de la migration sur le serveur distant
+	 * @var string $this->_wp_lang 				Langue Wordpress
+	 * @var string $this->_wp_api 				Url de l'api Wordpress
+	 * @var string $this->_wp_dir_core 			Dossier temporaire de copie des fichier WP
+	 * @var string $this->_file_destination 	Nom du fichier Zip créé lors de la sauvegarde
+	 * @var string $this->_file_sql 				Nom du fichier sql créé lors du Cump SQL
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.6.0';
+		$this->_version          = '2.7.0';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
-		$this->_file_destination = 'migration_file.zip';
-		$this->_file_sql         = 'migration_bdd.sql';
-		$this->_file_log         = 'logfile.log';
-		$this->_file_log_ftp     = 'ftp.log';
 		$this->_current_rep      = getcwd();
 		$this->_fileswp          = array(
 			'wp-activate.php',
@@ -54,11 +46,16 @@ Class Wp_Migration {
 			'wp-trackback.php',
 			'xmlrpc.php',
 			'index.php',
+			'license.txt',
+			'readme.html',
+			'wp-config-sample.php',
 			'wp-admin',
 			'wp-content',
 			'wp-includes',
 			'.htaccess'
 		);
+
+		$this->set_var_wp();
 	}
 
 	/**
@@ -66,18 +63,38 @@ Class Wp_Migration {
 	 *
 	 * @param mixed[] $options Array Information de connexion a la base de données local 
 	 */
-	public function set_var_wp($options) {
+	public function set_var_wp($options = null) {
 
-		$this->_dbhost 			= $options[0];
-		$this->_dbname 			= $options[1];
-		$this->_dbuser 			= $options[2];
-		$this->_dbpassword 		= $options[3];
-		$this->_table_prefix 	= $options[4];
+		// Chemin vers le fichier wp-config.php
+		$wp_config_file = 'wp-config.php';
+
+		// Si le fichier n'existe pas, on retourne une erreur
+		if (!file_exists($wp_config_file)) {
+			return false;
+		}
+
+		// Lire le contenu du fichier sans l'inclure
+		$config_content = file_get_contents($wp_config_file);
+
+		// Expression régulière pour capturer les constantes
+		preg_match("/define\(\s*'DB_NAME'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_name);
+		preg_match("/define\(\s*'DB_USER'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_user);
+		preg_match("/define\(\s*'DB_PASSWORD'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_password);
+		preg_match("/define\(\s*'DB_HOST'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_host);
+		preg_match("/define\(\s*'DB_CHARSET'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_charset);
+		preg_match("/define\(\s*'DB_COLLATE'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_collate);
+		preg_match("/\\\$table_prefix\s*=\s*'(.+?)'\s*;/", $config_content, $table_prefix_matches);
+
+		$this->_dbhost 			= $db_host[1];
+		$this->_dbname 			= $db_name[1];
+		$this->_dbuser 			= $db_user[1];
+		$this->_dbpassword 		= $db_password[1];
+		$this->_table_prefix 	= $table_prefix_matches[1];
 
 		Config::write('db.host', $this->_dbhost);
 		Config::write('db.basename', $this->_dbname);
 		Config::write('db.user', $this->_dbuser);
-		Config::write('db.password', $this->_dbpassword);		
+		Config::write('db.password', $this->_dbpassword);
 	}
 
 	/**
@@ -85,102 +102,16 @@ Class Wp_Migration {
 	 */
 	public function wp_get_info(string $option = 'siteurl'){
 
-	    $bdd = Bdd::getInstance();
+		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
 
 		$req = $bdd->dbh->prepare('SELECT option_value FROM '.$this->_table_prefix.'options WHERE option_name = "' . $option . '";');
 		$req->execute();
 
 		return $req->fetch();
-	}
-
-	/**
-	 * Ecrit les log dans le fichier $this->_file_log sur le serveur
-	 *
-	 * @param string $text 		Ligne de text du log
-	 *
-	 * @return bool 			retourne true ou false
-	 */
-	public function wp_log($text){
-
-		if(file_exists($this->_file_log)) {
-			$old = file_get_contents($this->_file_log);
-		} else {
-			$old = "";
-		}
-
-		$var = $old.date('Y/m/d h:i:s')." : ".$text."\n";
-		file_put_contents($this->_file_log, $var);
-
-		return TRUE;
-	}
-
-	/**
-	 * Test si le dossier donné par l'utilisateur existe reelement
-	 *
-	 * @param mixed[] $opts Array informations de connexion au FTP distant
-	 */
-	public function wp_ftp_is_existedir($opts){	
-		$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']."".$opts['ftp_folder']);
-		//$folder_exists = is_dir("ftp://".$opts['user_ftp'].":".$opts['ftp_pass']."@".$opts['ftp_url']."".rtrim($opts['ftp_folder'], '/'));
-		return $folder_exists;
-	}
-
-	/**
-	 * Envoie les fichiers zip et migration sur le serveur distant en FTP
-	 *
-	 * @param mixed[] $opts Array informations de connexion au FTP distant
-	 */
-	public function wp_ftp_migration($opts, $type_ftp = 'ftp'){
-
-		$file 			= $this->_file_destination;
-		$remote_file 	= $this->_file_destination;
-
-		if($type_ftp === 'sftp'){
-			$connection = ssh2_connect($opts['ftp_url'], 22);
-			ssh2_auth_password($connection, $opts['user_ftp'], $opts['ftp_pass']);
-
-			ssh2_scp_send($connection, 'migration.php', rtrim($opts['ftp_folder'], '/').'/migration.php', 0644);
-			ssh2_scp_send($connection, $this->_file_sql, rtrim($opts['ftp_folder'], '/').'/'.$this->_file_sql, 0644);
-			ssh2_scp_send($connection, $file, rtrim($opts['ftp_folder'], '/').'/'.$remote_file, 0644);
-
-			return TRUE;
-		}
-
-		if($type_ftp === 'ftp'){
-			$conn_id = ftp_connect($opts['ftp_url']);
-		}elseif ($type_ftp === 'ftps') {
-			$conn_id = ftp_ssl_connect($opts['ftp_url']);
-		}
-
-		if($conn_id == FALSE){
-
-			return FALSE;
-		}
-
-		$login_result = ftp_login($conn_id, $opts['user_ftp'], $opts['ftp_pass']);
-		if($login_result == FALSE){
-
-			return FALSE;
-		}
-
-		// Envoie de tous les fichiers en FTP
-		$this->ftp_putAll($conn_id, '.', rtrim($opts['ftp_folder'], '/'));
-		
-		ftp_close($conn_id);
-
-		return TRUE;
-	}
-
-	/**
-	 * Efface les fichiers d'installation du serveur distant ( zip et sql )
-	 */
-	public function wp_clean_ftp_migration(){
-
-		@unlink($this->_file_destination);
-		@unlink($this->_file_sql);
-		@unlink($this->_file_log_ftp);
-
-		return TRUE;
 	}
 
 	/**
@@ -191,12 +122,22 @@ Class Wp_Migration {
 	 * Status : Ok
 	 * 
 	 */
-	public function wp_download_zip(){
+	public function wp_download_zip($url = null){
 
-		// Get WordPress data
-		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+		// Si on a une URL source, on l'utilise
+		if($url != null){
 
-		file_put_contents( 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents( $wp->download ) );
+			$fichierDest = 'wordpress-custom.zip';
+			file_put_contents( $fichierDest, file_get_contents( $url ) );
+		} else {
+
+			// Get WordPress data
+			$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+
+			$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
+
+			file_put_contents( $fichierDest, file_get_contents( $wp->download ) );
+		}
 
 		return TRUE;
 	}
@@ -211,44 +152,74 @@ Class Wp_Migration {
 	 * Status : Ok
 	 * 
 	 */
-	public function wp_download(){
+	public function wp_download($url = null){
 
-		// Get WordPress data
-		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+		// Si on a une URL source, on l'utilise
+		if($url != null){
 
-		if( ! mkdir($this->_wp_dir_core, 0775)){
-			return FALSE;
+			$fichierDest = 'wordpress-custom.zip';
+			file_put_contents( $fichierDest, file_get_contents( $url ) );
+
+		}else{
+
+			// Get WordPress data
+			$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+			$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
+
+			if( ! mkdir($this->_wp_dir_core, 0775)){
+				return FALSE;
+			}
+
+			file_put_contents( $this->_wp_dir_core . $fichierDest, file_get_contents( $wp->download  ) );
 		}
-
-		file_put_contents( $this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents( $wp->download ) );
 
 		$zip = new ZipArchive;
 
 		// We verify if we can use the archive
-		if ( $zip->open( $this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip' ) === true ) {
+		if ( $zip->open( $fichierDest ) === true ) {
 
 			// Let's unzip
-			$zip->extractTo( '.' );
-			$zip->close();
-
-			chmod( 'wordpress' , 0775 );
-
-			// We scan the folder
-			$files = scandir( 'wordpress' );
-
-			// We remove the "." and ".." from the current folder and its parent
-			$files = array_diff( $files, array( '.', '..' ) );
-
-			// We move the files and folders
-			foreach ( $files as $file ) {
-				rename(  'wordpress/' . $file, './' . $file );
+			// Boucle pour parcourir tous les fichiers
+			for ($i = 0; $i < $zip->numFiles; $i++) {
+					$filename = $zip->getNameIndex($i);
+					
+					// Vérification rapide si le fichier n'est pas un fichier ZIP
+					if (substr($filename, -4) !== '.zip') {
+						$zip->extractTo('.', $filename);
+					}
 			}
 
-			rmdir( 'wordpress' );
-			$this->rrmdir( 'core' );
-			unlink( './license.txt' );
-			unlink( './readme.html' );
-			unlink( './wp-content/plugins/hello.php' );
+			// Fermeture de l'archive
+			$zip->close();
+
+			if($url != null){
+
+				unlink( $fichierDest );
+			}else{
+
+				chmod( 'wordpress' , 0775 );
+
+				// We scan the folder
+				$files = scandir( 'wordpress' );
+
+				if( is_array($files) ){
+				
+					// We remove the "." and ".." from the current folder and its parent
+					$files = array_diff( $files, array( '.', '..' ) );
+
+					// We move the files and folders
+					foreach ( $files as $file ) {
+						rename(  'wordpress/' . $file, './' . $file );
+					}
+
+					rmdir( 'wordpress' );
+					$this->rrmdir( 'core' );
+					//unlink( './license.txt' );
+					//unlink( './readme.html' );
+					unlink( './wp-content/plugins/hello.php' );
+				
+				}
+			}
 
 			return TRUE;
 		}
@@ -367,14 +338,18 @@ Class Wp_Migration {
 		try{
 			$bdd = Bdd::getInstance();
 
+			if($bdd->dbh == null){
+				return false;
+			}
+
 			$sql = $bdd->dbh->prepare('SHOW TABLES');
 			$sql->execute();
 			$row = $sql->fetchAll();
 			
 			return TRUE;
-        }catch(PDOException $e){
+		}catch(PDOException $e){
 
-        	return FALSE;
+			return FALSE;
 		}
 	}
 
@@ -389,6 +364,7 @@ Class Wp_Migration {
 
 		define( 'WP_INSTALLING', true );
 		
+		require_once( 'wp-config.php' );
 		require_once( 'wp-load.php' );
 		require_once( 'wp-admin/includes/upgrade.php' );
 		require_once( 'wp-includes/wp-db.php' );
@@ -416,44 +392,29 @@ Class Wp_Migration {
 	public function wp_migration($opts_migration) {
 
 		$postdata = http_build_query(
-		    array(
-		        'api_call' 		=> 'migration',
-		        'dbuser' 		=> $opts_migration['user_sql'],
+			array(
+				'api_call' 		=> 'migration',
+				'dbuser' 		=> $opts_migration['user_sql'],
 				'dbname' 		=> $opts_migration['name_sql'],
 				'dbpassword' 	=> $opts_migration['pass_sql'],
 				'dbhost' 		=> $opts_migration['serveur_sql'],
 				'site' 			=> $opts_migration['www_url'],
 				'table_prefix'  => $opts_migration['table_prefix']
-		    )
+			)
 		);
 
 		$opts = array('http' =>
-		    array(
-		        'method'  => 'POST',
-		        'header'  => 'Content-type: application/x-www-form-urlencoded',
-		        'content' => $postdata
-		    )
+			array(
+				'method'  => 'POST',
+				'header'  => 'Content-type: application/x-www-form-urlencoded',
+				'content' => $postdata
+			)
 		);
 
 		$context  = stream_context_create($opts);
 
 		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
 		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
-
-		return $result;
-	}
-
-	/**
-	 * Recupere sur le serveur distant le fichier de log crée lors de la migration
-	 *
-	 * @param mixed[] $opts_migration Array 
-	 *
-	 * @return string retourne le log entier 
-	 */	
-	public function wp_migration_log($opts_migration) {
-
-		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
-		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/'.$this->_file_log);
 
 		return $result;
 	}
@@ -469,6 +430,10 @@ Class Wp_Migration {
 
 		$bdd = Bdd::getInstance();
 
+		if($bdd->dbh == null){
+			return false;
+		}
+
 		# Changer l'URL du site
 		$req1 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
 
@@ -482,23 +447,23 @@ Class Wp_Migration {
 		$req4 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
 
 		$req1->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
 		));
 
 		$req2->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
 		));
 
 		$req3->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
 		));
 
 		$req4->execute(array(
-		    'oldurl' => $oldurl,
-		    'newurl' => $newurl
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
 		));
 
 		return TRUE;
@@ -569,10 +534,10 @@ Class Wp_Migration {
 		$num_lines = count($lines);
 
 		if ($num_lines > 9) {
-		    array_splice($lines, $num_lines - 9, 0, array($methode));
-		    file_put_contents($filename, implode('', $lines));
+			array_splice($lines, $num_lines - 9, 0, array($methode));
+			file_put_contents($filename, implode('', $lines));
 		} else {
-		    file_put_contents($filename, PHP_EOL . $methode, FILE_APPEND);
+			file_put_contents($filename, PHP_EOL . $methode, FILE_APPEND);
 		}
 
 		chmod( 'wp-config.php', 0666 );
@@ -627,186 +592,17 @@ Class Wp_Migration {
 	}
 
 	/**
-	 * Exporte la base de données Wordpress selon 3 types de possibilité pour repondre le plus rapidement a la demande en fonction des serveurs,
-	 *
-	 * @link http://stackoverflow.com/questions/22195493/export-mysql-database-using-php-only Export php SQL issus de cette doc
-	 */
-	public function wp_export_sql() {
-
-		if(file_exists($this->_file_sql )){
-			unlink($this->_file_sql );
-		}
-
-		if(function_exists('exec')){
-
-			$command = 'mysqldump --opt -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' > '.$this->_file_sql;
-			exec($command, $output = array(), $worked);
-
-		} elseif(function_exists('system')){
-
-			system("mysqldump --host=" . $this->_dbhost ." --user=" . $this->_dbuser ." --password=". $this->_dbpassword ." ". $this->_dbname ." > ".$this->_file_sql);
-
-		} else {
-			
-		    $bdd = Bdd::getInstance();
-
-			$bdd->dbh->query("SET NAMES 'utf8'");
-
-	        $queryTables    = $bdd->dbh->query('SHOW TABLES'); 
-	        while($row = $queryTables->fetch()) 
-	        { 
-	            $target_tables[] = $row[0]; 
-	        }
-
-			$content   =  '-- Migration SQL Dump'. "\n";
-			$content  .=  '-- version 1.0'. "\n";
-			$content  .=  '-- http://www.viky.fr'. "\n";
-			$content  .=  '--'. "\n";
-			$content  .=  '-- Host: localhost'. "\n";
-			$content  .=  '-- Generation Time: '. "\n";
-			$content  .=  '-- Server version: '. "\n";
-			$content  .=  '-- PHP Version: '. "\n";
-
-	        foreach($target_tables as $table)
-	        {
-
-	            $result         =   $bdd->dbh->query('SELECT * FROM '.$table);  
-	            $fields_amount  =   $result->columnCount();  
-	            $rows_num		=	$result->rowCount();
-	            $res            =   $bdd->dbh->query('SHOW CREATE TABLE '.$table); 
-	            $TableMLine     =   $res->fetch();
-
-				$content       .=  "\n" . "--" . "\n";
-				$content       .= "-- Table structure for table `".$table."`". "\n";
-				$content       .= "--". "\n";
-
-	            $content        = (!isset($content) ?  '' : $content) . "\n\n".$TableMLine[1].";\n\n";
-
-	            for ($i = 0, $st_counter = 0; $i < $fields_amount;   $i++, $st_counter=0) 
-	            {
-	                while($row = $result->fetch())  
-	                { //when started (and every after 100 command cycle):
-	                    if ($st_counter%100 == 0 || $st_counter == 0 )  
-	                    {
-	                            $content .= "\nINSERT INTO ".$table." VALUES";
-	                    }
-	                    $content .= "\n(";
-	                    for($j=0; $j<$fields_amount; $j++)  
-	                    { 
-	                        $row[$j] = str_replace("\n","\\n", addslashes($row[$j]) ); 
-	                        if (isset($row[$j]))
-	                        {
-	                            $content .= '"'.$row[$j].'"' ; 
-	                        }
-	                        else 
-	                        {   
-	                            $content .= '""';
-	                        }     
-	                        if ($j<($fields_amount-1))
-	                        {
-	                                $content.= ',';
-	                        }      
-	                    }
-	                    $content .=")";
-	                    //every after 100 command cycle [or at last line] ....p.s. but should be inserted 1 cycle eariler
-	                    if ( (($st_counter+1)%100==0 && $st_counter!=0) || $st_counter+1==$rows_num) 
-	                    {   
-	                        $content .= ";";
-	                    } 
-	                    else 
-	                    {
-	                        $content .= ",";
-	                    } 
-	                    $st_counter=$st_counter+1;
-	                }
-	            } 
-
-	            $content .="\n\n\n";
-        	}
-
-        	file_put_contents($this->_file_sql , $content);
-		}
-
-		if(file_exists($this->_file_sql )){
-			return TRUE;
-		}
-
-		return FALSE;
-	}
-
-	/**
 	 * Extrait les fichiers dans le dossier courant
 	 */
 	public function wp_import_file() {
-	 
-	    $zip = new ZipArchive;
+	
+		$zip = new ZipArchive;
 
-	    $zip->open($this->_file_destination);
-	    $zip->extractTo('.');
-	    $zip->close();
+		$zip->open($this->_file_destination);
+		$zip->extractTo('.');
+		$zip->close();
 
-	    return TRUE;
-	}
-
-	/**
-	 * Permet d'importer la base de données selon 3 types de possibilites 
-	 *
-	 * @link http://stackoverflow.com/questions/19751354/how-to-import-sql-file-in-mysql-database-using-php import SQL php issus de cette doc
-	 */
-	public function wp_import_sql() {
-
-		if(function_exists('exec')){
-
-			$command = 'mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < '.$this->_file_sql;
-			exec($command, $output = array(), $worked);
-
-			switch($worked){
-				case 0:
-
-					return TRUE;
-				break;
-				case 1:
-
-					return FALSE;
-				break;
-			}
-
-		} elseif(function_exists('system')){
-
-			system('mysql -h' . $this->_dbhost .' -u' . $this->_dbuser .' -p' . $this->_dbpassword .' ' . $this->_dbname .' < '.$this->_file_sql);
-
-			return TRUE;
-		} else {
-			
-		    $bdd = Bdd::getInstance();
-
-			$templine = '';
-			// Read in entire file
-			$lines = file($this->_file_sql);
-			// Loop through each line
-			foreach ($lines as $line)
-			{
-				// Skip it if it's a comment
-				if (substr($line, 0, 2) == '--' || $line == '') {
-				    continue;
-				}
-
-				// Add this line to the current segment
-				$templine .= $line;
-				// If it has a semicolon at the end, it's the end of the query
-				if (substr(trim($line), -1, 1) == ';')
-				{
-				    // Perform the query
-				    $bdd->dbh->query($templine);
-				    // Reset temp variable to empty
-				    $templine = '';
-				}
-			}
-
-			return TRUE;
-		}
-
-		return FALSE;
+		return TRUE;
 	}
 
 	/**
@@ -815,6 +611,10 @@ Class Wp_Migration {
 	public function wp_sql_clean_revision() {
 
 		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
 
 		$sql = $bdd->dbh->prepare('DELETE FROM '.$this->_table_prefix.'posts WHERE post_type = "revision"');
 		
@@ -828,6 +628,10 @@ Class Wp_Migration {
 
 		$bdd = Bdd::getInstance();
 
+		if($bdd->dbh == null){
+			return false;
+		}
+
 		$sql = $bdd->dbh->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
 		
 		return $sql->execute();
@@ -840,6 +644,10 @@ Class Wp_Migration {
 	 */
 	public function wp_install_plugins($plug_off){
 
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/plugin.php');
+
 		$plugins     = explode( ",", $plug_off );
 		$plugins     = array_map( 'trim' , $plugins );
 		$plugins_dir = 'wp-content/plugins/';
@@ -847,32 +655,48 @@ Class Wp_Migration {
 		foreach ( $plugins as $plugin ) {
 
 			// We retrieve the plugin XML file to get the link to downlad it
-		    $plugin_repo = file_get_contents( "http://api.wordpress.org/plugins/info/1.0/$plugin.json" );
+			$plugin_repo = file_get_contents( "http://api.wordpress.org/plugins/info/1.0/$plugin.json" );
 
-		    if ( $plugin_repo && $plugin = json_decode( $plugin_repo ) ) {
+			if ( $plugin_repo && $plugin = json_decode( $plugin_repo ) ) {
 
-				$plugin_path = config('wp_dir_plug') . $plugin->slug . '-' . $plugin->version . '.zip';
+				$plugin_path = $plugins_dir . $plugin->slug . '-' . $plugin->version . '.zip';
 
 				if ( ! file_exists( $plugin_path ) ) {
 					// We download the lastest version
 					if ( $download_link = file_get_contents( $plugin->download_link ) ) {
 						file_put_contents( $plugin_path, $download_link );
-					}							
+					}
 				}
 
-		    	// We unzip it
-		    	$zip = new ZipArchive;
+				// We unzip it
+				$zip = new ZipArchive;
 				if ( $zip->open( $plugin_path ) === true ) {
 					$zip->extractTo( $plugins_dir );
 					$zip->close();
 				}
-		    }
+			}
 		}
 
-		require_once( 'wp-load.php' );
-		require_once( 'wp-admin/includes/plugin.php');		
+		// Récupérer les plugins actifs
+		$plugins_active = array_keys(get_plugins());
 
-		activate_plugins( array_keys( get_plugins() ) );
+		// Tableau pour stocker les plugins à activer
+		$plugins_a_activer = [];
+
+		// Boucler sur les plugins actifs pour trouver ceux qui correspondent à ton tableau
+		foreach ($plugins_active as $plugin_path) {
+			foreach ($plugins as $plugin_name) {
+				// Vérifier si le nom du plugin est contenu dans le chemin
+				if (strpos($plugin_path, $plugin_name) !== false) {
+					$plugins_a_activer[] = $plugin_path; // Ajouter le chemin complet
+				}
+			}
+		}
+
+		// Activer les plugins correspondants
+		if (!empty($plugins_a_activer)) {
+			activate_plugins($plugins_a_activer);
+		}
 
 		return TRUE;
 	}
@@ -883,9 +707,11 @@ Class Wp_Migration {
 	 */
 	public function wp_delete_theme(){
 
+		require_once( 'wp-config.php' );
 		require_once( 'wp-load.php' );
 		require_once( 'wp-admin/includes/upgrade.php' );
-
+		
+		delete_theme( 'twentytwentyfour' );
 		delete_theme( 'twentyfourteen' );
 		delete_theme( 'twentythirteen' );
 		delete_theme( 'twentytwelve' );
@@ -893,6 +719,8 @@ Class Wp_Migration {
 		delete_theme( 'twentyten' );
 		// We delete the _MACOSX folder (bug with a Mac)
 		delete_theme( '__MACOSX' );
+
+		return TRUE;
 	}
 
 	/**
@@ -904,22 +732,23 @@ Class Wp_Migration {
 	 */
 	public function wp_add_user($user_login, $user_pass){
 
+		require_once( 'wp-config.php' );
 		require_once( 'wp-load.php' );
 		require_once( 'wp-includes/user.php' );
 		
 		$userdata = array(
-		    'user_login' 	=>  $user_login,
-		    'user_url'  	=>  '',
-		    'user_email'	=>  '',
-		    'user_pass' 	=>  $user_pass,
-		    'role' 			=> 'administrator'
+			'user_login' 	=>  $user_login,
+			'user_url'  	=>  '',
+			'user_email'	=>  '',
+			'user_pass' 	=>  $user_pass,
+			'role' 			=> 'administrator'
 		);
 
 		$user_id = wp_insert_user( $userdata ) ;
 
 		//On success
 		if ( ! is_wp_error( $user_id ) ) {
-		    return TRUE;
+			return TRUE;
 		}
 
 		return FALSE;
@@ -930,6 +759,11 @@ Class Wp_Migration {
 	 */
 	public function wp_rename_prefix($new_prefix)
 	{
+
+		// on verifie que le prefix est valide avec un _ a la fin
+		if (substr($new_prefix, -1) != '_'){
+			$new_prefix .= '_';
+		}
 
 		$old_prefix = $this->_table_prefix;
 
@@ -957,6 +791,10 @@ Class Wp_Migration {
 		// Modifier la base de données
 		$bdd = Bdd::getInstance();
 		
+		if($bdd->dbh == null){
+			return false;
+		}
+
 		$sql = $bdd->dbh->prepare("SHOW TABLES LIKE '".$old_prefix."%'");
 		$sql->execute();
 		$tables = $sql->fetchAll();
@@ -1008,6 +846,10 @@ Class Wp_Migration {
 	{
 		$bdd = Bdd::getInstance();
 
+		if($bdd->dbh == null){
+			return false;
+		}
+
 		$sql = $bdd->dbh->prepare("SHOW TABLES LIKE '".$this->_table_prefix."%'");
 		$sql->execute();
 		$tables = $sql->fetchAll();
@@ -1021,28 +863,6 @@ Class Wp_Migration {
 		}
 
 		return TRUE;
-	}
-
-	/**
-	 * 
-	 */
-	public function wp_test_hash()
-	{
-
-		if(file_exists('migration-hash.php')){
-			include('migration-hash.php');
-
-			$retour = '';
-			foreach ($fileswp as $key => $value) {
-				if(md5_file($key) != $value){
-					$retour .= "Le fichier : ".$key." ne correspond plus a la version initial.<br>";
-				}
-			}
-
-			return $retour;
-		}
-
-		return FALSE;
 	}
 
 	/**
@@ -1063,7 +883,7 @@ Class Wp_Migration {
 	 * Verifie si une nouvelle version est dispo.
 	 * 
 	 */
-	public function wp_check_update()
+	public function migration_check_update()
 	{
 		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/version.json'.'?'.mt_rand());
 		$version = json_decode($content);
@@ -1081,122 +901,6 @@ Class Wp_Migration {
 
 		return $retour;
 	}	
-
-	/**
-	 * 
-	 */
-	public function wp_create_hash()
-	{
-		if(file_exists('migration-hash.php')){
-			unlink('migration-hash.php');
-		}
-
-		$hashfiles = '<?php '."\n";
-		$hashfiles .= $this->wp_hashs_files(getcwd(), 0, FALSE);
-		$hashfiles .= "\n".'?>';
-
-		file_put_contents('migration-hash.php', $hashfiles);
-
-		return TRUE;
-	}
-
-	/**
-	 * Create a Directory Map and hash file md5 to php array
-	 *
-	 * Reads the specified directory and builds an array
-	 * representation of it. Sub-folders contained with the
-	 * directory will be mapped as well.
-	 *
-	 * @param	string	$source_dir		Path to source
-	 * @param	int	$directory_depth	Depth of directories to traverse
-	 *						(0 = fully recursive, 1 = current dir, etc)
-	 * @param	bool	$hidden			Whether to show hidden files
-	 * @return	array
-	 */
-	public function wp_hashs_files($source_dir, $directory_depth = 0, $hidden = FALSE)
-	{
-		if ($fp = @opendir($source_dir))
-		{
-			$hashs		= '';
-			$new_depth	= $directory_depth - 1;
-			$source_dir	= rtrim($source_dir, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
-
-			while (FALSE !== ($file = readdir($fp)))
-			{
-				// Remove '.', '..', and hidden files [optional]
-				if ($file === '.' OR $file === '..' OR ($hidden === FALSE && $file[0] === '.'))
-				{
-					continue;
-				}
-
-				is_dir($source_dir.$file) && $file .= DIRECTORY_SEPARATOR;
-
-				if (($directory_depth < 1 OR $new_depth > 0) && is_dir($source_dir.$file))
-				{	
-					$hashs .= $this->wp_hashs_files($source_dir.$file, $new_depth, $hidden);
-				}
-				else
-				{
-					$file_current = substr_replace($source_dir.$file, '', 0, strlen($this->_current_rep)+1);
-					$hashs .= '$fileswp["'.$file_current.'"] = "'.md5_file($source_dir.$file).'";'."\n";
-				}
-			}
-						
-			closedir($fp);
-			
-			return $hashs;
-		}
-
-		return FALSE;
-	}
-
-	/**
-	 * 
-	 * @link
-	 */
-	public function excludefilesfolderin_zip($serialize = FALSE) {
-		$files_current = scandir('.');
-		unset($files_current[0]);
-		unset($files_current[1]);
-
-		$result = array_diff($files_current, $this->_fileswp);
-		
-		$listefiles = '';
-		if($serialize = TRUE) {
-			if (count($result) > 0) {
-				foreach ($result as $file) {
-					$ext = '';
-					if(is_dir($file)) {
-						$ext = '/*';
-					}
-					$listefiles .= ' "'.$file.$ext.'" ';
-				}
-			}
-
-			return $listefiles;
-		}
-
-		return $result;
-	}	
-
-	public function ftp_putAll($conn_id, $src_dir, $dst_dir) {
-	   $d = dir($src_dir);
-	   while($file = $d->read()) { // do this for each file in the directory
-	       if ($file != "." && $file != "..") { // to prevent an infinite loop
-	           if (is_dir($src_dir."/".$file)) { // do the following if it is a directory
-	               if (!@ftp_nlist($conn_id, $dst_dir."/".$file)) {
-	                   ftp_mkdir($conn_id, $dst_dir."/".$file); // create directories that do not yet exist
-	               }
-	               $this->ftp_putAll($conn_id, $src_dir."/".$file, $dst_dir."/".$file); // recursive part
-	           } else {
-	               $upload = ftp_put($conn_id, $dst_dir."/".$file, $src_dir."/".$file, FTP_BINARY); // put the files
-	           }
-	           // ecrit dans le fichier ftp.log le fichier en court d'up
-	           file_put_contents($this->_file_log_ftp, date('d-m-Y h:i:s')." : ".$src_dir."/".$file, FILE_APPEND);
-	       }
-	   }
-	   $d->close();
-	}
 
 	/**
 	 * Creer des Zip recursivement en utilisant les fonctions systemes
@@ -1240,61 +944,61 @@ Class Wp_Migration {
 	 */
 	public function Zip($source, $destination)
 	{
-	    if (!extension_loaded('zip')) {
-	    //if (!extension_loaded('zip') || !file_exists($source)) {
+		if (!extension_loaded('zip')) {
+		//if (!extension_loaded('zip') || !file_exists($source)) {
 
-	        return false;
-	    }
+			return false;
+		}
 
-	    $zip = new ZipArchive();
-	    if (!$zip->open($destination, ZIPARCHIVE::CREATE)) {
+		$zip = new ZipArchive();
+		if (!$zip->open($destination, ZIPARCHIVE::CREATE)) {
 
-	        return false;
-	    }
+			return false;
+		}
 
-	    $sources = str_replace('\\', '/', realpath('.'));
+		$sources = str_replace('\\', '/', realpath('.'));
 
-	    foreach ($source as $key => $value) {
+		foreach ($source as $key => $value) {
 
 			if (is_dir($value) === true)
 			{
-			    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($value), RecursiveIteratorIterator::SELF_FIRST);
+				$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($value), RecursiveIteratorIterator::SELF_FIRST);
 
-			    foreach ($files as $file)
-			    {
-			        $file = str_replace('\\', '/', $file);
+				foreach ($files as $file)
+				{
+					$file = str_replace('\\', '/', $file);
 
-			        // Ignore "." and ".." folders
-			        if( in_array(substr($file, strrpos($file, '/')+1), array('.', '..')) )
-			            continue;
+					// Ignore "." and ".." folders
+					if( in_array(substr($file, strrpos($file, '/')+1), array('.', '..')) )
+							continue;
 
-			        $file = realpath($file);
+					$file = realpath($file);
 
-			        if (is_dir($file) === true)
-			        {
-			            if( ! $zip->addEmptyDir(str_replace($sources . '/', '', $file . '/')))
+					if (is_dir($file) === true)
+					{
+							if( ! $zip->addEmptyDir(str_replace($sources . '/', '', $file . '/')))
 						{
 							@unlink($this->_file_destination);
 							throw new Exception("La memoire alouée par le serveur n'est pas sufisante.");
 						}
-			        }
-			        else if (is_file($file) === true)
-			        {
-			            if( ! $zip->addFromString(str_replace($sources . '/', '', $file), file_get_contents($file)))
+					}
+					else if (is_file($file) === true)
+					{
+							if( ! $zip->addFromString(str_replace($sources . '/', '', $file), file_get_contents($file)))
 						{
 							@unlink($this->_file_destination);
 							throw new Exception("La memoire alouée par le serveur n'est pas sufisante.");
 						}
-			        }
-			    }
+					}
+				}
 			}
 			else if (is_file($value) === true)
 			{
-			    $zip->addFromString(basename($value), file_get_contents($value));
+				$zip->addFromString(basename($value), file_get_contents($value));
 			}
 		}
 
-	    return $zip->close();
+		return $zip->close();
 	}
 
 	/**
@@ -1309,11 +1013,11 @@ Class Wp_Migration {
 	public function get_memory_limit($units = TRUE) {
 		$memory_limit = ini_get('memory_limit');
 		if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
-		    if ($matches[2] == 'M') {
-		        $memory_limit = $matches[1] * 1024 * 1024; // nnnM -> nnn MB
-		    } else if ($matches[2] == 'K') {
-		        $memory_limit = $matches[1] * 1024; // nnnK -> nnn KB
-		    }
+			if ($matches[2] == 'M') {
+				$memory_limit = $matches[1] * 1024 * 1024; // nnnM -> nnn MB
+			} else if ($matches[2] == 'K') {
+				$memory_limit = $matches[1] * 1024; // nnnK -> nnn KB
+			}
 		}
 
 		return $this->formatBytes($memory_limit, 2, $units);
@@ -1331,13 +1035,13 @@ Class Wp_Migration {
 	 * @return string chaine d'unités avec son suffixe ou non
 	 */
 	public function formatBytes($bytes, $precision = 2, $units = TRUE) {
-	    $unit = ["B", "KB", "MB", "GB"];
-	    $exp = floor(log($bytes, 1024)) | 0;
-	    
-	    if($units === TRUE) {
-	    	return round($bytes / (pow(1024, $exp)), $precision).$unit[$exp];
+		$unit = ["B", "KB", "MB", "GB"];
+		$exp = floor(log((int) $bytes, 1024)) | 0;
+		
+		if($units === TRUE) {
+			return round((int)$bytes / (pow(1024, $exp)), $precision).$unit[$exp];
 		} else {
-	    	return round($bytes / (pow(1024, $exp)), $precision);
+			return round((int)$bytes / (pow(1024, $exp)), $precision);
 		}
 	}
 
@@ -1396,46 +1100,58 @@ Class Wp_Migration {
 
 class Bdd
 {
-    public $dbh; // handle of the db connexion
-    private static $instance;
+	public $dbh; // handle of the db connexion
+	private static $instance;
 
-    private function __construct()
-    {
-        // building data source name from config
-        $dsn = 'mysql:host=' . Config::read('db.host') .
-               ';dbname='    . Config::read('db.basename') .
-               ';charset=utf8';
+	private function __construct()
+	{
+		// Construction du DSN
+		$dsn = 'mysql:host=' . Config::read('db.host') .
+				';dbname='    . Config::read('db.basename') .
+				';charset=utf8';
+	
+		$user = Config::read('db.user');
+		$password = Config::read('db.password');
+	
+		try {
+			// Ajout de l'option pour limiter le temps d'attente de la connexion
+			$options = [
+					PDO::ATTR_TIMEOUT => 1,  // Timeout de 5 secondes
+					PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,  // Pour lancer des exceptions sur erreur
+			];
+	
+			// Connexion à la base de données avec un timeout de 5 secondes
+			$this->dbh = new PDO($dsn, $user, $password, $options);
+		} catch (PDOException $e) {
+			//echo 'Connection failed: ' . $e->getMessage();
+			//exit;
+		}
+	}
 
-        $user 		= Config::read('db.user');
-        $password 	= Config::read('db.password');
+	public static function getInstance()
+	{
+		if (!isset(self::$instance))
+		{
+				$object = __CLASS__;
+				self::$instance = new $object;
+		}
 
-        $this->dbh 	= new PDO($dsn, $user, $password);
-    }
-
-    public static function getInstance()
-    {
-        if (!isset(self::$instance))
-        {
-            $object = __CLASS__;
-            self::$instance = new $object;
-        }
-
-        return self::$instance;
-    }
+		return self::$instance;
+	}
 }
 
 class Config
 {
-    static $confArray;
+	static $confArray;
 
-    public static function read($name)
-    {
+	public static function read($name)
+	{
 
-        return self::$confArray[$name];
-    }
+		return self::$confArray[$name];
+	}
 
-    public static function write($name, $value)
-    {
-        self::$confArray[$name] = $value;
-    }
+	public static function write($name, $value)
+	{
+		self::$confArray[$name] = $value;
+	}
 }

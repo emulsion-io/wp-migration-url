@@ -9,9 +9,9 @@
 
 /**	
  * 
- * 2021 03 25
+ * 2024-10-08
  * 
- * Refonte du script.
+ * Reprise du script.
  * 
  */
 
@@ -34,6 +34,15 @@
 //set_time_limit(0);
 error_reporting(-1);
 ini_set('display_errors', '1');
+
+if(ini_get('allow_url_fopen') == FALSE) {
+	echo "La fonction file_get_contents() est désactivée sur ce serveur, veuillez l'activer pour continuer."; exit;
+}
+
+/**
+ * Vos zips d'installation de Wordpress
+ */
+$zips_wp = [];
 
 /**
  * Variable de status d'execution du script
@@ -60,7 +69,7 @@ $retour_action_dl_zip_extract = FALSE;
 include('mig_class.php');
 
 $migration = new Wp_Migration();
-$update    = $migration->wp_check_update();
+$update    = $migration->migration_check_update();
 
 include('mig_action.php');
 
@@ -71,29 +80,27 @@ if(file_exists('wp-config.php')) {
 
 	define( 'WP_INSTALLING', true );
 
-	include ('wp-config.php');
+	$migration->set_var_wp();
 
-	// Assigne les variables du WP courant a la class
-	$options = array(
-		DB_HOST,
-		DB_NAME,
-		DB_USER,
-		DB_PASSWORD,
-		$table_prefix
-	);
-
-	$migration->set_var_wp($options);
+	$wp_exist = TRUE;
+	$wp_exist_install = TRUE;
 
 	// Recupere les informations sur le WP courant
 	$site_url = $migration->wp_get_info("siteurl");
 
-	// Annonce 
-	$wp_exist = TRUE;
+	if($site_url == false) {
+		$site_url = [];
+		$site_url['option_value'] = '';
+
+		$wp_exist_install = FALSE;
+	}
 
 } else {
 	$site_url['option_value'] = '';
 
 	$wp_exist = FALSE;
+	$wp_exist_install = FALSE;
+
 }
 
 ?>
@@ -105,7 +112,8 @@ if(file_exists('wp-config.php')) {
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
-		<title>Migration Wordpress Easy</title>
+		<title>Toolbox Wordpress</title>
+		<link rel="icon" type="image/png" href="https://emulsion.io/favicon.png" />
 
 		<link rel="stylesheet" href="https://cdn.emulsion.io/wp-migration/css/bootstrap.css">
 		<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -114,7 +122,14 @@ if(file_exists('wp-config.php')) {
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
 		
 		<style type="text/css">
+			body { background-color: #14161a; }
 			.menushow { cursor: pointer; }
+			.text-orange { color: #ffb70f; }
+			.text-orange:hover { color: #fff; }
+			.border-info { border-color: #ffb70f !important; }
+			.card { background-color: #181b20; }
+			.text-green { color: #00ff00; }
+			.text-red { color: #ff0000; }
 		</style>
 	</head>
 	<body>
@@ -134,38 +149,31 @@ if(file_exists('wp-config.php')) {
 						<li class="nav-item">
 							<a class="nav-link" href="https://emulsion.io">Emulsion.io</a>
 						</li>
-						<li class="nav-item">
-							<a class="nav-link" href="#about">About</a>
-						</li>
 						<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Outils</a>
-						<div class="dropdown-menu">
-							<a class="dropdown-item open-tools" data-open="#tools-1" data-go="#go-tools-1">Telecharger et extraire un Wordpress avec possibilité de l'installer</a>
-							<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2">Modifier les Urls de votre installation Wordpress</a>
-							<a class="dropdown-item open-tools" data-open="#tools-3" data-go="#go-tools-3">Creer le fichier .htaccess</a>
-							<a class="dropdown-item open-tools" data-open="#tools-4" data-go="#go-tools-4">Effacer toutes les revisions de votre Wordpress</a>
-							<a class="dropdown-item open-tools" data-open="#tools-5" data-go="#go-tools-5">Effacer tous les commentaires non validés (Spam)</a>
-							<a class="dropdown-item open-tools" data-open="#tools-6" data-go="#go-tools-6">Installer les plugins de votre choix</a>
-							<a class="dropdown-item open-tools" data-open="#tools-7" data-go="#go-tools-7">Supprime les themes par defaut de Wordpress</a>
-							<a class="dropdown-item open-tools" data-open="#tools-8" data-go="#go-tools-8">Ajouter un administrateur a votre installation</a>
-							<div class="dropdown-divider"></div>
-							<a class="dropdown-item open-tools" data-open="#tools-9" data-go="#go-tools-9">Modifier le prefix des tables</a>
-							<a class="dropdown-item open-tools" data-open="#tools-10" data-go="#go-tools-10">Supprime toutes les fichiers de Wordpress</a>
-							<a class="dropdown-item open-tools" data-open="#tools-11" data-go="#go-tools-11">Supprime toutes les tables de la base de données de Wordpress</a>
-						</div>
+							<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Outils</a>
+							<div class="dropdown-menu">
+								<a class="dropdown-item open-tools" data-open="#tools-1" data-go="#go-tools-1">Telecharger et extraire un Wordpress avec possibilité de l'installer</a>
+								<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2">Modifier les Urls de votre installation Wordpress</a>
+								<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2-1">Modifier les Urls de votre installation Wordpress en SQL</a>
+								<a class="dropdown-item open-tools" data-open="#tools-3" data-go="#go-tools-3">Creer le fichier .htaccess</a>
+								<a class="dropdown-item open-tools" data-open="#tools-4" data-go="#go-tools-4">Effacer toutes les revisions de votre Wordpress</a>
+								<a class="dropdown-item open-tools" data-open="#tools-5" data-go="#go-tools-5">Effacer tous les commentaires non validés (Spam)</a>
+								<a class="dropdown-item open-tools" data-open="#tools-6" data-go="#go-tools-6">Installer les plugins de votre choix</a>
+								<a class="dropdown-item open-tools" data-open="#tools-7" data-go="#go-tools-7">Supprime les themes par defaut de Wordpress</a>
+								<a class="dropdown-item open-tools" data-open="#tools-8" data-go="#go-tools-8">Ajouter un administrateur a votre installation</a>
+								<div class="dropdown-divider"></div>
+								<a class="dropdown-item open-tools" data-open="#tools-9" data-go="#go-tools-9">Modifier le prefix des tables</a>
+								<a class="dropdown-item open-tools" data-open="#tools-10" data-go="#go-tools-10">Supprime toutes les fichiers de Wordpress</a>
+							</div>
 						</li>
 					</ul>
-					<form class="form-inline my-2 my-lg-0">
-						<input class="form-control mr-sm-2" type="text" placeholder="Search">
-						<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-					</form>
 				</div>
 			</nav>
 
 			<header class="row">
 				<div class="col-12">
 					<div class="jumbotron mt-4">
-						<h1>ToolBox Wordpress</h1>
+						<h1><span class="text-orange">Toolbox</span> Wordpress</h1>
 						<p>La boite a outils pour Wordpress</p>
 					</div>
 				</div>
@@ -188,8 +196,15 @@ if(file_exists('wp-config.php')) {
 							<div class="card-text">
 								<ul>
 									<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
-									<li>Fonction exec() <?php echo (function_exists('exec'))? " is enabled" : " is disabled"; ?></li>
-									<li>Fonction system() <?php echo (function_exists('system'))? " is enabled" : " is disabled"; ?></li>
+									<li>Version de PHP : <?php echo phpversion(); ?></li>
+
+									<li>Fonction mail() : <?php echo (function_exists('mail'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction file_get_contents() <?php echo ((ini_get('allow_url_fopen'))) ? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction file_put_contents() <?php echo (function_exists('file_put_contents'))? " <span class='text-green'>is enabled</span>" : "<span class='text-red'> is disabled</span>"; ?></li>
+									<li>Fonction fopen() <?php echo (function_exists('fopen'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction exec() <?php echo (function_exists('exec'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction system() <?php echo (function_exists('system'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
 									<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
 								</ul>
 							</div>
@@ -245,37 +260,89 @@ if(file_exists('wp-config.php')) {
 									<div class="row mt-3">
 										<div class="col-6">
 											<form id="action_dl_zip" method="post">
-												<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Télecharger le zip de Wordpress sur le serveur</button>
+												<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoie le zip de Wordpress sur le serveur</button>
 											</form>
 											<script>
 												$( "#action_dl_zip" ).submit(function( event ) {
 													event.preventDefault();
 													var donnees = {
-														action_dl_zip	: 'ok'
+														action_dl_zip : 'ok'
 													}
-													sendform('action_dl_zip', donnees, 'Telecharge, extrait et install un Wordpress');
+													sendform('action_dl_zip', donnees, 'Le zip de Wordpress est sur le serveur');
 												});
 											</script>
 										</div>
 										<div class="col-6">
 											<form id="action_dl_zip_extract" method="post">
-												<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Télecharger et extraire Wordpress sur le serveur</button>
+												<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Envoyer et extraire Wordpress sur le serveur</button>
 											</form>
 											<script>
 												$( "#action_dl_zip_extract" ).submit(function( event ) {
 													event.preventDefault();
 													var donnees = {
-														action_dl_zip_extract	: 'ok',
+														action_dl_zip_extract : 'ok',
 													}
-													sendform('action_dl_zip_extract', donnees, 'Telecharge, extrait et install un Wordpress');
+													sendform('action_dl_zip_extract', donnees, 'Wordpress est extrait sur le serveur');
 												});
 											</script>
 										</div>
 									</div>
+									<div class="row mt-3">
+										<?php if($zips_wp) : ?>
+											<div class="col-12">
+												<h3>Vos instances Custom Wordpress</h3>
+											</div>
+
+											<?php $i = 0; foreach($zips_wp as $zip) : ?>
+												<div class="col-6">
+													<form id="action_dl_zip_extract_<?=$i;?>" method="post">
+														<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoyer et extraire le zip de <?= $zip['nom']; ?> sur le serveur</button>
+													</form>
+													<script>
+														$( "#action_dl_zip_extract_<?=$i;?>" ).submit(function( event ) {
+															event.preventDefault();
+															var donnees = {
+																action_dl_zip_extract : 'ok',
+																url : '<?= $zip['fichier']; ?>'
+															}
+															sendform('action_dl_zip_extract', donnees, 'Le Wordpress de <?= $zip['nom']; ?> est extrait sur le serveur');
+														});
+													</script>
+												</div>
+											<?php $i++; endforeach; ?>
+										<?php endif; ?>
+									</div>
+									<div class="row mt-3">
+										<?php if($zips_wp) : ?>
+											<?php $i = 0; foreach($zips_wp as $zip) : ?>
+												<div class="col-6">
+													<form id="action_dl_zip_<?=$i;?>" method="post">
+														<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoyer le zip de <?= $zip['nom']; ?> sur le serveur</button>
+													</form>
+													<script>
+														$( "#action_dl_zip_<?=$i;?>" ).submit(function( event ) {
+															event.preventDefault();
+															var donnees = {
+																action_dl_zip : 'ok',
+																url : '<?= $zip['fichier']; ?>'
+															}
+															sendform('action_dl_zip', donnees, 'Le zip du Wordpress de <?= $zip['nom']; ?> est sur le serveur');
+														});
+													</script>
+												</div>
+											<?php $i++; endforeach; ?>
+										<?php endif; ?>
+									</div>
+
 								<?php else: ?>
 									<ul>
 										<li>Wordpress est présent sur ce serveur.</li>
-										<li>Version installée de WP : <?= $wp_version; ?></li>
+										<?php if($wp_exist_install === TRUE) : ?>
+											<li>URL du site : <?php echo $site_url['option_value']; ?></li>
+										<?php else : ?>
+											<li>URL du site : <span class="text-danger">Wordpress non configuré</span></li>
+										<?php endif; ?>
+										<li>Version installée de WP : <? //= $wp_version; ?></li>
 									</ul>
 								<?php endif; ?>
 							</div>
@@ -287,6 +354,7 @@ if(file_exists('wp-config.php')) {
 
 			<h2>Outils</h2>
 
+			<?php /*
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
 					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-0" aria-expanded="false" aria-controls="tools-1">Tools-0</button>
@@ -301,6 +369,7 @@ if(file_exists('wp-config.php')) {
 					</div>
 				</div>
 			</div>
+			*/ ?>
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
@@ -462,7 +531,7 @@ if(file_exists('wp-config.php')) {
 								</div>
 								<div class="form-group">
 									<label for="new">Nouvelle URL</label>
-									<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>" required>
+									<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="https://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>" required>
 								</div>
 								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
@@ -486,6 +555,62 @@ if(file_exists('wp-config.php')) {
 									}
 									sendform('action_change_url', donnees, 'Ecriture des nouvelles Urls');
 									
+								});
+							</script>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<buttonn id="go-tools-2-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2-1" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress en SQL</buttonn>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-2-1">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Modifie les URLs dans la table wp_option, home et siteurl sont affectés</li>
+									<li>Modifie les URLs dans la table wp_posts, guid et post_content sont affectés</li>
+									<li>Modifie les URLs dans la table wp_postmeta, toutes les meta_value auront la nouvelle URL</li>
+								</ul>
+							</div>
+
+							<form id="action_change_url_sql" method="post">
+								<div class="form-group">
+									<label for="old">Ancienne URL</label>
+									<input type="text" class="form-control" id="oldUrl" name="oldUrl" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>" required>
+								</div>
+								<div class="form-group">
+									<label for="new">Nouvelle URL</label>
+									<input type="text" class="form-control" id="newUrl" name="newUrl" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>" required>
+								</div>
+								<div class="form-group">
+									<label for="new">Préfixe des tables</label>
+									<input type="text" class="form-control" id="prefix" name="prefix" placeholder="wp" value="wp" required>
+								</div>
+								
+								<div class="form-group">
+									<button type="submit" id="go_action_change_url_sql" class="btn btn-primary">Mettre a jour</button>
+								</div>
+
+								<div class="form-group">
+									<label for="sqlOutput">Requêtes SQL</label>
+									<textarea class="form-control" id="sqlOutput" rows="10" readonly></textarea>
+								</div>
+
+								<div class="form-group">
+									<button type="button" class="btn btn-primary" onclick="copyToClipboard()">Copier</button>
+								</div>
+
+							</form>
+							<script>
+								$( "#action_change_url_sql" ).submit(function( event ) {
+									event.preventDefault();
+
+									generateSQL();
 								});
 							</script>
 
@@ -664,6 +789,7 @@ if(file_exists('wp-config.php')) {
 							<div class="text-warning mb-3">
 								<ul>
 									<li>Supprime l'ensemble des themes suivant : </li>
+									<li>twentytwentyfour</li>
 									<li>twentyfourteen</li>
 									<li>twentythirteen</li>
 									<li>twentytwelve</li>
@@ -801,13 +927,13 @@ if(file_exists('wp-config.php')) {
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Efface tous les fichiers correspondant a l'installation d'un Wordpress</li>
+									<li>Efface tous les fichiers correspondant à l'installation de Wordpress</li>
 								</ul>
 							</div>
 
 							<form id="action_purge" method="post">
 								<div class="form-group">
-									<button id="go_action_purge" type="submit" class="btn btn-primary">Effacer les tous fichiers wordpress</button>
+									<button id="go_action_purge" type="submit" class="btn btn-primary">Effacer les tous fichiers Wordpress</button>
 								</div>
 							</form>
 							<script>
@@ -824,41 +950,13 @@ if(file_exists('wp-config.php')) {
 				</div>
 			</div>
 
-			<div class="row mb-3">
-				<div class="col-12 mb-2">
-					<button id="go-tools-11" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-11" aria-expanded="false" aria-controls="tools-11">Supprime toutes les tables de la base de données de Wordpress</button>
-				</div>
-				<div class="col-12">
-					<div class="collapse" id="tools-11">
-						<div class="card card-body">
-							<div class="text-warning mb-3">
-								<ul>
-									<li>Supprime toutes les tables de Wordpress de votre base de données</li>
-								</ul>
-							</div>
-
-							<form id="action_purge_sql" method="post">
-								<div class="form-group">
-									<button id="go_action_purge_sql" type="submit" class="btn btn-primary">Effacer les tables</button>
-								</div>
-							</form>
-							<script>
-								$( "#action_purge_sql" ).submit(function( event ) {
-									var donnees = {
-										action_purge_sql	: 'ok',
-									}
-									sendform('action_purge_sql', donnees, 'Purger SQL Wordpress');
-									event.preventDefault();
-								});
-							</script>
-
-						</div>
-					</div>
-				</div>
-			</div>
-
 			<footer class="row">
-				<div class="col-12 my-3">Developpé par <a href="https://emulsion.io">Fabrice Simonet</a> || <a href="https://emulsion.io">https://emulsion.io</a></div>
+				<div class="col-12 my-3 text-center">
+					<strong>ToolBox Wordpress</strong> par <a class="text-orange" href="https://emulsion.io">Fabrice Simonet</a>.
+					<a href="https://emulsion.io" title="Agence emulsion.io | Simonet Fabrice" style="text-decoration:none; margin-top:20px; display: block;">
+						<img src="https://cdn.emulsion.io/signature/fond-noir.svg" width="25px" height="23px" alt="Agence emulsion.io | Simonet Fabrice"> <span style="color:#fff; vertical-align: bottom;">Emulsion</span><span style="color:#ffa726; vertical-align: bottom;">.io</span>
+					</a>
+				</div>
 			</footer>
 		</div>
 		<script>
@@ -927,7 +1025,7 @@ if(file_exists('wp-config.php')) {
 								Swal.fire({
 									icon: 'error',
 									title: 'Erreur',
-									text: "Le temps d'attente est trop long, demande expiré, renter votre chance."
+									text: "Le temps d'attente est trop long, demande expiré, retenter votre chance."
 								});
 							},
 							error: function(){
@@ -935,12 +1033,12 @@ if(file_exists('wp-config.php')) {
 								Swal.fire({
 									icon: 'error',
 									title: 'Erreur',
-									text: "Une erreur est intervenu dans le traitement de la requête, renter votre chance."
+									text: "Une erreur est intervenu dans le traitement de la requête, retenter votre chance."
 								});
 							}
 						});
 					},
- 					allowOutsideClick: () => !Swal.isLoading()
+					allowOutsideClick: () => !Swal.isLoading()
 				}).then((result) => {
 					if (result.isConfirmed) {
 						Swal.fire({
@@ -950,6 +1048,49 @@ if(file_exists('wp-config.php')) {
 						});
 					}
 				})
+			}
+
+			function ensureHttps(url) {
+				if (url.startsWith('http://')) {
+				} else if (!url.startsWith('https://')) {
+					url = 'https://' + url;
+				}
+				
+				return url.endsWith('/') ? url.slice(0, -1) : url;
+			}
+
+			function generateSQL() {
+					let oldUrl = document.getElementById('oldUrl').value;
+					let newUrl = document.getElementById('newUrl').value;
+					const prefix = document.getElementById('prefix').value;
+
+					if (!oldUrl || !newUrl || !prefix) {
+						alert("Veuillez remplir tous les champs.");
+						return;
+					}
+
+					oldUrl = ensureHttps(oldUrl);
+					newUrl = ensureHttps(newUrl);
+
+					const sqlQueries = `
+UPDATE ${prefix}_options SET option_value = replace(option_value, '${oldUrl}', '${newUrl}') WHERE option_name = 'home' OR option_name = 'siteurl';
+UPDATE ${prefix}_posts SET guid = replace(guid, '${oldUrl}', '${newUrl}');
+UPDATE ${prefix}_posts SET post_content = replace(post_content, '${oldUrl}', '${newUrl}'); 
+UPDATE ${prefix}_postmeta SET meta_value = replace(meta_value, '${oldUrl}', '${newUrl}');
+
+UPDATE ${prefix}_revslider_slides SET params = replace(params, '${oldUrl}', '${newUrl}');
+UPDATE ${prefix}_revslider_slides SET layers = replace(layers, '${oldUrl}', '${newUrl}');
+UPDATE ${prefix}_revslider_sliders SET params = replace(params, '${oldUrl}', '${newUrl}');
+					`;
+
+					document.getElementById('sqlOutput').value = sqlQueries.trim();
+			}
+
+			function copyToClipboard() {
+				const textarea = document.getElementById('sqlOutput');
+				textarea.select();
+				document.execCommand('copy');
+				alert('Requêtes SQL copiées dans le presse-papiers');
 			}
 		</script>
    </body>
