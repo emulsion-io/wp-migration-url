@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://emulsion.io
  *
- * @version 2.7.2
+ * @version 2.7.3
 */
 
 /**	
@@ -115,7 +115,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.2';
+		$this->_version          = '2.7.3';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
@@ -573,43 +573,6 @@ Class Wp_Migration {
 		update_option( 'permalink_structure', '/%postname%/');
 
 		return TRUE;
-	}
-
-	/**
-	 * Contact l'api distante pour lui donner les ordres du coté serveur distant
-	 *
-	 * @param mixed[] $opts_migration Array 
-	 *
-	 * @return bool true|false
-	 */
-	public function wp_migration($opts_migration) {
-
-		$postdata = http_build_query(
-			array(
-				'api_call' 		=> 'migration',
-				'dbuser' 		=> $opts_migration['user_sql'],
-				'dbname' 		=> $opts_migration['name_sql'],
-				'dbpassword' 	=> $opts_migration['pass_sql'],
-				'dbhost' 		=> $opts_migration['serveur_sql'],
-				'site' 			=> $opts_migration['www_url'],
-				'table_prefix'  => $opts_migration['table_prefix']
-			)
-		);
-
-		$opts = array('http' =>
-			array(
-				'method'  => 'POST',
-				'header'  => 'Content-type: application/x-www-form-urlencoded',
-				'content' => $postdata
-			)
-		);
-
-		$context  = stream_context_create($opts);
-
-		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
-		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
-
-		return $result;
 	}
 
 	/**
@@ -1096,7 +1059,7 @@ Class Wp_Migration {
 	public function wp_update()
 	{
 
-		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/migration.php');
+		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/dist/migration.php');
 
 		file_put_contents('migration.php', $content);
 
@@ -2001,14 +1964,14 @@ if(file_exists('wp-config.php')) {
 								<?php if($update['maj_dipso'] == TRUE): ?>
 							
 									<form id="action_update" method="post">
-										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour du script</button>
+										<button type="submit" id="go_action_update" class="btn btn-primary">Effectuer la mise à jour du script</button>
 									</form>
 									<script>
 										$( "#action_update" ).submit(function( event ) {
 											var donnees = {
 												'action_update'	: 'ok'
 											}
-											sendform('action_update', donnees, 'Effecuer la mise a jour du script');
+											sendform('action_update', donnees, 'Effectuer la mise à jour du script');
 											event.preventDefault();
 											$(document).ajaxSuccess(function() {
 												setTimeout(function(){ window.location.reload(); }, 2000);

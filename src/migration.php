@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://emulsion.io
  *
- * @version 2.7.2
+ * @version 2.7.3
 */
 
 /**	
@@ -238,14 +238,14 @@ if(file_exists('wp-config.php')) {
 								<?php if($update['maj_dipso'] == TRUE): ?>
 							
 									<form id="action_update" method="post">
-										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour du script</button>
+										<button type="submit" id="go_action_update" class="btn btn-primary">Effectuer la mise à jour du script</button>
 									</form>
 									<script>
 										$( "#action_update" ).submit(function( event ) {
 											var donnees = {
 												'action_update'	: 'ok'
 											}
-											sendform('action_update', donnees, 'Effecuer la mise a jour du script');
+											sendform('action_update', donnees, 'Effectuer la mise à jour du script');
 											event.preventDefault();
 											$(document).ajaxSuccess(function() {
 												setTimeout(function(){ window.location.reload(); }, 2000);
