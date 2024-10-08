@@ -10,7 +10,7 @@ Pour utiliser le tools sur votre serveur, utilisez `migration.php` dans `/dist/`
 Ou depuis la racine de votre serveur, utilisez la commande suivante :
 
 ```
-wget https://github.com/emulsion-io/wp-migration-url/releases/download/v2.7/migration.php
+wget https://raw.githubusercontent.com/emulsion-io/wp-migration-url/refs/heads/master/dist/migration.php
 ```
 
 et accedez à votre serveur via l'url suivante :
