@@ -1155,3 +1155,12 @@ class Config
 		self::$confArray[$name] = $value;
 	}
 }
+
+/** 
+ * Helper function to display the status of a function
+ */
+function displayFunctionStatus($functionName, $condition) {
+	echo "<li>Fonction {$functionName} : ";
+	echo $condition ? "<span class='text-green'>is enabled</span>" : "<span class='text-red'>is disabled</span>";
+	echo "</li>";
+}

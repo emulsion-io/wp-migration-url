@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link http://emulsion.io
  *
- * @version 2.6
+ * @version 2.7.0
 */
 
 /**	
@@ -211,14 +211,15 @@ if(file_exists('wp-config.php')) {
 								<ul>
 									<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
 									<li>Version de PHP : <?php echo phpversion(); ?></li>
-
-									<li>Fonction mail() : <?php echo (function_exists('mail'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
-									<li>Fonction file_get_contents() <?php echo ((ini_get('allow_url_fopen'))) ? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
-									<li>Fonction file_put_contents() <?php echo (function_exists('file_put_contents'))? " <span class='text-green'>is enabled</span>" : "<span class='text-red'> is disabled</span>"; ?></li>
-									<li>Fonction fopen() <?php echo (function_exists('fopen'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
-									<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
-									<li>Fonction exec() <?php echo (function_exists('exec'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
-									<li>Fonction system() <?php echo (function_exists('system'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<?php
+										displayFunctionStatus('mail()', function_exists('mail'));
+										displayFunctionStatus('file_get_contents()', ini_get('allow_url_fopen'));
+										displayFunctionStatus('file_put_contents()', function_exists('file_put_contents'));
+										displayFunctionStatus('fopen()', function_exists('fopen'));
+										displayFunctionStatus('shell_exec()', function_exists('shell_exec'));
+										displayFunctionStatus('exec()', function_exists('exec'));
+										displayFunctionStatus('system()', function_exists('system'));
+									?>
 									<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
 								</ul>
 							</div>

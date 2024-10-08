@@ -1,1207 +1,1646 @@
 <?php
+
+/**
+ * @author Fabrice Simonet
+ * @link http://emulsion.io
+ *
+ * @version 2.7.0
+*/
+
+/**	
+ * 
+ * 2024-10-08
+ * 
+ * Reprise du script.
+ * 
+ */
+
+/**
+ * Copyright (c) 2021 Fabrice Simonet
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, 
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+//ini_set("memory_limit", "-1");
+//set_time_limit(0);
 error_reporting(-1);
 ini_set('display_errors', '1');
-$retour_url = FALSE;
-$retour_migration = FALSE;
-$retour_migration_api = FALSE;
-$retour_migration_log = FALSE;
-$retour_export = FALSE;
-$retour_import = FALSE;
-$retour_export_sql = FALSE;
-$retour_import_sql = FALSE;
-$retour_htaccess = FALSE;
-$retour_dl = FALSE;
-$retour_dl_full = FALSE;
-$retour_clean_revision = FALSE;
-$retour_clean_spam = FALSE;
-$retour_plug_install = FALSE;
-$retour_delete_theme = FALSE;
-$retour_add_user = FALSE;
-$retour_action_dl_zip = FALSE;
-$retour_action_dl_zip_extract = FALSE;
-class Wp_Migration
-{
-    public $_wp_lang, $_wp_api, $_wp_dir_core, $_version, $_file_destination, $_file_sql, $_file_log, $_file_log_ftp, $_current_rep, $_fileswp;
-    public $_dbhost, $_dbname, $_dbuser, $_dbpassword, $_table_prefix;
-    public function __construct()
-    {
-        $this->_version = '2.6.0';
-        $this->_wp_lang = 'fr_FR';
-        $this->_wp_api = 'http://api.wordpress.org/core/version-check/1.7/?locale=' . $this->_wp_lang;
-        $this->_wp_dir_core = 'core/';
-        $this->_file_destination = 'migration_file.zip';
-        $this->_file_sql = 'migration_bdd.sql';
-        $this->_file_log = 'logfile.log';
-        $this->_file_log_ftp = 'ftp.log';
-        $this->_current_rep = getcwd();
-        $this->_fileswp = array('wp-activate.php', 'wp-blog-header.php', 'wp-comments-post.php', 'wp-config.php', 'wp-cron.php', 'wp-links-opml.php', 'wp-load.php', 'wp-login.php', 'wp-mail.php', 'wp-settings.php', 'wp-signup.php', 'wp-trackback.php', 'xmlrpc.php', 'index.php', 'wp-admin', 'wp-content', 'wp-includes', '.htaccess');
-    }
-    public function set_var_wp($options)
-    {
-        $this->_dbhost = $options[0];
-        $this->_dbname = $options[1];
-        $this->_dbuser = $options[2];
-        $this->_dbpassword = $options[3];
-        $this->_table_prefix = $options[4];
-        Config::write('db.host', $this->_dbhost);
-        Config::write('db.basename', $this->_dbname);
-        Config::write('db.user', $this->_dbuser);
-        Config::write('db.password', $this->_dbpassword);
-    }
-    public function wp_get_info(string $option = 'siteurl')
-    {
-        $bdd = Bdd::getInstance();
-        $req = $bdd->dbh->prepare('SELECT option_value FROM ' . $this->_table_prefix . 'options WHERE option_name = "' . $option . '";');
-        $req->execute();
-        return $req->fetch();
-    }
-    public function wp_log($text)
-    {
-        if (file_exists($this->_file_log)) {
-            $old = file_get_contents($this->_file_log);
-        } else {
-            $old = '';
-        }
-        $var = $old . date('Y/m/d h:i:s') . ' : ' . $text . '
-';
-        file_put_contents($this->_file_log, $var);
-        return TRUE;
-    }
-    public function wp_ftp_is_existedir($opts)
-    {
-        $folder_exists = is_dir('ftp://' . $opts['user_ftp'] . ':' . $opts['ftp_pass'] . '@' . $opts['ftp_url'] . '' . $opts['ftp_folder']);
-        return $folder_exists;
-    }
-    public function wp_ftp_migration($opts, $type_ftp = 'ftp')
-    {
-        $file = $this->_file_destination;
-        $remote_file = $this->_file_destination;
-        if ($type_ftp === 'sftp') {
-            $connection = ssh2_connect($opts['ftp_url'], 22);
-            ssh2_auth_password($connection, $opts['user_ftp'], $opts['ftp_pass']);
-            ssh2_scp_send($connection, 'migration.php', rtrim($opts['ftp_folder'], '/') . '/migration.php', 420);
-            ssh2_scp_send($connection, $this->_file_sql, rtrim($opts['ftp_folder'], '/') . '/' . $this->_file_sql, 420);
-            ssh2_scp_send($connection, $file, rtrim($opts['ftp_folder'], '/') . '/' . $remote_file, 420);
-            return TRUE;
-        }
-        if ($type_ftp === 'ftp') {
-            $conn_id = ftp_connect($opts['ftp_url']);
-        } elseif ($type_ftp === 'ftps') {
-            $conn_id = ftp_ssl_connect($opts['ftp_url']);
-        }
-        if ($conn_id == FALSE) {
-            return FALSE;
-        }
-        $login_result = ftp_login($conn_id, $opts['user_ftp'], $opts['ftp_pass']);
-        if ($login_result == FALSE) {
-            return FALSE;
-        }
-        $this->ftp_putAll($conn_id, '.', rtrim($opts['ftp_folder'], '/'));
-        ftp_close($conn_id);
-        return TRUE;
-    }
-    public function wp_clean_ftp_migration()
-    {
-        @unlink($this->_file_destination);
-        @unlink($this->_file_sql);
-        @unlink($this->_file_log_ftp);
-        return TRUE;
-    }
-    public function wp_download_zip()
-    {
-        $wp = json_decode(file_get_contents($this->_wp_api))->offers[0];
-        file_put_contents('wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents($wp->download));
-        return TRUE;
-    }
-    public function wp_download()
-    {
-        $wp = json_decode(file_get_contents($this->_wp_api))->offers[0];
-        if (!mkdir($this->_wp_dir_core, 509)) {
-            return FALSE;
-        }
-        file_put_contents($this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip', file_get_contents($wp->download));
-        $zip = new ZipArchive();
-        if ($zip->open($this->_wp_dir_core . 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip') === true) {
-            $zip->extractTo('.');
-            $zip->close();
-            chmod('wordpress', 509);
-            $files = scandir('wordpress');
-            $files = array_diff($files, array('.', '..'));
-            foreach ($files as $file) {
-                rename('wordpress/' . $file, './' . $file);
-            }
-            rmdir('wordpress');
-            $this->rrmdir('core');
-            unlink('./license.txt');
-            unlink('./readme.html');
-            unlink('./wp-content/plugins/hello.php');
-            return TRUE;
-        }
-        return FALSE;
-    }
-    public function wp_install_config($opts)
-    {
-        $config_file = file('wp-config-sample.php');
-        $secret_keys = explode('
-', file_get_contents('https://api.wordpress.org/secret-key/1.1/salt/'));
-        foreach ($secret_keys as $k => $v) {
-            $secret_keys[$k] = substr($v, 28, 64);
-        }
-        $key = 0;
-        foreach ($config_file as &$line) {
-            if ('$table_prefix  =' == substr($line, 0, 16)) {
-                $line = '$table_prefix  = \'' . $this->sanit($opts['prefix']) . '\';
-';
-                continue;
-            }
-            if (!preg_match('/^define\\(\'([A-Z_]+)\',([ ]+)/', $line, $match)) {
-                continue;
-            }
-            $constant = $match[1];
-            switch ($constant) {
-                case 'WP_DEBUG':
-                    if ((int) $opts['debug'] == 1) {
-                        $line = 'define(\'WP_DEBUG\', \'true\');
-';
-                        if ((int) $opts['debug_display'] == 1) {
-                            $line .= '
 
- ' . '/** Affichage des erreurs à l\'écran */' . '
-';
-                            $line .= 'define(\'WP_DEBUG_DISPLAY\', \'true\');
-';
-                        }
-                        if ((int) $opts['debug_log'] == 1) {
-                            $line .= '
-
- ' . '/** Ecriture des erreurs dans un fichier log */' . '
-';
-                            $line .= 'define(\'WP_DEBUG_LOG\', \'true\');
-';
-                        }
-                    }
-                    $line .= '
-
- ' . '/** On augmente la mémoire limite */' . '
-';
-                    $line .= 'define(\'WP_MEMORY_LIMIT\', \'256M\');' . '
-';
-                    break;
-                case 'DB_NAME':
-                    $line = 'define(\'DB_NAME\', \'' . $this->sanit($opts['dbname']) . '\');
-';
-                    break;
-                case 'DB_USER':
-                    $line = 'define(\'DB_USER\', \'' . $this->sanit($opts['uname']) . '\');
-';
-                    break;
-                case 'DB_PASSWORD':
-                    $line = 'define(\'DB_PASSWORD\', \'' . $this->sanit($opts['pwd']) . '\');
-';
-                    break;
-                case 'DB_HOST':
-                    $line = 'define(\'DB_HOST\', \'' . $this->sanit($opts['dbhost']) . '\');
-';
-                    break;
-                case 'AUTH_KEY':
-                case 'SECURE_AUTH_KEY':
-                case 'LOGGED_IN_KEY':
-                case 'NONCE_KEY':
-                case 'AUTH_SALT':
-                case 'SECURE_AUTH_SALT':
-                case 'LOGGED_IN_SALT':
-                case 'NONCE_SALT':
-                    $line = 'define(\'' . $constant . '\', \'' . $secret_keys[$key++] . '\');
-';
-                    break;
-                case 'WPLANG':
-                    $line = 'define(\'WPLANG\', \'' . $this->sanit($this->_wp_lang) . '\');
-';
-                    break;
-            }
-        }
-        unset($line);
-        $handle = fopen('wp-config.php', 'w');
-        foreach ($config_file as $line) {
-            fwrite($handle, $line);
-        }
-        fclose($handle);
-        chmod('wp-config.php', 438);
-        unlink('wp-config-sample.php');
-        return TRUE;
-    }
-    public function wp_test_bdd()
-    {
-        try {
-            $bdd = Bdd::getInstance();
-            $sql = $bdd->dbh->prepare('SHOW TABLES');
-            $sql->execute();
-            $row = $sql->fetchAll();
-            return TRUE;
-        } catch (PDOException $e) {
-            return FALSE;
-        }
-    }
-    public function wp_install_wp($opts)
-    {
-        define('WP_INSTALLING', true);
-        ;
-        ;
-        ;
-        wp_install($opts['weblog_title'], $opts['user_login'], $opts['admin_email'], (int) $opts['blog_public'], '', $opts['admin_password']);
-        $newurl = 'https://' . $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
-        update_option('siteurl', $newurl);
-        update_option('home', $newurl);
-        update_option('permalink_structure', '/%postname%/');
-        return TRUE;
-    }
-    public function wp_migration($opts_migration)
-    {
-        $postdata = http_build_query(array('api_call' => 'migration', 'dbuser' => $opts_migration['user_sql'], 'dbname' => $opts_migration['name_sql'], 'dbpassword' => $opts_migration['pass_sql'], 'dbhost' => $opts_migration['serveur_sql'], 'site' => $opts_migration['www_url'], 'table_prefix' => $opts_migration['table_prefix']));
-        $opts = array('http' => array('method' => 'POST', 'header' => 'Content-type: application/x-www-form-urlencoded', 'content' => $postdata));
-        $context = stream_context_create($opts);
-        ini_set('user_agent', 'Mozilla/4.0 (compatible; MSIE 6.0)');
-        $result = file_get_contents(rtrim($opts_migration['www_url'], '/') . '/migration.php', false, $context);
-        return $result;
-    }
-    public function wp_migration_log($opts_migration)
-    {
-        ini_set('user_agent', 'Mozilla/4.0 (compatible; MSIE 6.0)');
-        $result = file_get_contents(rtrim($opts_migration['www_url'], '/') . '/' . $this->_file_log);
-        return $result;
-    }
-    public function wp_url($oldurl, $newurl)
-    {
-        $bdd = Bdd::getInstance();
-        $req1 = $bdd->dbh->prepare('UPDATE ' . $this->_table_prefix . 'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
-        $req2 = $bdd->dbh->prepare('UPDATE ' . $this->_table_prefix . 'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
-        $req3 = $bdd->dbh->prepare('UPDATE ' . $this->_table_prefix . 'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
-        $req4 = $bdd->dbh->prepare('UPDATE ' . $this->_table_prefix . 'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
-        $req1->execute(array('oldurl' => $oldurl, 'newurl' => $newurl));
-        $req2->execute(array('oldurl' => $oldurl, 'newurl' => $newurl));
-        $req3->execute(array('oldurl' => $oldurl, 'newurl' => $newurl));
-        $req4->execute(array('oldurl' => $oldurl, 'newurl' => $newurl));
-        return TRUE;
-    }
-    public function wp_htaccess()
-    {
-        $path = dirname($_SERVER['REQUEST_URI']);
-        $ht = '<IfModule mod_rewrite.c>' . '
-';
-        $ht .= 'RewriteEngine On' . '
-';
-        $ht .= 'RewriteBase ' . $path . '' . '
-';
-        $ht .= 'RewriteRule ^index\\.php$ - [L]' . '
-';
-        $ht .= 'RewriteCond %{REQUEST_FILENAME} !-f' . '
-';
-        $ht .= 'RewriteCond %{REQUEST_FILENAME} !-d' . '
-';
-        $ht .= 'RewriteRule . ' . rtrim($path, '/') . '/index.php [L]' . '
-';
-        $ht .= '</IfModule>' . '
-';
-        $ht .= '<files wp-config.php>' . '
-';
-        $ht .= '	order allow,deny' . '
-';
-        $ht .= '	deny from all' . '
-';
-        $ht .= '</files> ' . '
-';
-        $ht .= '<Files .htaccess>' . '
-';
-        $ht .= '	order allow,deny ' . '
-';
-        $ht .= '	deny from all ' . '
-';
-        $ht .= '</Files>' . '
-';
-        $ht .= 'Options All -Indexes' . '
-';
-        if (file_exists('.htaccess')) {
-            copy('.htaccess', '.htaccess.bak');
-        }
-        if (file_put_contents('.htaccess', $ht) !== FALSE) {
-            return TRUE;
-        }
-        return FALSE;
-    }
-    public function wp_configfile($options)
-    {
-        $filename = 'wp-config.php';
-        $content = file_get_contents($filename);
-        $content = preg_replace('/define\\(\'DB_NAME\', \'(.*)\'\\);/i', 'define(\'DB_NAME\', \'' . $options['dbname'] . '\');', $content);
-        $content = preg_replace('/define\\(\'DB_USER\', \'(.*)\'\\);/i', 'define(\'DB_USER\', \'' . $options['dbuser'] . '\');', $content);
-        $content = preg_replace('/define\\(\'DB_PASSWORD\', \'(.*)\'\\);/i', 'define(\'DB_PASSWORD\', \'' . $options['dbpassword'] . '\');', $content);
-        $content = preg_replace('/define\\(\'DB_HOST\', \'(.*)\'\\);/i', 'define(\'DB_HOST\', \'' . $options['dbhost'] . '\');', $content);
-        file_put_contents($filename, $content);
-        $methode = 'define(\'FS_METHOD\', \'direct\');
-define(\'WPLANG\', \'fr_FR\');
-';
-        $lines = file($filename);
-        $num_lines = count($lines);
-        if ($num_lines > 9) {
-            array_splice($lines, $num_lines - 9, 0, array($methode));
-            file_put_contents($filename, implode('', $lines));
-        } else {
-            file_put_contents($filename, PHP_EOL . $methode, FILE_APPEND);
-        }
-        chmod('wp-config.php', 438);
-        unlink('wp-config-sample.php');
-        return TRUE;
-    }
-    public function test_url_exist($url)
-    {
-        $headers = @get_headers($url);
-        if ($headers === FALSE) {
-            return FALSE;
-        } else {
-            return TRUE;
-        }
-    }
-    public function wp_export_file()
-    {
-        if (file_exists($this->_file_destination)) {
-            unlink($this->_file_destination);
-        }
-        try {
-            $this->Zip($this->_fileswp, $this->_file_destination);
-        } catch (Exception $e) {
-            if (function_exists('exec')) {
-                $this->Zip_soft('./', $this->_file_destination, 'exec');
-            } elseif (function_exists('system')) {
-                $this->Zip_soft('./', $this->_file_destination, 'system');
-            }
-        }
-        if (file_exists($this->_file_destination)) {
-            return TRUE;
-        }
-        return FALSE;
-    }
-    public function wp_export_sql()
-    {
-        if (file_exists($this->_file_sql)) {
-            unlink($this->_file_sql);
-        }
-        if (function_exists('exec')) {
-            $command = 'mysqldump --opt -h' . $this->_dbhost . ' -u' . $this->_dbuser . ' -p' . $this->_dbpassword . ' ' . $this->_dbname . ' > ' . $this->_file_sql;
-            exec($command, $output = array(), $worked);
-        } elseif (function_exists('system')) {
-            system('mysqldump --host=' . $this->_dbhost . ' --user=' . $this->_dbuser . ' --password=' . $this->_dbpassword . ' ' . $this->_dbname . ' > ' . $this->_file_sql);
-        } else {
-            $bdd = Bdd::getInstance();
-            $bdd->dbh->query('SET NAMES \'utf8\'');
-            $queryTables = $bdd->dbh->query('SHOW TABLES');
-            while ($row = $queryTables->fetch()) {
-                $target_tables[] = $row[0];
-            }
-            $content = '-- Migration SQL Dump' . '
-';
-            $content .= '-- version 1.0' . '
-';
-            $content .= '-- http://www.viky.fr' . '
-';
-            $content .= '--' . '
-';
-            $content .= '-- Host: localhost' . '
-';
-            $content .= '-- Generation Time: ' . '
-';
-            $content .= '-- Server version: ' . '
-';
-            $content .= '-- PHP Version: ' . '
-';
-            foreach ($target_tables as $table) {
-                $result = $bdd->dbh->query('SELECT * FROM ' . $table);
-                $fields_amount = $result->columnCount();
-                $rows_num = $result->rowCount();
-                $res = $bdd->dbh->query('SHOW CREATE TABLE ' . $table);
-                $TableMLine = $res->fetch();
-                $content .= '
-' . '--' . '
-';
-                $content .= '-- Table structure for table `' . $table . '`' . '
-';
-                $content .= '--' . '
-';
-                $content = (!isset($content) ? '' : $content) . '
-
-' . $TableMLine[1] . ';
-
-';
-                for ($i = 0, $st_counter = 0; $i < $fields_amount; $i++, $st_counter = 0) {
-                    while ($row = $result->fetch()) {
-                        if ($st_counter % 100 == 0 || $st_counter == 0) {
-                            $content .= '
-INSERT INTO ' . $table . ' VALUES';
-                        }
-                        $content .= '
-(';
-                        for ($j = 0; $j < $fields_amount; $j++) {
-                            $row[$j] = str_replace('
-', '\\n', addslashes($row[$j]));
-                            if (isset($row[$j])) {
-                                $content .= '"' . $row[$j] . '"';
-                            } else {
-                                $content .= '""';
-                            }
-                            if ($j < $fields_amount - 1) {
-                                $content .= ',';
-                            }
-                        }
-                        $content .= ')';
-                        if (($st_counter + 1) % 100 == 0 && $st_counter != 0 || $st_counter + 1 == $rows_num) {
-                            $content .= ';';
-                        } else {
-                            $content .= ',';
-                        }
-                        $st_counter = $st_counter + 1;
-                    }
-                }
-                $content .= '
-
-
-';
-            }
-            file_put_contents($this->_file_sql, $content);
-        }
-        if (file_exists($this->_file_sql)) {
-            return TRUE;
-        }
-        return FALSE;
-    }
-    public function wp_import_file()
-    {
-        $zip = new ZipArchive();
-        $zip->open($this->_file_destination);
-        $zip->extractTo('.');
-        $zip->close();
-        return TRUE;
-    }
-    public function wp_import_sql()
-    {
-        if (function_exists('exec')) {
-            $command = 'mysql -h' . $this->_dbhost . ' -u' . $this->_dbuser . ' -p' . $this->_dbpassword . ' ' . $this->_dbname . ' < ' . $this->_file_sql;
-            exec($command, $output = array(), $worked);
-            switch ($worked) {
-                case 0:
-                    return TRUE;
-                    break;
-                case 1:
-                    return FALSE;
-                    break;
-            }
-        } elseif (function_exists('system')) {
-            system('mysql -h' . $this->_dbhost . ' -u' . $this->_dbuser . ' -p' . $this->_dbpassword . ' ' . $this->_dbname . ' < ' . $this->_file_sql);
-            return TRUE;
-        } else {
-            $bdd = Bdd::getInstance();
-            $templine = '';
-            $lines = file($this->_file_sql);
-            foreach ($lines as $line) {
-                if (substr($line, 0, 2) == '--' || $line == '') {
-                    continue;
-                }
-                $templine .= $line;
-                if (substr(trim($line), -1, 1) == ';') {
-                    $bdd->dbh->query($templine);
-                    $templine = '';
-                }
-            }
-            return TRUE;
-        }
-        return FALSE;
-    }
-    public function wp_sql_clean_revision()
-    {
-        $bdd = Bdd::getInstance();
-        $sql = $bdd->dbh->prepare('DELETE FROM ' . $this->_table_prefix . 'posts WHERE post_type = "revision"');
-        return $sql->execute();
-    }
-    public function wp_sql_clean_spam()
-    {
-        $bdd = Bdd::getInstance();
-        $sql = $bdd->dbh->prepare('DELETE from ' . $this->_table_prefix . 'comments WHERE comment_approved = 0');
-        return $sql->execute();
-    }
-    public function wp_install_plugins($plug_off)
-    {
-        $plugins = explode(',', $plug_off);
-        $plugins = array_map('trim', $plugins);
-        $plugins_dir = 'wp-content/plugins/';
-        foreach ($plugins as $plugin) {
-            $plugin_repo = file_get_contents("http://api.wordpress.org/plugins/info/1.0/{$plugin}.json");
-            if ($plugin_repo && ($plugin = json_decode($plugin_repo))) {
-                $plugin_path = config('wp_dir_plug') . $plugin->slug . '-' . $plugin->version . '.zip';
-                if (!file_exists($plugin_path)) {
-                    if ($download_link = file_get_contents($plugin->download_link)) {
-                        file_put_contents($plugin_path, $download_link);
-                    }
-                }
-                $zip = new ZipArchive();
-                if ($zip->open($plugin_path) === true) {
-                    $zip->extractTo($plugins_dir);
-                    $zip->close();
-                }
-            }
-        }
-        ;
-        ;
-        activate_plugins(array_keys(get_plugins()));
-        return TRUE;
-    }
-    public function wp_delete_theme()
-    {
-        ;
-        ;
-        delete_theme('twentyfourteen');
-        delete_theme('twentythirteen');
-        delete_theme('twentytwelve');
-        delete_theme('twentyeleven');
-        delete_theme('twentyten');
-        delete_theme('__MACOSX');
-    }
-    public function wp_add_user($user_login, $user_pass)
-    {
-        ;
-        ;
-        $userdata = array('user_login' => $user_login, 'user_url' => '', 'user_email' => '', 'user_pass' => $user_pass, 'role' => 'administrator');
-        $user_id = wp_insert_user($userdata);
-        if (!is_wp_error($user_id)) {
-            return TRUE;
-        }
-        return FALSE;
-    }
-    public function wp_rename_prefix($new_prefix)
-    {
-        $old_prefix = $this->_table_prefix;
-        if (!is_writable('wp-config.php')) {
-            return FALSE;
-        }
-        $file = file('wp-config.php');
-        $content = '';
-        foreach ($file as $line) {
-            $line = ltrim($line);
-            if (!empty($line)) {
-                if (strpos($line, '$table_prefix') !== false) {
-                    $line = preg_replace('/=(.*)\\;/', '= \'' . $new_prefix . '\';', $line);
-                }
-            }
-            $content .= $line;
-        }
-        if (!empty($content)) {
-            file_put_contents('wp-config.php', $content);
-        }
-        $bdd = Bdd::getInstance();
-        $sql = $bdd->dbh->prepare('SHOW TABLES LIKE \'' . $old_prefix . '%\'');
-        $sql->execute();
-        $tables = $sql->fetchAll();
-        $changed_tables = array();
-        foreach ($tables as $table) {
-            $table_old_name = $table[0];
-            $table_new_name = substr_replace($table_old_name, $new_prefix, 0, strlen($old_prefix));
-            $sql1 = $bdd->dbh->prepare("RENAME TABLE `{$table_old_name}` TO `{$table_new_name}`");
-            $sql1->execute();
-            array_push($changed_tables, $table_new_name);
-        }
-        $sql2 = $bdd->dbh->prepare("UPDATE {$new_prefix}options SET option_name='{$new_prefix}user_roles' WHERE option_name='{$old_prefix}user_roles';");
-        $sql2->execute();
-        $query = 'UPDATE ' . $new_prefix . 'usermeta set meta_key = CONCAT(replace(left(meta_key, ' . strlen($old_prefix) . "), '{$old_prefix}', '{$new_prefix}'), SUBSTR(meta_key, " . (strlen($old_prefix) + 1) . ")) where meta_key in ('{$old_prefix}autosave_draft_ids', '{$old_prefix}capabilities', '{$old_prefix}metaboxorder_post', '{$old_prefix}user_level', '{$old_prefix}usersettings','{$old_prefix}usersettingstime', '{$old_prefix}user-settings', '{$old_prefix}user-settings-time', '{$old_prefix}dashboard_quick_press_last_post_id')";
-        $sql3 = $bdd->dbh->prepare($query);
-        $sql3->execute();
-        return TRUE;
-    }
-    public function wp_clean_files()
-    {
-        foreach ($this->_fileswp as $key => $file) {
-            if (is_dir($file)) {
-                $this->rrmdir($file);
-            } else {
-                @unlink($file);
-            }
-        }
-        return TRUE;
-    }
-    public function wp_clean_sql()
-    {
-        $bdd = Bdd::getInstance();
-        $sql = $bdd->dbh->prepare('SHOW TABLES LIKE \'' . $this->_table_prefix . '%\'');
-        $sql->execute();
-        $tables = $sql->fetchAll();
-        foreach ($tables as $table) {
-            $table_name = $table[0];
-            $sql1 = $bdd->dbh->prepare("DROP TABLE `{$table_name}`");
-            $sql1->execute();
-        }
-        return TRUE;
-    }
-    public function wp_test_hash()
-    {
-        if (file_exists('migration-hash.php')) {
-            ;
-            $retour = '';
-            foreach ($fileswp as $key => $value) {
-                if (md5_file($key) != $value) {
-                    $retour .= 'Le fichier : ' . $key . ' ne correspond plus a la version initial.<br>';
-                }
-            }
-            return $retour;
-        }
-        return FALSE;
-    }
-    public function wp_update()
-    {
-        $content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/migration.php');
-        file_put_contents('migration.php', $content);
-        return TRUE;
-    }
-    public function wp_check_update()
-    {
-        $content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/version.json' . '?' . mt_rand());
-        $version = json_decode($content);
-        $retour['version_courante'] = $this->_version;
-        $retour['version_enligne'] = $version->version;
-        if ($retour['version_courante'] != $retour['version_enligne']) {
-            $retour['maj_dipso'] = TRUE;
-        } else {
-            $retour['maj_dipso'] = FALSE;
-        }
-        return $retour;
-    }
-    public function wp_create_hash()
-    {
-        if (file_exists('migration-hash.php')) {
-            unlink('migration-hash.php');
-        }
-        $hashfiles = '<?php ' . '
-';
-        $hashfiles .= $this->wp_hashs_files(getcwd(), 0, FALSE);
-        $hashfiles .= '
-' . '?>';
-        file_put_contents('migration-hash.php', $hashfiles);
-        return TRUE;
-    }
-    public function wp_hashs_files($source_dir, $directory_depth = 0, $hidden = FALSE)
-    {
-        if ($fp = @opendir($source_dir)) {
-            $hashs = '';
-            $new_depth = $directory_depth - 1;
-            $source_dir = rtrim($source_dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
-            while (FALSE !== ($file = readdir($fp))) {
-                if ($file === '.' or $file === '..' or $hidden === FALSE && $file[0] === '.') {
-                    continue;
-                }
-                is_dir($source_dir . $file) && ($file .= DIRECTORY_SEPARATOR);
-                if (($directory_depth < 1 or $new_depth > 0) && is_dir($source_dir . $file)) {
-                    $hashs .= $this->wp_hashs_files($source_dir . $file, $new_depth, $hidden);
-                } else {
-                    $file_current = substr_replace($source_dir . $file, '', 0, strlen($this->_current_rep) + 1);
-                    $hashs .= '$fileswp["' . $file_current . '"] = "' . md5_file($source_dir . $file) . '";' . '
-';
-                }
-            }
-            closedir($fp);
-            return $hashs;
-        }
-        return FALSE;
-    }
-    public function excludefilesfolderin_zip($serialize = FALSE)
-    {
-        $files_current = scandir('.');
-        unset($files_current[0]);
-        unset($files_current[1]);
-        $result = array_diff($files_current, $this->_fileswp);
-        $listefiles = '';
-        if ($serialize = TRUE) {
-            if (count($result) > 0) {
-                foreach ($result as $file) {
-                    $ext = '';
-                    if (is_dir($file)) {
-                        $ext = '/*';
-                    }
-                    $listefiles .= ' "' . $file . $ext . '" ';
-                }
-            }
-            return $listefiles;
-        }
-        return $result;
-    }
-    public function ftp_putAll($conn_id, $src_dir, $dst_dir)
-    {
-        $d = dir($src_dir);
-        while ($file = $d->read()) {
-            if ($file != '.' && $file != '..') {
-                if (is_dir($src_dir . '/' . $file)) {
-                    if (!@ftp_nlist($conn_id, $dst_dir . '/' . $file)) {
-                        ftp_mkdir($conn_id, $dst_dir . '/' . $file);
-                    }
-                    $this->ftp_putAll($conn_id, $src_dir . '/' . $file, $dst_dir . '/' . $file);
-                } else {
-                    $upload = ftp_put($conn_id, $dst_dir . '/' . $file, $src_dir . '/' . $file, FTP_BINARY);
-                }
-                file_put_contents($this->_file_log_ftp, date('d-m-Y h:i:s') . ' : ' . $src_dir . '/' . $file, FILE_APPEND);
-            }
-        }
-        $d->close();
-    }
-    public function Zip_soft($source, $destination, $soft = 'exec')
-    {
-        if (!is_readable($source) || !is_writeable(dirname($destination)) || file_exists($destination) && !is_file($destination)) {
-            return false;
-        }
-        $output = '';
-        $returnv = true;
-        if ($soft == 'exec') {
-            exec('zip -r ' . $destination . ' ' . $source . ' -x ' . $this->excludefilesfolderin_zip(TRUE) . ' >/dev/null', $output, $returnv);
-        } else {
-            system('zip -r ' . $destination . ' ' . $source . ' -x ' . $this->excludefilesfolderin_zip(TRUE) . ' >/dev/null', $output);
-        }
-        return TRUE;
-    }
-    public function Zip($source, $destination)
-    {
-        if (!extension_loaded('zip')) {
-            return false;
-        }
-        $zip = new ZipArchive();
-        if (!$zip->open($destination, ZIPARCHIVE::CREATE)) {
-            return false;
-        }
-        $sources = str_replace('\\', '/', realpath('.'));
-        foreach ($source as $key => $value) {
-            if (is_dir($value) === true) {
-                $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($value), RecursiveIteratorIterator::SELF_FIRST);
-                foreach ($files as $file) {
-                    $file = str_replace('\\', '/', $file);
-                    if (in_array(substr($file, strrpos($file, '/') + 1), array('.', '..'))) {
-                        continue;
-                    }
-                    $file = realpath($file);
-                    if (is_dir($file) === true) {
-                        if (!$zip->addEmptyDir(str_replace($sources . '/', '', $file . '/'))) {
-                            @unlink($this->_file_destination);
-                            throw new Exception('La memoire alouée par le serveur n\'est pas sufisante.');
-                        }
-                    } else {
-                        if (is_file($file) === true) {
-                            if (!$zip->addFromString(str_replace($sources . '/', '', $file), file_get_contents($file))) {
-                                @unlink($this->_file_destination);
-                                throw new Exception('La memoire alouée par le serveur n\'est pas sufisante.');
-                            }
-                        }
-                    }
-                }
-            } else {
-                if (is_file($value) === true) {
-                    $zip->addFromString(basename($value), file_get_contents($value));
-                }
-            }
-        }
-        return $zip->close();
-    }
-    public function get_memory_limit($units = TRUE)
-    {
-        $memory_limit = ini_get('memory_limit');
-        if (preg_match('/^(\\d+)(.)$/', $memory_limit, $matches)) {
-            if ($matches[2] == 'M') {
-                $memory_limit = $matches[1] * 1024 * 1024;
-            } else {
-                if ($matches[2] == 'K') {
-                    $memory_limit = $matches[1] * 1024;
-                }
-            }
-        }
-        return $this->formatBytes($memory_limit, 2, $units);
-    }
-    public function formatBytes($bytes, $precision = 2, $units = TRUE)
-    {
-        $unit = array('B', 'KB', 'MB', 'GB');
-        $exp = floor(log($bytes, 1024)) | 0;
-        if ($units === TRUE) {
-            return round($bytes / pow(1024, $exp), $precision) . $unit[$exp];
-        } else {
-            return round($bytes / pow(1024, $exp), $precision);
-        }
-    }
-    public function rrmdir($dir)
-    {
-        if (is_dir($dir)) {
-            $objects = scandir($dir);
-            foreach ($objects as $object) {
-                if ($object != '.' && $object != '..') {
-                    if (filetype($dir . '/' . $object) == 'dir') {
-                        $this->rrmdir($dir . '/' . $object);
-                    } else {
-                        unlink($dir . '/' . $object);
-                    }
-                }
-            }
-            reset($objects);
-            rmdir($dir);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    private function sanit($str)
-    {
-        return addcslashes(str_replace(array(';', '\\n'), '', $str), '\\');
-    }
-    public function retour($data = '', $success = TRUE)
-    {
-        $json = json_encode(array('success' => $success, 'data' => $data));
-        header('Access-Control-Allow-Origin: *');
-        header('Cache-Control: no-cache, must-revalidate');
-        header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
-        header('content-type: text/html; charset=utf-8');
-        echo $json;
-        die;
-    }
+if(ini_get('allow_url_fopen') == FALSE) {
+	echo "La fonction file_get_contents() est désactivée sur ce serveur, veuillez l'activer pour continuer."; exit;
 }
+
+/**
+ * Vos zips d'installation de Wordpress
+ * 
+ * $zips_wp = [
+ * 	[
+ * 		'nom' => 'Mon template WP #1',
+ * 		'fichier' => 'https://site/fichier.zip',
+ * 		'sql' => 'https://site/fichier.zip'
+ * 	],
+ * 	[
+ * 		'nom' => 'Mon template WP #2',
+ * 		'fichier' => 'https://site/fichier.zip',
+ * 		'sql' => 'https://site/fichier.zip'
+ * 	]
+ * ];
+ * 
+ */
+$zips_wp = [];
+
+/**
+ * Variable de status d'execution du script
+ */
+$retour_url                   = FALSE;
+$retour_migration             = FALSE;
+$retour_migration_api         = FALSE;
+$retour_migration_log         = FALSE;
+$retour_export                = FALSE;
+$retour_import                = FALSE;
+$retour_export_sql            = FALSE;
+$retour_import_sql            = FALSE;
+$retour_htaccess              = FALSE;
+$retour_dl                    = FALSE;
+$retour_dl_full               = FALSE;
+$retour_clean_revision        = FALSE;
+$retour_clean_spam            = FALSE;
+$retour_plug_install          = FALSE;
+$retour_delete_theme          = FALSE;
+$retour_add_user              = FALSE;
+$retour_action_dl_zip         = FALSE;
+$retour_action_dl_zip_extract = FALSE;
+
+
+
+Class Wp_Migration {
+
+	var $_wp_lang,
+		$_wp_api,
+		$_wp_dir_core,
+		$_version,
+		$_file_destination,
+		$_file_sql,
+		$_current_rep,
+		$_fileswp;
+
+	var $_dbhost,
+		$_dbname,
+		$_dbuser,
+		$_dbpassword,
+		$_table_prefix;
+
+	/**
+	 * @var string $this->_wp_lang 				Langue Wordpress
+	 * @var string $this->_wp_api 				Url de l'api Wordpress
+	 * @var string $this->_wp_dir_core 			Dossier temporaire de copie des fichier WP
+	 * @var string $this->_file_destination 	Nom du fichier Zip créé lors de la sauvegarde
+	 * @var string $this->_file_sql 				Nom du fichier sql créé lors du Cump SQL
+	 */
+	public function __construct() {
+
+		$this->_version          = '2.7.0';
+		$this->_wp_lang          = 'fr_FR';
+		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
+		$this->_wp_dir_core      = 'core/';
+		$this->_current_rep      = getcwd();
+		$this->_fileswp          = array(
+			'wp-activate.php',
+			'wp-blog-header.php',
+			'wp-comments-post.php',
+			'wp-config.php',
+			'wp-cron.php',
+			'wp-links-opml.php',
+			'wp-load.php',
+			'wp-login.php',
+			'wp-mail.php',
+			'wp-settings.php',
+			'wp-signup.php',
+			'wp-trackback.php',
+			'xmlrpc.php',
+			'index.php',
+			'license.txt',
+			'readme.html',
+			'wp-config-sample.php',
+			'wp-admin',
+			'wp-content',
+			'wp-includes',
+			'.htaccess'
+		);
+
+		$this->set_var_wp();
+	}
+
+	/**
+	 * Assigne les variable du Wordpress courant a la class
+	 *
+	 * @param mixed[] $options Array Information de connexion a la base de données local 
+	 */
+	public function set_var_wp($options = null) {
+
+		// Chemin vers le fichier wp-config.php
+		$wp_config_file = 'wp-config.php';
+
+		// Si le fichier n'existe pas, on retourne une erreur
+		if (!file_exists($wp_config_file)) {
+			return false;
+		}
+
+		// Lire le contenu du fichier sans l'inclure
+		$config_content = file_get_contents($wp_config_file);
+
+		// Expression régulière pour capturer les constantes
+		preg_match("/define\(\s*'DB_NAME'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_name);
+		preg_match("/define\(\s*'DB_USER'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_user);
+		preg_match("/define\(\s*'DB_PASSWORD'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_password);
+		preg_match("/define\(\s*'DB_HOST'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_host);
+		preg_match("/define\(\s*'DB_CHARSET'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_charset);
+		preg_match("/define\(\s*'DB_COLLATE'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_collate);
+		preg_match("/\\\$table_prefix\s*=\s*'(.+?)'\s*;/", $config_content, $table_prefix_matches);
+
+		$this->_dbhost 			= $db_host[1];
+		$this->_dbname 			= $db_name[1];
+		$this->_dbuser 			= $db_user[1];
+		$this->_dbpassword 		= $db_password[1];
+		$this->_table_prefix 	= $table_prefix_matches[1];
+
+		Config::write('db.host', $this->_dbhost);
+		Config::write('db.basename', $this->_dbname);
+		Config::write('db.user', $this->_dbuser);
+		Config::write('db.password', $this->_dbpassword);
+	}
+
+	/**
+	 * Recupere les informations sur le WP courant
+	 */
+	public function wp_get_info(string $option = 'siteurl'){
+
+		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
+
+		$req = $bdd->dbh->prepare('SELECT option_value FROM '.$this->_table_prefix.'options WHERE option_name = "' . $option . '";');
+		$req->execute();
+
+		return $req->fetch();
+	}
+
+	/**
+	 * Recupere le Zip de la derniere version en ligne de Wordpress
+	 * 
+	 * 2021/03/25
+	 * 
+	 * Status : Ok
+	 * 
+	 */
+	public function wp_download_zip($url = null){
+
+		// Si on a une URL source, on l'utilise
+		if($url != null){
+
+			$fichierDest = 'wordpress-custom.zip';
+			file_put_contents( $fichierDest, file_get_contents( $url ) );
+		} else {
+
+			// Get WordPress data
+			$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+
+			$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
+
+			file_put_contents( $fichierDest, file_get_contents( $wp->download ) );
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Recupere le Zip de la derniere version en ligne de Wordpress
+	 * Extrait le Zip de la version telechargé
+	 * Supprime les fichiers telechargés et non utiles
+	 * 
+	 * 2021/03/25
+	 * 
+	 * Status : Ok
+	 * 
+	 */
+	public function wp_download($url = null){
+
+		// Si on a une URL source, on l'utilise
+		if($url != null){
+
+			$fichierDest = 'wordpress-custom.zip';
+			file_put_contents( $fichierDest, file_get_contents( $url ) );
+
+		}else{
+
+			// Get WordPress data
+			$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+			$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
+
+			if( ! mkdir($this->_wp_dir_core, 0775)){
+				return FALSE;
+			}
+
+			file_put_contents( $this->_wp_dir_core . $fichierDest, file_get_contents( $wp->download  ) );
+		}
+
+		$zip = new ZipArchive;
+
+		// We verify if we can use the archive
+		if ( $zip->open( $fichierDest ) === true ) {
+
+			// Let's unzip
+			// Boucle pour parcourir tous les fichiers
+			for ($i = 0; $i < $zip->numFiles; $i++) {
+					$filename = $zip->getNameIndex($i);
+					
+					// Vérification rapide si le fichier n'est pas un fichier ZIP
+					if (substr($filename, -4) !== '.zip') {
+						$zip->extractTo('.', $filename);
+					}
+			}
+
+			// Fermeture de l'archive
+			$zip->close();
+
+			if($url != null){
+
+				unlink( $fichierDest );
+			}else{
+
+				chmod( 'wordpress' , 0775 );
+
+				// We scan the folder
+				$files = scandir( 'wordpress' );
+
+				if( is_array($files) ){
+				
+					// We remove the "." and ".." from the current folder and its parent
+					$files = array_diff( $files, array( '.', '..' ) );
+
+					// We move the files and folders
+					foreach ( $files as $file ) {
+						rename(  'wordpress/' . $file, './' . $file );
+					}
+
+					rmdir( 'wordpress' );
+					$this->rrmdir( 'core' );
+					//unlink( './license.txt' );
+					//unlink( './readme.html' );
+					unlink( './wp-content/plugins/hello.php' );
+				
+				}
+			}
+
+			return TRUE;
+		}
+
+		return FALSE;
+	}
+
+	/**
+	 * Ecrit le fichier de configuration
+	 *
+	 * @param string $opts 		
+	 *
+	 * @return bool 			retourne true ou false
+	 */
+	public function wp_install_config($opts){
+
+		// We retrieve each line as an array
+		$config_file = file( 'wp-config-sample.php' );
+
+		// Managing the security keys
+		$secret_keys = explode( "\n", file_get_contents( 'https://api.wordpress.org/secret-key/1.1/salt/' ) );
+
+		foreach ( $secret_keys as $k => $v ) {
+			$secret_keys[$k] = substr( $v, 28, 64 );
+		}
+
+		// We change the data
+		$key = 0;
+		foreach ( $config_file as &$line ) {
+
+			if ( '$table_prefix  =' == substr( $line, 0, 16 ) ) {
+				$line = '$table_prefix  = \'' . $this->sanit( $opts['prefix'] ) . "';\r\n";
+				continue;
+			}
+
+			if ( ! preg_match( '/^define\(\'([A-Z_]+)\',([ ]+)/', $line, $match ) ) {
+				continue;
+			}
+
+			$constant = $match[1];
+
+			switch ( $constant ) {
+				case 'WP_DEBUG'	   :
+
+					// Debug mod
+					if ( (int) $opts['debug'] == 1 ) {
+						$line = "define('WP_DEBUG', 'true');\r\n";
+
+						// Display error
+						if ( (int) $opts['debug_display']  == 1 ) {
+							$line .= "\r\n\n " . "/** Affichage des erreurs à l'écran */" . "\r\n";
+							$line .= "define('WP_DEBUG_DISPLAY', 'true');\r\n";
+						}
+
+						// To write error in a log files
+						if ( (int) $opts['debug_log']  == 1 ) {
+							$line .= "\r\n\n " . "/** Ecriture des erreurs dans un fichier log */" . "\r\n";
+							$line .= "define('WP_DEBUG_LOG', 'true');\r\n";
+						}
+					}
+					
+					$line .= "\r\n\n " . "/** On augmente la mémoire limite */" . "\r\n";
+					$line .= "define('WP_MEMORY_LIMIT', '256M');" . "\r\n";
+
+					break;
+				case 'DB_NAME'     :
+					$line = "define('DB_NAME', '" . $this->sanit( $opts['dbname'] ) . "');\r\n";
+					break;
+				case 'DB_USER'     :
+					$line = "define('DB_USER', '" . $this->sanit( $opts['uname'] ) . "');\r\n";
+					break;
+				case 'DB_PASSWORD' :
+					$line = "define('DB_PASSWORD', '" . $this->sanit( $opts['pwd'] ) . "');\r\n";
+					break;
+				case 'DB_HOST'     :
+					$line = "define('DB_HOST', '" . $this->sanit( $opts['dbhost'] ) . "');\r\n";
+					break;
+				case 'AUTH_KEY'         :
+				case 'SECURE_AUTH_KEY'  :
+				case 'LOGGED_IN_KEY'    :
+				case 'NONCE_KEY'        :
+				case 'AUTH_SALT'        :
+				case 'SECURE_AUTH_SALT' :
+				case 'LOGGED_IN_SALT'   :
+				case 'NONCE_SALT'       :
+					$line = "define('" . $constant . "', '" . $secret_keys[$key++] . "');\r\n";
+					break;
+
+				case 'WPLANG' :
+					$line = "define('WPLANG', '" . $this->sanit( $this->_wp_lang ) . "');\r\n";
+					break;
+			}
+		}
+		unset( $line );
+
+		$handle = fopen( 'wp-config.php', 'w' );
+		foreach ( $config_file as $line ) {
+			fwrite( $handle, $line );
+		}
+		fclose( $handle );
+
+		// We set the good rights to the wp-config file
+		chmod( 'wp-config.php', 0666 );
+		unlink('wp-config-sample.php' );
+
+		return TRUE;
+	}
+
+	/**
+	 * On test si la base de donnée est accessible ou existante
+	 *
+	 * @return bool true|false
+	 */
+	public function wp_test_bdd(){
+
+		try{
+			$bdd = Bdd::getInstance();
+
+			if($bdd->dbh == null){
+				return false;
+			}
+
+			$sql = $bdd->dbh->prepare('SHOW TABLES');
+			$sql->execute();
+			$row = $sql->fetchAll();
+			
+			return TRUE;
+		}catch(PDOException $e){
+
+			return FALSE;
+		}
+	}
+
+	/**
+	 * Instale et configure WordPress sur le serveur local dans le dossier courant
+	 *
+	 * @param mixed[] $opts informations d'inscription du compte admin Wordpress
+	 *
+	 * @return bool true|false
+	 */
+	public function wp_install_wp($opts){
+
+		define( 'WP_INSTALLING', true );
+		
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/upgrade.php' );
+		require_once( 'wp-includes/wp-db.php' );
+
+		// WordPress installation
+		wp_install($opts['weblog_title'], $opts['user_login'], $opts['admin_email'], (int) $opts['blog_public'], '', $opts['admin_password']);
+
+		// We update the options with the right siteurl et homeurl value
+		$newurl = 'https://'.$_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
+		update_option( 'siteurl', $newurl);
+		update_option( 'home', $newurl);
+
+		update_option( 'permalink_structure', '/%postname%/');
+
+		return TRUE;
+	}
+
+	/**
+	 * Contact l'api distante pour lui donner les ordres du coté serveur distant
+	 *
+	 * @param mixed[] $opts_migration Array 
+	 *
+	 * @return bool true|false
+	 */
+	public function wp_migration($opts_migration) {
+
+		$postdata = http_build_query(
+			array(
+				'api_call' 		=> 'migration',
+				'dbuser' 		=> $opts_migration['user_sql'],
+				'dbname' 		=> $opts_migration['name_sql'],
+				'dbpassword' 	=> $opts_migration['pass_sql'],
+				'dbhost' 		=> $opts_migration['serveur_sql'],
+				'site' 			=> $opts_migration['www_url'],
+				'table_prefix'  => $opts_migration['table_prefix']
+			)
+		);
+
+		$opts = array('http' =>
+			array(
+				'method'  => 'POST',
+				'header'  => 'Content-type: application/x-www-form-urlencoded',
+				'content' => $postdata
+			)
+		);
+
+		$context  = stream_context_create($opts);
+
+		ini_set('user_agent','Mozilla/4.0 (compatible; MSIE 6.0)');
+		$result = file_get_contents(rtrim($opts_migration['www_url'], '/').'/migration.php', false, $context);
+
+		return $result;
+	}
+
+	/**
+	 * Modifie les urls dans la table de configuration et les contenues
+	 *
+	 * @param string $oldurl ancienne url ( a remplacer ) 
+	 * @param string $newurl nouvelle url ( en remplacement )
+	 * 
+	 */
+	public function wp_url($oldurl, $newurl) {
+
+		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
+
+		# Changer l'URL du site
+		$req1 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'options SET option_value = replace(option_value, :oldurl, :newurl) WHERE option_name = \'home\' OR option_name = \'siteurl\';');
+
+		# Changer l'URL des GUID
+		$req2 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'posts SET guid = REPLACE (guid, :oldurl, :newurl);');
+
+		# Changer l'URL des médias dans les articles et pages
+		$req3 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'posts SET post_content = REPLACE (post_content, :oldurl, :newurl);');
+
+		# Changer l'URL des données meta
+		$req4 = $bdd->dbh->prepare('UPDATE '.$this->_table_prefix.'postmeta SET meta_value = REPLACE (meta_value, :oldurl, :newurl);');
+
+		$req1->execute(array(
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
+		));
+
+		$req2->execute(array(
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
+		));
+
+		$req3->execute(array(
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
+		));
+
+		$req4->execute(array(
+			'oldurl' => $oldurl,
+			'newurl' => $newurl
+		));
+
+		return TRUE;
+	}
+
+	/**
+	 * Creer un htaccess adapté a wordpress
+	 */
+	public function wp_htaccess() {
+
+		$path = dirname($_SERVER['REQUEST_URI']);
+
+		$ht  = '<IfModule mod_rewrite.c>'."\r\n";
+		$ht .= 'RewriteEngine On'."\r\n";
+		$ht .= 'RewriteBase '.$path.''."\r\n";
+		$ht .= 'RewriteRule ^index\.php$ - [L]'."\r\n";
+		$ht .= 'RewriteCond %{REQUEST_FILENAME} !-f'."\r\n";
+		$ht .= 'RewriteCond %{REQUEST_FILENAME} !-d'."\r\n";
+		$ht .= 'RewriteRule . '.rtrim($path, '/').'/index.php [L]'."\r\n";
+		$ht .= '</IfModule>'."\r\n";
+
+		$ht .= '<files wp-config.php>'."\r\n";
+		$ht .= '	order allow,deny'."\r\n";
+		$ht .= '	deny from all'."\r\n";
+		$ht .= '</files> '."\r\n";
+
+		$ht .= '<Files .htaccess>'."\r\n";
+		$ht .= '	order allow,deny '."\r\n";
+		$ht .= '	deny from all '."\r\n";
+		$ht .= '</Files>'."\r\n";
+
+		$ht .= 'Options All -Indexes'."\r\n";
+		
+		if(file_exists('.htaccess')) {
+			copy('.htaccess', '.htaccess.bak');
+		}
+
+		if(file_put_contents( '.htaccess', $ht ) !== FALSE){
+			return TRUE;
+		}
+			
+		return FALSE;
+	}
+
+	/**
+	 * Modifie le fichier de configuration et ajoute les lignes de config pour mise a jour via le net et la langue FR
+	 *
+	 * @param mixed[] $options Array Options de connexion au serveur distant
+	 *
+	 * @return bool true|false
+	 */
+	public function wp_configfile($options) {
+		
+		$filename = 'wp-config.php';
+
+		$content = file_get_contents($filename);
+
+		$content = preg_replace ("/define\('DB_NAME', '(.*)'\);/i", "define('DB_NAME', '".$options['dbname']."');", $content);
+		$content = preg_replace ("/define\('DB_USER', '(.*)'\);/i", "define('DB_USER', '".$options['dbuser']."');", $content);
+		$content = preg_replace ("/define\('DB_PASSWORD', '(.*)'\);/i", "define('DB_PASSWORD', '".$options['dbpassword']."');", $content);
+		$content = preg_replace ("/define\('DB_HOST', '(.*)'\);/i", "define('DB_HOST', '".$options['dbhost']."');", $content);
+
+		file_put_contents($filename , $content );
+
+		// ajouter une ligne a la ligne -8
+		$methode = "define('FS_METHOD', 'direct');\ndefine('WPLANG', 'fr_FR');\n";
+		$lines = file($filename);
+		$num_lines = count($lines);
+
+		if ($num_lines > 9) {
+			array_splice($lines, $num_lines - 9, 0, array($methode));
+			file_put_contents($filename, implode('', $lines));
+		} else {
+			file_put_contents($filename, PHP_EOL . $methode, FILE_APPEND);
+		}
+
+		chmod( 'wp-config.php', 0666 );
+		unlink( 'wp-config-sample.php' );
+
+		return TRUE;
+	}
+
+	/**
+	 * Test si l'url existe
+	 */
+	public function test_url_exist($url) {
+
+		$headers = @get_headers($url);
+
+		if ($headers === FALSE) {
+
+			return FALSE;
+		} else {
+
+			return TRUE;
+		}
+	}
+	/**
+	 * Exporte les fichiers de WP
+	 */
+	public function wp_export_file() {
+		
+		if(file_exists($this->_file_destination)){
+			unlink($this->_file_destination);
+		}
+
+		try {
+			$this->Zip($this->_fileswp, $this->_file_destination);
+
+		} catch (Exception $e) {
+			
+			if(function_exists('exec')){
+
+				$this->Zip_soft('./', $this->_file_destination, 'exec');
+			} elseif(function_exists('system')){
+
+				$this->Zip_soft('./', $this->_file_destination, 'system');
+			}
+		}
+
+		if(file_exists($this->_file_destination)){
+			return TRUE;
+		}		
+
+		return FALSE;
+	}
+
+	/**
+	 * Extrait les fichiers dans le dossier courant
+	 */
+	public function wp_import_file() {
+	
+		$zip = new ZipArchive;
+
+		$zip->open($this->_file_destination);
+		$zip->extractTo('.');
+		$zip->close();
+
+		return TRUE;
+	}
+
+	/**
+	 * Supprime les revisions de la bdd
+	 */
+	public function wp_sql_clean_revision() {
+
+		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
+
+		$sql = $bdd->dbh->prepare('DELETE FROM '.$this->_table_prefix.'posts WHERE post_type = "revision"');
+		
+		return $sql->execute();
+	}
+
+	/**
+	 * Supprime tous les commentaires non approuvés
+	 */
+	public function wp_sql_clean_spam() {
+
+		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
+
+		$sql = $bdd->dbh->prepare('DELETE from '.$this->_table_prefix.'comments WHERE comment_approved = 0');
+		
+		return $sql->execute();
+	}
+
+	/**
+	 * Install une liste de plugin separé par une , 
+	 *
+	 * @param string $plug_off liste separé par une , 
+	 */
+	public function wp_install_plugins($plug_off){
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/plugin.php');
+
+		$plugins     = explode( ",", $plug_off );
+		$plugins     = array_map( 'trim' , $plugins );
+		$plugins_dir = 'wp-content/plugins/';
+
+		foreach ( $plugins as $plugin ) {
+
+			// We retrieve the plugin XML file to get the link to downlad it
+			$plugin_repo = file_get_contents( "http://api.wordpress.org/plugins/info/1.0/$plugin.json" );
+
+			if ( $plugin_repo && $plugin = json_decode( $plugin_repo ) ) {
+
+				$plugin_path = $plugins_dir . $plugin->slug . '-' . $plugin->version . '.zip';
+
+				if ( ! file_exists( $plugin_path ) ) {
+					// We download the lastest version
+					if ( $download_link = file_get_contents( $plugin->download_link ) ) {
+						file_put_contents( $plugin_path, $download_link );
+					}
+				}
+
+				// We unzip it
+				$zip = new ZipArchive;
+				if ( $zip->open( $plugin_path ) === true ) {
+					$zip->extractTo( $plugins_dir );
+					$zip->close();
+				}
+			}
+		}
+
+		// Récupérer les plugins actifs
+		$plugins_active = array_keys(get_plugins());
+
+		// Tableau pour stocker les plugins à activer
+		$plugins_a_activer = [];
+
+		// Boucler sur les plugins actifs pour trouver ceux qui correspondent à ton tableau
+		foreach ($plugins_active as $plugin_path) {
+			foreach ($plugins as $plugin_name) {
+				// Vérifier si le nom du plugin est contenu dans le chemin
+				if (strpos($plugin_path, $plugin_name) !== false) {
+					$plugins_a_activer[] = $plugin_path; // Ajouter le chemin complet
+				}
+			}
+		}
+
+		// Activer les plugins correspondants
+		if (!empty($plugins_a_activer)) {
+			activate_plugins($plugins_a_activer);
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Supprime les themes default de Wordpress
+	 *
+	 */
+	public function wp_delete_theme(){
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-admin/includes/upgrade.php' );
+		
+		delete_theme( 'twentytwentyfour' );
+		delete_theme( 'twentyfourteen' );
+		delete_theme( 'twentythirteen' );
+		delete_theme( 'twentytwelve' );
+		delete_theme( 'twentyeleven' );
+		delete_theme( 'twentyten' );
+		// We delete the _MACOSX folder (bug with a Mac)
+		delete_theme( '__MACOSX' );
+
+		return TRUE;
+	}
+
+	/**
+	 * Ajoute un utilisateur a Wordpress
+	 *
+	 * @param string $user_login 	Nom utilisateur
+	 * @param string $user_pass 	Mot de passe utilisateur
+	 *
+	 */
+	public function wp_add_user($user_login, $user_pass){
+
+		require_once( 'wp-config.php' );
+		require_once( 'wp-load.php' );
+		require_once( 'wp-includes/user.php' );
+		
+		$userdata = array(
+			'user_login' 	=>  $user_login,
+			'user_url'  	=>  '',
+			'user_email'	=>  '',
+			'user_pass' 	=>  $user_pass,
+			'role' 			=> 'administrator'
+		);
+
+		$user_id = wp_insert_user( $userdata ) ;
+
+		//On success
+		if ( ! is_wp_error( $user_id ) ) {
+			return TRUE;
+		}
+
+		return FALSE;
+	}	
+
+	/**
+	 * 
+	 */
+	public function wp_rename_prefix($new_prefix)
+	{
+
+		// on verifie que le prefix est valide avec un _ a la fin
+		if (substr($new_prefix, -1) != '_'){
+			$new_prefix .= '_';
+		}
+
+		$old_prefix = $this->_table_prefix;
+
+		if( ! is_writable('wp-config.php')){
+			return FALSE;
+		}
+
+		// Modifier le fichier config
+		$file = file('wp-config.php');
+		$content = '';
+		foreach($file as $line)
+		{
+			$line = ltrim($line);
+			if (!empty($line)){
+				if (strpos($line, '$table_prefix') !== false){
+					$line = preg_replace("/=(.*)\;/", "= '".$new_prefix."';", $line);
+				}
+			}
+			$content .= $line;
+		}
+		if (!empty($content)){
+			file_put_contents('wp-config.php', $content);
+		}
+
+		// Modifier la base de données
+		$bdd = Bdd::getInstance();
+		
+		if($bdd->dbh == null){
+			return false;
+		}
+
+		$sql = $bdd->dbh->prepare("SHOW TABLES LIKE '".$old_prefix."%'");
+		$sql->execute();
+		$tables = $sql->fetchAll();
+
+		$changed_tables = array();
+		foreach ($tables as $table)	{
+			$table_old_name = $table[0];
+
+			// To rename the table
+			$table_new_name = substr_replace($table_old_name, $new_prefix, 0, strlen($old_prefix));
+
+			$sql1 = $bdd->dbh->prepare("RENAME TABLE `{$table_old_name}` TO `{$table_new_name}`");
+			$sql1->execute();
+
+			array_push($changed_tables, $table_new_name);
+		}
+		
+		$sql2 = $bdd->dbh->prepare("UPDATE {$new_prefix}options SET option_name='{$new_prefix}user_roles' WHERE option_name='{$old_prefix}user_roles';");
+		$sql2->execute();
+
+		$query = 'UPDATE '.$new_prefix.'usermeta set meta_key = CONCAT(replace(left(meta_key, ' . strlen($old_prefix) . "), '{$old_prefix}', '{$new_prefix}'), SUBSTR(meta_key, " . (strlen($old_prefix) + 1) . ")) where meta_key in ('{$old_prefix}autosave_draft_ids', '{$old_prefix}capabilities', '{$old_prefix}metaboxorder_post', '{$old_prefix}user_level', '{$old_prefix}usersettings','{$old_prefix}usersettingstime', '{$old_prefix}user-settings', '{$old_prefix}user-settings-time', '{$old_prefix}dashboard_quick_press_last_post_id')";
+		$sql3 = $bdd->dbh->prepare($query);
+		$sql3->execute();
+
+		return TRUE;
+	}
+
+	/**
+	 * Efface les fichiers de l'installation Wordpress
+	 */
+	public function wp_clean_files()
+	{
+
+		foreach ($this->_fileswp as $key => $file) {
+			if(is_dir($file)) {
+				$this->rrmdir($file);
+			} else {
+				@unlink($file);
+			}
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Efface les tables de WP
+	 */
+	public function wp_clean_sql()
+	{
+		$bdd = Bdd::getInstance();
+
+		if($bdd->dbh == null){
+			return false;
+		}
+
+		$sql = $bdd->dbh->prepare("SHOW TABLES LIKE '".$this->_table_prefix."%'");
+		$sql->execute();
+		$tables = $sql->fetchAll();
+
+		foreach ($tables as $table)	{
+			$table_name = $table[0];
+
+			// To rename the table
+			$sql1 = $bdd->dbh->prepare("DROP TABLE `{$table_name}`");
+			$sql1->execute();
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Telecharge la nouvelle version de migration.php
+	 */
+	public function wp_update()
+	{
+
+		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/migration.php');
+
+		file_put_contents('migration.php', $content);
+
+		return TRUE;
+	}
+
+	/**
+	 * 
+	 * Verifie si une nouvelle version est dispo.
+	 * 
+	 */
+	public function migration_check_update()
+	{
+		$content = file_get_contents('https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/version.json'.'?'.mt_rand());
+		$version = json_decode($content);
+
+		//var_dump($version); exit;
+
+		$retour['version_courante'] = $this->_version;
+		$retour['version_enligne']  = $version->version;
+
+		if($retour['version_courante'] != $retour['version_enligne']) {
+			$retour['maj_dipso'] = TRUE;
+		} else {
+			$retour['maj_dipso'] = FALSE;
+		}
+
+		return $retour;
+	}	
+
+	/**
+	 * Creer des Zip recursivement en utilisant les fonctions systemes
+	 *
+	 * @param string $source 		Source des fichiers
+	 * @param string $destination 	Fichier de destinations ( zip )
+	 * @param string $soft 			Methode de creation du zip
+	 *
+	 * @return bool true|false
+	 */
+	public function Zip_soft($source, $destination, $soft = 'exec')
+	{	    
+		if (!is_readable($source) || ! is_writeable(dirname($destination)) || (file_exists($destination) && !is_file($destination))) {
+			// really you should capture some more specific information
+			// in your excaption handling
+
+			return false;
+		}
+
+		$output 	= '';
+		$returnv 	= true;
+
+		if($soft == 'exec') {
+			exec('zip -r '.$destination.' '.$source.' -x '.$this->excludefilesfolderin_zip(TRUE).' >/dev/null', $output, $returnv);
+		} else {
+			system('zip -r '.$destination.' '.$source.' -x '.$this->excludefilesfolderin_zip(TRUE).' >/dev/null', $output);
+		}
+
+		return TRUE;
+	}
+
+	/**
+	 * Creer des Zip recursivement
+	 *
+	 * @link : http://stackoverflow.com/questions/1334613/how-to-recursively-zip-a-directory-in-php methode php issus de cette doc
+	 *
+	 * @param array $source 		Listes des fichiers et dossier wp a save dans le zip
+	 * @param string $destination 	Fichier de destinations ( zip )
+	 *
+	 * @return bool true|false
+	 */
+	public function Zip($source, $destination)
+	{
+		if (!extension_loaded('zip')) {
+		//if (!extension_loaded('zip') || !file_exists($source)) {
+
+			return false;
+		}
+
+		$zip = new ZipArchive();
+		if (!$zip->open($destination, ZIPARCHIVE::CREATE)) {
+
+			return false;
+		}
+
+		$sources = str_replace('\\', '/', realpath('.'));
+
+		foreach ($source as $key => $value) {
+
+			if (is_dir($value) === true)
+			{
+				$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($value), RecursiveIteratorIterator::SELF_FIRST);
+
+				foreach ($files as $file)
+				{
+					$file = str_replace('\\', '/', $file);
+
+					// Ignore "." and ".." folders
+					if( in_array(substr($file, strrpos($file, '/')+1), array('.', '..')) )
+							continue;
+
+					$file = realpath($file);
+
+					if (is_dir($file) === true)
+					{
+							if( ! $zip->addEmptyDir(str_replace($sources . '/', '', $file . '/')))
+						{
+							@unlink($this->_file_destination);
+							throw new Exception("La memoire alouée par le serveur n'est pas sufisante.");
+						}
+					}
+					else if (is_file($file) === true)
+					{
+							if( ! $zip->addFromString(str_replace($sources . '/', '', $file), file_get_contents($file)))
+						{
+							@unlink($this->_file_destination);
+							throw new Exception("La memoire alouée par le serveur n'est pas sufisante.");
+						}
+					}
+				}
+			}
+			else if (is_file($value) === true)
+			{
+				$zip->addFromString(basename($value), file_get_contents($value));
+			}
+		}
+
+		return $zip->close();
+	}
+
+	/**
+	 * Affiche la memoir php alouée par le serveur
+	 *
+	 * @link http://stackoverflow.com/questions/10208698/checking-memory-limit-in-php script issus de cette doc
+	 *
+	 * @param bool $units true|false
+	 *
+	 * @return string memoire alouée par le serveur
+	 */
+	public function get_memory_limit($units = TRUE) {
+		$memory_limit = ini_get('memory_limit');
+		if (preg_match('/^(\d+)(.)$/', $memory_limit, $matches)) {
+			if ($matches[2] == 'M') {
+				$memory_limit = $matches[1] * 1024 * 1024; // nnnM -> nnn MB
+			} else if ($matches[2] == 'K') {
+				$memory_limit = $matches[1] * 1024; // nnnK -> nnn KB
+			}
+		}
+
+		return $this->formatBytes($memory_limit, 2, $units);
+	}
+
+	/**
+	 * Convertie en unité humaine B KB MB GB une information en octets
+	 *
+	 * @link http://stackoverflow.com/questions/2510434/format-bytes-to-kilobytes-megabytes-gigabytes
+	 *
+	 * @param int 	$bytes
+	 * @param int 	$precision
+	 * @param bool 	$units true|false
+	 *
+	 * @return string chaine d'unités avec son suffixe ou non
+	 */
+	public function formatBytes($bytes, $precision = 2, $units = TRUE) {
+		$unit = ["B", "KB", "MB", "GB"];
+		$exp = floor(log((int) $bytes, 1024)) | 0;
+		
+		if($units === TRUE) {
+			return round((int)$bytes / (pow(1024, $exp)), $precision).$unit[$exp];
+		} else {
+			return round((int)$bytes / (pow(1024, $exp)), $precision);
+		}
+	}
+
+	/**
+	 * Supprime recursivement un dossier et ses fichiers
+	 *
+	 * @param string 	$dir  chemin a effacer
+	 *
+	 * @return bool true|false
+	 */
+	public function rrmdir($dir) {
+		if (is_dir($dir)) {
+			$objects = scandir($dir);
+			foreach ($objects as $object) {
+				if ($object != "." && $object != "..") {
+					if (filetype($dir."/".$object) == "dir") $this->rrmdir($dir."/".$object); else unlink($dir."/".$object);
+				}
+			}
+			reset($objects);
+			rmdir($dir);
+
+			return TRUE;
+		}
+
+		return FALSE;
+	}
+
+	/**
+	 * Nettoie les chaines de caraceteres avant d'etre utilisées par Wordpress
+	 * @param string 	$str
+	 */
+	private function sanit( $str ) {
+		return addcslashes( str_replace( array( ';', '\n' ), '', $str ), '\\' );
+	}
+
+	/**
+	 * Formate un array php sous forme de json
+	 * @param string 	$data 
+	 * @param bool 	$success
+	 */
+	public function retour($data = '', $success = TRUE)
+	{
+
+		$json = json_encode(array('success' => $success, 'data' => $data));
+			
+		header('Access-Control-Allow-Origin: *');
+		header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+		header("Expires: Sat, 26 Jul 1997 05:00:00 GMT"); // Date dans le passé
+		header('content-type: text/html; charset=utf-8');
+
+		echo $json;
+
+		exit;
+	}
+}
+
 class Bdd
 {
-    public $dbh;
-    private static $instance;
-    private function __construct()
-    {
-        $dsn = 'mysql:host=' . Config::read('db.host') . ';dbname=' . Config::read('db.basename') . ';charset=utf8';
-        $user = Config::read('db.user');
-        $password = Config::read('db.password');
-        $this->dbh = new PDO($dsn, $user, $password);
-    }
-    public static function getInstance()
-    {
-        if (!isset(self::$instance)) {
-            $object = __CLASS__;
-            self::$instance = new $object();
-        }
-        return self::$instance;
-    }
+	public $dbh; // handle of the db connexion
+	private static $instance;
+
+	private function __construct()
+	{
+		// Construction du DSN
+		$dsn = 'mysql:host=' . Config::read('db.host') .
+				';dbname='    . Config::read('db.basename') .
+				';charset=utf8';
+	
+		$user = Config::read('db.user');
+		$password = Config::read('db.password');
+	
+		try {
+			// Ajout de l'option pour limiter le temps d'attente de la connexion
+			$options = [
+					PDO::ATTR_TIMEOUT => 1,  // Timeout de 5 secondes
+					PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,  // Pour lancer des exceptions sur erreur
+			];
+	
+			// Connexion à la base de données avec un timeout de 5 secondes
+			$this->dbh = new PDO($dsn, $user, $password, $options);
+		} catch (PDOException $e) {
+			//echo 'Connection failed: ' . $e->getMessage();
+			//exit;
+		}
+	}
+
+	public static function getInstance()
+	{
+		if (!isset(self::$instance))
+		{
+				$object = __CLASS__;
+				self::$instance = new $object;
+		}
+
+		return self::$instance;
+	}
 }
+
 class Config
 {
-    static $confArray;
-    public static function read($name)
-    {
-        return self::$confArray[$name];
-    }
-    public static function write($name, $value)
-    {
-        self::$confArray[$name] = $value;
-    }
-};
+	static $confArray;
+
+	public static function read($name)
+	{
+
+		return self::$confArray[$name];
+	}
+
+	public static function write($name, $value)
+	{
+		self::$confArray[$name] = $value;
+	}
+}
+
+
 $migration = new Wp_Migration();
-$update = $migration->wp_check_update();
-if (isset($_POST['action_update'])) {
-    if (!empty($_POST['action_update'])) {
-        $retour_update = $migration->wp_update();
-        if ($retour_update === TRUE) {
-            $migration->retour(array('message' => 'La mise a jour du script s\'est effectué avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible d\'effectuer la mise a jour.'), FALSE);
-        }
-    }
+$update    = $migration->migration_check_update();
+
+ 
+
+/**
+ * 
+ * Met à jour le script de migration
+ * 
+ * Status : 
+ * 
+ */
+if(isset($_POST['action_update'])) {
+	if(!empty($_POST['action_update'])) {
+
+		$retour_update 	= $migration->wp_update();
+
+		if($retour_update === TRUE) {
+			$migration->retour(array('message' => 'La mise a jour du script s\'est effectué avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'effectuer la mise a jour.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_dl_zip'])) {
-    if (!empty($_POST['action_dl_zip'])) {
-        $retour_action_dl_zip = $migration->wp_download_zip();
-        if ($retour_action_dl_zip === TRUE) {
-            $migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Le Zip existe deja, ou impossible d\'ecrire sur le serveur.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Telecharge Le dernier zip a jour de Wordpress
+ * 
+ * Status : OK | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_dl_zip'])) {
+	if(!empty($_POST['action_dl_zip'])) {
+
+		$url = $_POST['url'];
+		if(empty($url)) {
+			$url = null;
+		}
+
+		$retour_action_dl_zip = $migration->wp_download_zip($url);
+
+		if($retour_action_dl_zip === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Le Zip existe deja, ou impossible d\'ecrire sur le serveur.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_dl_zip_extract'])) {
-    if (!empty($_POST['action_dl_zip_extract'])) {
-        $retour_action_dl_zip_extract = $migration->wp_download();
-        if ($retour_action_dl_zip_extract === TRUE) {
-            $migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel
+ * 
+ * Status : OK | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_dl_zip_extract'])) {
+	if(!empty($_POST['action_dl_zip_extract'])) {
+
+		$url = $_POST['url'];
+		if(empty($url)) {
+			$url = null;
+		}
+
+		$retour_action_dl_zip_extract = $migration->wp_download($url);
+
+		if($retour_action_dl_zip_extract === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_dl'])) {
-    if (!empty($_POST['action_dl'])) {
-        if ($_POST['install_full'] == 'false') {
-            $retour_action_dl = $migration->wp_download();
-            if ($retour_action_dl === TRUE) {
-                $migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
-            } else {
-                $migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
-            }
-        } elseif ($_POST['install_full'] == 'true') {
-            $opts['prefix'] = $_POST['prefix'];
-            $opts['dbname'] = $_POST['dbname'];
-            $opts['uname'] = $_POST['uname'];
-            $opts['pwd'] = $_POST['pwd'];
-            $opts['dbhost'] = $_POST['dbhost'];
-            $opts['weblog_title'] = $_POST['weblog_title'];
-            $opts['user_login'] = $_POST['user_login'];
-            $opts['admin_email'] = $_POST['admin_email'];
-            $opts['admin_password'] = $_POST['admin_password'];
-            $opts['debug'] = $_POST['debug'] == 'true' ? 1 : 0;
-            $opts['debug_display'] = $_POST['debug_display'] == 'true' ? 1 : 0;
-            $opts['debug_log'] = $_POST['debug_log'] == 'true' ? 1 : 0;
-            $opts['blog_public'] = $_POST['blog_public'] == 'true' ? 1 : 0;
-            $options = array($opts['dbhost'], $opts['dbname'], $opts['uname'], $opts['pwd'], $opts['prefix']);
-            $migration->set_var_wp($options);
-            $retour_action_bdd_existe = $migration->wp_test_bdd();
-            if ($retour_action_bdd_existe === FALSE) {
-                $migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
-            }
-            $migration->wp_download();
-            $migration->wp_install_config($opts);
-            $migration->wp_install_wp($opts);
-            $migration->wp_htaccess();
-            $migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Action inconnue'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Creer un fichier htaccess
+ * 
+ * Status : OK | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_htaccess'])) {
+	if(!empty($_POST['action_htaccess'])) {
+
+		$retour_htaccess = $migration->wp_htaccess();
+
+		if($retour_htaccess === TRUE) {
+			$migration->retour(array('message' => 'Fichier .htaccess crée avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de creer le .htaccess.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_change_url'])) {
-    if (!empty($_POST['action_change_url'])) {
-        $oldurl = $_POST['old'];
-        $newurl = $_POST['new'];
-        $retour_url = $migration->wp_url($oldurl, $newurl);
-        if ($retour_url === TRUE) {
-            $migration->retour(array('message' => 'Les urls sont modifiées avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de modifier les urls.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Permet de changer les Urls dans la config de Wordpress ainsi que dans les articles, pages et tous les contenus
+ * 
+ * Status : Ok | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_change_url'])) {
+	if(!empty($_POST['action_change_url'])) {
+
+		$oldurl = $_POST['old'];
+		$newurl = $_POST['new'];
+
+		$retour_url = $migration->wp_url($oldurl, $newurl);
+
+		if($retour_url === TRUE) {
+			$migration->retour(array('message' => 'Les urls sont modifiées avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier les urls.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_htaccess'])) {
-    if (!empty($_POST['action_htaccess'])) {
-        $retour_htaccess = $migration->wp_htaccess();
-        if ($retour_htaccess === TRUE) {
-            $migration->retour(array('message' => 'Fichier .htaccess crée avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de creer le .htaccess.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Permet de supprimer toutes les revisions qui ne servent pas
+ * 
+ * Status : Ok | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_clean_revision'])) {
+	if(!empty($_POST['action_clean_revision'])) {
+
+		$retour_clean_revision = $migration->wp_sql_clean_revision();
+
+		if($retour_clean_revision === TRUE) {
+			$migration->retour(array('message' => 'Revision supprimée avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les revisions.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_exporter'])) {
-    if (!empty($_POST['action_exporter'])) {
-        $retour_export = $migration->wp_export_file();
-        $context = "L'export a ete effectue avec succes.<p><a href=\"/{$migration->_file_destination}\">Telecharger le zip des fichers</a></p>";
-        if ($retour_export === TRUE) {
-            $migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.', 'context' => $context), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de creer le Zip.'), FALSE);
-        }
-    }
+
+/**
+ * Efface tous les commentaires qui n'ont pas ete validé
+ * 
+ * Status : Ok | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_clean_spam'])) {
+	if(!empty($_POST['action_clean_spam'])) {
+
+		$retour_clean_spam = $migration->wp_sql_clean_spam();
+
+		if($retour_clean_spam === TRUE) {
+			$migration->retour(array('message' => 'Spam supprimé avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les spams.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_exporter_sql'])) {
-    if (!empty($_POST['action_exporter_sql'])) {
-        $retour_export_sql = $migration->wp_export_sql();
-        $context = "L'export a ete effectue avec succes.<p><a href=\"/{$migration->_file_sql}\">Telecharger le Dump</a></p>";
-        if ($retour_export_sql === TRUE) {
-            $migration->retour(array('message' => 'Dump SQL effectué avec succes.', 'context' => $context), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible d\'effectuer le Dump SQL.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Supprime les themes WP de base ne servant pas ( si vous utilisez un d'entre eux, ne pas effectuer cette action )
+ * 
+ * Status : Ok | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_delete_theme'])) {
+	if(!empty($_POST['action_delete_theme'])) {
+
+		$retour_delete_theme = $migration->wp_delete_theme();
+
+		if($retour_delete_theme === TRUE) {
+			$migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_importer'])) {
-    if (!empty($_POST['action_importer'])) {
-        $retour_import = $migration->wp_import_file();
-        if ($retour_import === TRUE) {
-            $migration->retour(array('message' => 'Votre zip est extrait avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible d\'extraire le Zip.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Permet d'ajouter un utilisateur avec les droits admin dans l'instance de WP sur le serveur
+ * 
+ * Status : Ok | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_add_user'])) {
+	if(!empty($_POST['action_add_user'])) {
+
+		$retour_add_user = $migration->wp_add_user($_POST['user'], $_POST['pass']);
+
+		if($retour_add_user === TRUE) {
+			$migration->retour(array('message' => 'Utilisateur ajouté avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter un utilisateur.'), FALSE);
+		}	
+	}
 }
-if (isset($_POST['action_importer_sql'])) {
-    if (!empty($_POST['action_importer_sql'])) {
-        $retour_import_sql = $migration->wp_import_sql();
-        if ($retour_import_sql === TRUE) {
-            $migration->retour(array('message' => 'La base de donnée est injecté sur votre serveur.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible d\'ajouter votre base de données.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Purge l'installation courante de WP  (fichiers)
+ * 
+ * Status : OK | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_purge'])) {
+	if(!empty($_POST['action_purge'])) {
+
+		$retour_clean_files = $migration->wp_clean_files();
+
+		if($retour_clean_files === TRUE) {
+			$migration->retour(array('message' => 'Installation de WP purgée.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de supprimer les fichiers.'), FALSE);
+		}	
+	}
 }
-if (isset($_POST['action_clean_revision'])) {
-    if (!empty($_POST['action_clean_revision'])) {
-        $retour_clean_revision = $migration->wp_sql_clean_revision();
-        if ($retour_clean_revision === TRUE) {
-            $migration->retour(array('message' => 'Revision supprimée avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de supprimer les revisions.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Telecharge et installe tous les plugins de la liste saisie
+ * 
+ * Status : OK | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_plug_install'])) {
+	if(!empty($_POST['action_plug_install'])) {
+
+		$retour_plug_install = $migration->wp_install_plugins($_POST['plug_install_liste']);
+
+		if($retour_plug_install === TRUE) {
+			$migration->retour(array('message' => 'Plugins installés avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'installer les plugins.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_clean_spam'])) {
-    if (!empty($_POST['action_clean_spam'])) {
-        $retour_clean_spam = $migration->wp_sql_clean_spam();
-        if ($retour_clean_spam === TRUE) {
-            $migration->retour(array('message' => 'Spam supprimé avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de supprimer les spams.'), FALSE);
-        }
-    }
+
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************* EN COURS DE TEST *****************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+/********************************************************************************************/
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel, si l'option install_full est coché, le WP s'installera, si la Bdd n'existe pas, il tentera de la créer
+ * 
+ * 2021/03/24
+ * 
+ * Status : install_full : En cours de test
+ * 
+ */
+if(isset($_POST['action_dl'])) {
+	if(!empty($_POST['action_dl'])) {
+		
+		if($_POST['install_full'] == "false") {
+
+			$retour_action_dl = $migration->wp_download();
+
+			if($retour_action_dl === TRUE) {
+				$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
+			} else {
+				$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+			}
+
+		} elseif($_POST['install_full'] == "true") {
+
+			$opts['prefix']         = $_POST['prefix'];
+			$opts['dbname']         = $_POST['dbname'];
+			$opts['uname']          = $_POST['uname'];
+			$opts['pwd']            = $_POST['pwd'];
+			$opts['dbhost']         = $_POST['dbhost'];
+			$opts['weblog_title']   = $_POST['weblog_title'];
+			$opts['user_login']     = $_POST['user_login'];
+			$opts['admin_email']    = $_POST['admin_email'];
+			$opts['admin_password'] = $_POST['admin_password'];
+			$opts['debug']          = ($_POST['debug'] == 'true')? 1 : 0 ;
+			$opts['debug_display']  = ($_POST['debug_display'] == 'true')? 1 : 0 ;
+			$opts['debug_log']      = ($_POST['debug_log'] == 'true')? 1 : 0 ;
+			$opts['blog_public']    = ($_POST['blog_public'] == 'true')? 1 : 0 ;
+
+			// assignation des variables de connexion pour effectuer un test si la bdd existe
+			$options = array(
+				$opts['dbhost'],
+				$opts['dbname'],
+				$opts['uname'],
+				$opts['pwd'],
+				$opts['prefix']
+			);
+			$migration->set_var_wp($options);
+
+			$retour_action_bdd_existe = $migration->wp_test_bdd();
+			if($retour_action_bdd_existe === FALSE) {
+				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
+			}
+
+			$migration->wp_download();
+			$migration->wp_install_config($opts);
+			$migration->wp_install_wp($opts);
+			$migration->wp_htaccess();
+
+			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Action inconnue'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_plug_install'])) {
-    if (!empty($_POST['action_plug_install'])) {
-        $retour_plug_install = $migration->wp_install_plugins($_POST['plug_install_liste']);
-        if ($retour_plug_install === TRUE) {
-            $migration->retour(array('message' => 'Plugins installés avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible d\'installer les plugins.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Creer un Zip des fichiers courant
+ */
+if(isset($_POST['action_exporter'])) {
+	if(!empty($_POST['action_exporter'])) {
+
+		$retour_export = $migration->wp_export_file();
+
+		$context = "L'export a ete effectue avec succes.<p><a href=\"/$migration->_file_destination\">Telecharger le zip des fichers</a></p>";
+
+		if($retour_export === TRUE) {
+			$migration->retour(array('message' => 'Creation du Zip de vos fichiers effectué avec succes.', 'context' => $context), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de creer le Zip.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_delete_theme'])) {
-    if (!empty($_POST['action_delete_theme'])) {
-        $retour_delete_theme = $migration->wp_delete_theme();
-        if ($retour_delete_theme === TRUE) {
-            $migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : effectue un Dump sql de la base de donnée du WP courant dans un fichier .sql
+ */
+if(isset($_POST['action_exporter_sql'])) {
+	if(!empty($_POST['action_exporter_sql'])) {
+
+		$retour_export_sql = $migration->wp_export_sql();
+
+		$context = "L'export a ete effectue avec succes.<p><a href=\"/$migration->_file_sql\">Telecharger le Dump</a></p>";
+
+		if($retour_export_sql === TRUE) {
+			$migration->retour(array('message' => 'Dump SQL effectué avec succes.', 'context' => $context), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'effectuer le Dump SQL.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_add_user'])) {
-    if (!empty($_POST['action_add_user'])) {
-        $retour_add_user = $migration->wp_add_user($_POST['user'], $_POST['pass']);
-        if ($retour_add_user === TRUE) {
-            $migration->retour(array('message' => 'Utilisateur ajouté avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible d\'ajouter un utilisateur.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Effectue un import du fichier SQL dans la base de donnée utilisé par l'instance de WP installé sur le serveur
+ */
+if(isset($_POST['action_importer_sql'])) {
+	if(!empty($_POST['action_importer_sql'])) {
+
+		$retour_import_sql = $migration->wp_import_sql();
+
+		if($retour_import_sql === TRUE) {
+			$migration->retour(array('message' => 'La base de donnée est injecté sur votre serveur.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter votre base de données.'), FALSE);
+		}
+	}
 }
-if (isset($_POST['action_prefix_edit'])) {
-    if (!empty($_POST['action_prefix_edit'])) {
-        $retour_prefix_edit = $migration->wp_rename_prefix($_POST['prefix_edit']);
-        if ($retour_prefix_edit === TRUE) {
-            $migration->retour(array('message' => 'Tables modifiées avec succes.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de modifier le prefix des tables.'), FALSE);
-        }
-    }
+
+/**
+ * ACTION : Permet de modifier le prefix des tables de WP
+ */
+if(isset($_POST['action_prefix_edit'])) {
+	if(!empty($_POST['action_prefix_edit'])) {
+
+		$retour_prefix_edit = $migration->wp_rename_prefix($_POST['prefix_edit']);
+
+		if($retour_prefix_edit === TRUE) {
+			$migration->retour(array('message' => 'Tables modifiées avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier le prefix des tables.'), FALSE);
+		}	
+	}
 }
-if (isset($_POST['action_purge'])) {
-    if (!empty($_POST['action_purge'])) {
-        $retour_clean_files = $migration->wp_clean_files();
-        if ($retour_clean_files === TRUE) {
-            $migration->retour(array('message' => 'Installation de WP purgée.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de supprimer les fichiers.'), FALSE);
-        }
-    }
-}
-if (isset($_POST['action_purge_sql'])) {
-    if (!empty($_POST['action_purge_sql'])) {
-        $retour_clean_sql = $migration->wp_clean_sql();
-        if ($retour_clean_sql === TRUE) {
-            $migration->retour(array('message' => 'Installation de WP purgée.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de supprimer les tables.'), FALSE);
-        }
-    }
-}
-if (isset($_POST['action_test_hash'])) {
-    if (!empty($_POST['action_test_hash'])) {
-        $retour_test_hash = $migration->wp_test_hash();
-        if ($retour_test_hash !== FALSE) {
-            $migration->retour(array('message' => 'Nous avons analysé vos fichiers.', 'context' => $retour_test_hash), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Nous n\'avons pas pu analyser vos fichiers.'), FALSE);
-        }
-    }
-}
-if (isset($_POST['action_creation_hash'])) {
-    if (!empty($_POST['action_creation_hash'])) {
-        $retour_crea_hash = $migration->wp_create_hash();
-        if ($retour_crea_hash === TRUE) {
-            $migration->retour(array('message' => 'La creation du fichier de hash a ete realisé sans probleme.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'Impossible de creer le fichier de hashs.'), FALSE);
-        }
-    }
-}
-if (isset($_POST['action_migration_testsite'])) {
-    if (!empty($_POST['action_migration_testsite'])) {
-        $retour = $migration->test_url_exist($_POST['www_url']);
-        if ($retour === TRUE) {
-            $migration->retour(array('message' => 'Merci, ce site existe bel et bien.'), TRUE);
-        } else {
-            $migration->retour(array('message' => 'L\'url recherchée n\'exist pas.'), FALSE);
-        }
-    }
-}
-if (isset($_POST['action_migration'])) {
-    if (!empty($_POST['action_migration'])) {
-        $opts_migration = array('www_url' => $_POST['www_url'], 'ftp_url' => $_POST['ftp_url'], 'user_ftp' => $_POST['user_ftp'], 'ftp_pass' => $_POST['ftp_pass'], 'ftp_folder' => $_POST['ftp_folder'], 'serveur_sql' => $_POST['serveur_sql'], 'name_sql' => $_POST['name_sql'], 'user_sql' => $_POST['user_sql'], 'pass_sql' => $_POST['pass_sql'], 'table_prefix' => $table_prefix, 'type_ftp' => 'ftp');
-        $ftp_exist_retour = $migration->wp_ftp_is_existedir($opts_migration);
-        if ($ftp_exist_retour === FALSE) {
-            $migration->retour(array('message' => 'Erreur FTP : Le dossier cible n\'existe pas.'), FALSE);
-        }
-        $retour_export_sql = $migration->wp_export_sql();
-        if ($retour_export_sql === FALSE) {
-            $migration->retour(array('message' => 'Erreur SQL : Impossible d\'effectuer le Dump SQL.'), FALSE);
-        }
-        $ftp_migration_retour = $migration->wp_ftp_migration($opts_migration);
-        $migration->wp_clean_ftp_migration();
-        if ($ftp_migration_retour === FALSE) {
-            $migration->retour(array('message' => 'Erreur FTP : Connexion impossible.'), FALSE);
-        }
-        $retour_migration = $migration->wp_migration($opts_migration);
-        $retour_migration_log = $migration->wp_migration_log($opts_migration);
-        $retour_api = json_decode($retour_migration);
-        if ($retour_api->success === TRUE) {
-            $migration->retour(array('message' => $retour_api->data->message, 'context' => nl2br($retour_migration_log)), TRUE);
-        } else {
-            $migration->retour(array('message' => $retour_api->data->message, 'context' => nl2br($retour_migration_log)), FALSE);
-        }
-    }
-}
-if (isset($_POST['api_call'])) {
-    if (!empty($_POST['api_call'])) {
-        $opts = array('dbname' => $_POST['dbname'], 'dbuser' => $_POST['dbuser'], 'dbpassword' => $_POST['dbpassword'], 'dbhost' => $_POST['dbhost'], 'site' => $_POST['site'], 'table_prefix' => $_POST['table_prefix']);
-        $retour = $migration->wp_import_file();
-        $migration->wp_log('Extraction des fichiers : ' . $retour ? 'Ok' : 'Nok');
-        $retour = $migration->wp_configfile($opts);
-        $migration->wp_log('Configuration du wp-config.php : ' . $retour ? 'Ok' : 'Nok');
-        $options = array($opts['dbhost'], $opts['dbname'], $opts['dbuser'], $opts['dbpassword'], $opts['table_prefix']);
-        $migration->set_var_wp($options);
-        $migration->wp_log('Rechargement des infos du nouveau WP');
-        $retour_action_bdd_existe = $migration->wp_test_bdd($options);
-        if ($retour_action_bdd_existe === FALSE) {
-            $migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
-        }
-        $migration->wp_log('Test de la base de données : ' . $retour_action_bdd_existe);
-        $retour = $migration->wp_import_sql();
-        $migration->wp_log('Importation du SQL : ' . $retour ? 'Ok' : 'Nok');
-        $site_url = $migration->wp_get_info();
-        $oldurl = $site_url['option_value'];
-        $newurl = 'http://' . $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
-        $retour = $migration->wp_url($oldurl, $newurl);
-        $migration->wp_log('Modification des URLs : ' . $retour ? 'Ok' : 'Nok');
-        $retour = $migration->wp_htaccess();
-        $migration->wp_log('Creation du htaccess : ' . $retour ? 'Ok' : 'Nok');
-        $retour = $migration->wp_clean_ftp_migration();
-        $migration->wp_log('Netoyage des fichiers temporaire de migration : ' . $retour ? 'Ok' : 'Nok');
-        $migration->retour(array('message' => 'La migration a ete effectuée avec succes.'), TRUE);
-    }
-};
-if (file_exists('wp-config.php')) {
-    define('WP_INSTALLING', true);
-    ;
-    $options = array(DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, $table_prefix);
-    $migration->set_var_wp($options);
-    $site_url = $migration->wp_get_info('siteurl');
-    $wp_exist = TRUE;
+
+
+
+/**
+ * Si un fichier wp-config.php existe, le script comprend que WP est deja installé
+ */
+if(file_exists('wp-config.php')) {
+
+	define( 'WP_INSTALLING', true );
+
+	$migration->set_var_wp();
+
+	$wp_exist = TRUE;
+	$wp_exist_install = TRUE;
+
+	// Recupere les informations sur le WP courant
+	$site_url = $migration->wp_get_info("siteurl");
+
+	if($site_url == false) {
+		$site_url = [];
+		$site_url['option_value'] = '';
+
+		$wp_exist_install = FALSE;
+	}
+
 } else {
-    $site_url['option_value'] = '';
-    $wp_exist = FALSE;
+	$site_url['option_value'] = '';
+
+	$wp_exist = FALSE;
+	$wp_exist_install = FALSE;
+
 }
+
 ?>
 
 <!doctype html>
@@ -1211,73 +1650,68 @@ if (file_exists('wp-config.php')) {
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 
-		<title>Migration Wordpress Easy</title>
+		<title>Toolbox Wordpress</title>
+		<link rel="icon" type="image/png" href="https://emulsion.io/favicon.png" />
 
-		<link rel="stylesheet" href="/css/bootstrap.css" crossorigin="anonymous">
-
+		<link rel="stylesheet" href="https://cdn.emulsion.io/wp-migration/css/bootstrap.css">
 		<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
 		<script src="//cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/themes@4.0.3/dark/dark.min.css">
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-Piv4xVNRyMGpqkS2by6br4gNJ7DXjqk09RmUpJ8jgGtD7zP9yug3goQfGII0yAns" crossorigin="anonymous"></script>
 		
 		<style type="text/css">
+			body { background-color: #14161a; }
 			.menushow { cursor: pointer; }
-			div.col-md-12 > h3:first-child {
-				border-style: solid;
-    			border-width: 1px;
-    			border-color: #ffccbc;
-    			padding: 3px;
-    			background-color: #fbe9e7;
-    			border-radius: 5px;
-			}
+			.text-orange { color: #ffb70f; }
+			.text-orange:hover { color: #fff; }
+			.border-info { border-color: #ffb70f !important; }
+			.card { background-color: #181b20; }
+			.text-green { color: #00ff00; }
+			.text-red { color: #ff0000; }
 		</style>
 	</head>
 	<body>
 		<div class="container">
 
-		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-			<a class="navbar-brand" href="#">Navbar</a>
-			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
+			<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+				<a class="navbar-brand" href="#">Toolbox</a>
+				<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+					<span class="navbar-toggler-icon"></span>
+				</button>
 
-			<div class="collapse navbar-collapse" id="navbarColor02">
-				<ul class="navbar-nav mr-auto">
-					<li class="nav-item active">
-					<a class="nav-link" href="#">Home
-						<span class="sr-only">(current)</span>
-					</a>
-					</li>
-					<li class="nav-item">
-					<a class="nav-link" href="#">Features</a>
-					</li>
-					<li class="nav-item">
-					<a class="nav-link" href="#">Pricing</a>
-					</li>
-					<li class="nav-item">
-					<a class="nav-link" href="#">About</a>
-					</li>
-					<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Dropdown</a>
-					<div class="dropdown-menu">
-						<a class="dropdown-item" href="#">Action</a>
-						<a class="dropdown-item" href="#">Another action</a>
-						<a class="dropdown-item" href="#">Something else here</a>
-						<div class="dropdown-divider"></div>
-						<a class="dropdown-item" href="#">Separated link</a>
-					</div>
-					</li>
-				</ul>
-				<form class="form-inline my-2 my-lg-0">
-					<input class="form-control mr-sm-2" type="text" placeholder="Search">
-					<button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-				</form>
-			</div>
+				<div class="collapse navbar-collapse" id="navbar">
+					<ul class="navbar-nav mr-auto">
+						<li class="nav-item active">
+							<a class="nav-link" href="#">Home</a>
+						</li>
+						<li class="nav-item">
+							<a class="nav-link" href="https://emulsion.io">Emulsion.io</a>
+						</li>
+						<li class="nav-item dropdown">
+							<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Outils</a>
+							<div class="dropdown-menu">
+								<a class="dropdown-item open-tools" data-open="#tools-1" data-go="#go-tools-1">Telecharger et extraire un Wordpress avec possibilité de l'installer</a>
+								<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2">Modifier les Urls de votre installation Wordpress</a>
+								<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2-1">Modifier les Urls de votre installation Wordpress en SQL</a>
+								<a class="dropdown-item open-tools" data-open="#tools-3" data-go="#go-tools-3">Creer le fichier .htaccess</a>
+								<a class="dropdown-item open-tools" data-open="#tools-4" data-go="#go-tools-4">Effacer toutes les revisions de votre Wordpress</a>
+								<a class="dropdown-item open-tools" data-open="#tools-5" data-go="#go-tools-5">Effacer tous les commentaires non validés (Spam)</a>
+								<a class="dropdown-item open-tools" data-open="#tools-6" data-go="#go-tools-6">Installer les plugins de votre choix</a>
+								<a class="dropdown-item open-tools" data-open="#tools-7" data-go="#go-tools-7">Supprime les themes par defaut de Wordpress</a>
+								<a class="dropdown-item open-tools" data-open="#tools-8" data-go="#go-tools-8">Ajouter un administrateur a votre installation</a>
+								<div class="dropdown-divider"></div>
+								<a class="dropdown-item open-tools" data-open="#tools-9" data-go="#go-tools-9">Modifier le prefix des tables</a>
+								<a class="dropdown-item open-tools" data-open="#tools-10" data-go="#go-tools-10">Supprime toutes les fichiers de Wordpress</a>
+							</div>
+						</li>
+					</ul>
+				</div>
 			</nav>
 
 			<header class="row">
 				<div class="col-12">
 					<div class="jumbotron mt-4">
-						<h1>ToolBox Wordpress</h1>
+						<h1><span class="text-orange">Toolbox</span> Wordpress</h1>
 						<p>La boite a outils pour Wordpress</p>
 					</div>
 				</div>
@@ -1292,57 +1726,44 @@ if (file_exists('wp-config.php')) {
 			</article>
 
 			<article class="row">
-				<div class="col-6">
+				<div class="col-12 col-md-6">
 					<div class="card border-info mb-3" >
-						<div class="card-header">Serveur</div>
+						<div class="card-header">Votre Serveur</div>
 						<div class="card-body">
 							<h4 class="card-title"></h4>
 							<div class="card-text">
 								<ul>
-									<li>Droit sur le dosier courant : <?php 
-echo substr(sprintf('%o', fileperms('.')), -4);
-?>
-</li>
-									<li>Fonction exec() <?php 
-echo function_exists('exec') ? ' is enabled' : ' is disabled';
-?>
-</li>
-									<li>Fonction system() <?php 
-echo function_exists('system') ? ' is enabled' : ' is disabled';
-?>
-</li>
-									<li>Memoire allouée : <?php 
-echo $migration->get_memory_limit();
-?>
-</li>
+									<li>Droit sur le dosier courant : <?php echo substr(sprintf('%o', fileperms('.')), -4); ?></li>
+									<li>Version de PHP : <?php echo phpversion(); ?></li>
+
+									<li>Fonction mail() : <?php echo (function_exists('mail'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction file_get_contents() <?php echo ((ini_get('allow_url_fopen'))) ? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction file_put_contents() <?php echo (function_exists('file_put_contents'))? " <span class='text-green'>is enabled</span>" : "<span class='text-red'> is disabled</span>"; ?></li>
+									<li>Fonction fopen() <?php echo (function_exists('fopen'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction shell_exec() <?php echo (function_exists('shell_exec'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction exec() <?php echo (function_exists('exec'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Fonction system() <?php echo (function_exists('system'))? " <span class='text-green'>is enabled</span>" : " <span class='text-red'>is disabled</span>"; ?></li>
+									<li>Memoire allouée : <?php echo $migration->get_memory_limit(); ?></li>
 								</ul>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<div class="col-6">
+				<div class="col-12 col-md-6">
 					<div class="card border-info mb-3" >
-						<div class="card-header">Script</div>
+						<div class="card-header">Ce Script</div>
 						<div class="card-body">
 							<h4 class="card-title"></h4>
 							<div class="card-text">
 								<ul>
-									<li>Votre version : <?php 
-echo $update['version_courante'];
-?>
-</li>
-									<li>Derniere version disponnible : <?php 
-echo $update['version_enligne'];
-?>
-</li>
+									<li>Votre version : <?php echo $update['version_courante']; ?></li>
+									<li>Derniere version disponnible : <?php echo $update['version_enligne']; ?></li>
 								</ul>
-								<?php 
-if ($update['maj_dipso'] == TRUE) {
-    ?>
+								<?php if($update['maj_dipso'] == TRUE): ?>
 							
 									<form id="action_update" method="post">
-										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour</button>
+										<button type="submit" id="go_action_update" class="btn btn-primary">Effecuer la mise a jour du script</button>
 									</form>
 									<script>
 										$( "#action_update" ).submit(function( event ) {
@@ -1356,9 +1777,7 @@ if ($update['maj_dipso'] == TRUE) {
 											});
 										});
 									</script>
-								<?php 
-}
-?>
+								<?php endif; ?>
 
 							</div>
 						</div>
@@ -1374,53 +1793,96 @@ if ($update['maj_dipso'] == TRUE) {
 						<div class="card-body">
 							<h4 class="card-title"></h4>
 							<div class="card-text">
-								<?php 
-if ($wp_exist === false) {
-    ?>
+								<?php if($wp_exist === false) : ?>
 									Wordpress n'est pas présent sur ce serveur, voulez-vous l'installer ?
 									<div class="row mt-3">
 										<div class="col-6">
 											<form id="action_dl_zip" method="post">
-												<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Télecharger le zip de Wordpress sur le serveur</button>
+												<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoie le zip de Wordpress sur le serveur</button>
 											</form>
 											<script>
 												$( "#action_dl_zip" ).submit(function( event ) {
 													event.preventDefault();
 													var donnees = {
-														action_dl_zip	: 'ok'
+														action_dl_zip : 'ok'
 													}
-													sendform('action_dl_zip', donnees, 'Telecharge, extrait et install un Wordpress');
+													sendform('action_dl_zip', donnees, 'Le zip de Wordpress est sur le serveur');
 												});
 											</script>
 										</div>
 										<div class="col-6">
 											<form id="action_dl_zip_extract" method="post">
-												<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Télecharger et extraire Wordpress sur le serveur</button>
+												<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Envoyer et extraire Wordpress sur le serveur</button>
 											</form>
 											<script>
 												$( "#action_dl_zip_extract" ).submit(function( event ) {
 													event.preventDefault();
 													var donnees = {
-														action_dl_zip_extract	: 'ok',
+														action_dl_zip_extract : 'ok',
 													}
-													sendform('action_dl_zip_extract', donnees, 'Telecharge, extrait et install un Wordpress');
+													sendform('action_dl_zip_extract', donnees, 'Wordpress est extrait sur le serveur');
 												});
 											</script>
 										</div>
 									</div>
-								<?php 
-} else {
-    ?>
+									<div class="row mt-3">
+										<?php if($zips_wp) : ?>
+											<div class="col-12">
+												<h3>Vos instances Custom Wordpress</h3>
+											</div>
+
+											<?php $i = 0; foreach($zips_wp as $zip) : ?>
+												<div class="col-6">
+													<form id="action_dl_zip_extract_<?=$i;?>" method="post">
+														<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoyer et extraire le zip de <?= $zip['nom']; ?> sur le serveur</button>
+													</form>
+													<script>
+														$( "#action_dl_zip_extract_<?=$i;?>" ).submit(function( event ) {
+															event.preventDefault();
+															var donnees = {
+																action_dl_zip_extract : 'ok',
+																url : '<?= $zip['fichier']; ?>'
+															}
+															sendform('action_dl_zip_extract', donnees, 'Le Wordpress de <?= $zip['nom']; ?> est extrait sur le serveur');
+														});
+													</script>
+												</div>
+											<?php $i++; endforeach; ?>
+										<?php endif; ?>
+									</div>
+									<div class="row mt-3">
+										<?php if($zips_wp) : ?>
+											<?php $i = 0; foreach($zips_wp as $zip) : ?>
+												<div class="col-6">
+													<form id="action_dl_zip_<?=$i;?>" method="post">
+														<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoyer le zip de <?= $zip['nom']; ?> sur le serveur</button>
+													</form>
+													<script>
+														$( "#action_dl_zip_<?=$i;?>" ).submit(function( event ) {
+															event.preventDefault();
+															var donnees = {
+																action_dl_zip : 'ok',
+																url : '<?= $zip['fichier']; ?>'
+															}
+															sendform('action_dl_zip', donnees, 'Le zip du Wordpress de <?= $zip['nom']; ?> est sur le serveur');
+														});
+													</script>
+												</div>
+											<?php $i++; endforeach; ?>
+										<?php endif; ?>
+									</div>
+
+								<?php else: ?>
 									<ul>
 										<li>Wordpress est présent sur ce serveur.</li>
-										<li><?php 
-    echo $wp_version;
-    ?>
-</li>
+										<?php if($wp_exist_install === TRUE) : ?>
+											<li>URL du site : <?php echo $site_url['option_value']; ?></li>
+										<?php else : ?>
+											<li>URL du site : <span class="text-danger">Wordpress non configuré</span></li>
+										<?php endif; ?>
+										<li>Version installée de WP : <? //= $wp_version; ?></li>
 									</ul>
-								<?php 
-}
-?>
+								<?php endif; ?>
 							</div>
 						</div>
 					</div>
@@ -1430,6 +1892,7 @@ if ($wp_exist === false) {
 
 			<h2>Outils</h2>
 
+			<?php /*
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
 					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-0" aria-expanded="false" aria-controls="tools-1">Tools-0</button>
@@ -1444,10 +1907,11 @@ if ($wp_exist === false) {
 					</div>
 				</div>
 			</div>
+			*/ ?>
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-1" aria-expanded="false" aria-controls="tools-1">
+					<button id="go-tools-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-1" aria-expanded="false" aria-controls="tools-1">
 						Telecharger et extraire un Wordpress avec possibilité de l'installer
 					</button>
 				</div>
@@ -1528,17 +1992,12 @@ if ($wp_exist === false) {
 									</div>
 								</div>
 
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Une version de Wordpress est deja installé sur le serveur
 									</div>
-								<?php 
-}
-?>
-	
+								<?php endif; ?>	
 
 								<div class="form-group mt-3">
 									<button id="go_action_dl" type="submit" class="btn btn-primary">Lancer la procedure</button>
@@ -1590,7 +2049,7 @@ if ($wp_exist == TRUE) {
 	
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress</button>
+					<buttonn id="go-tools-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress</buttonn>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-2">
@@ -1606,34 +2065,22 @@ if ($wp_exist == TRUE) {
 							<form id="action_change_url" method="post">
 								<div class="form-group">
 									<label for="old">Ancienne URL</label>
-									<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php 
-echo $site_url['option_value'];
-?>
-" required>
+									<input type="text" class="form-control" id="old" name="old" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>" required>
 								</div>
 								<div class="form-group">
 									<label for="new">Nouvelle URL</label>
-									<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="http://<?php 
-echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/');
-?>
-" required>
+									<input type="text" class="form-control" id="new" name="new" placeholder="Nouvelle URL sans / a la fin" value="https://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>" required>
 								</div>
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button type="submit" id="go_action_change_url" class="btn btn-primary">Mettre a jour</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
+								<?php endif; ?>
 							</form>
 							<script>
 								$( "#action_change_url" ).submit(function( event ) {
@@ -1656,21 +2103,77 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-3" aria-expanded="false" aria-controls="tools-3">Creer le fichier .htaccess</button>
+					<buttonn id="go-tools-2-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-2-1" aria-expanded="false" aria-controls="tools-2">Modifier les Urls de votre installation Wordpress en SQL</buttonn>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-2-1">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Modifie les URLs dans la table wp_option, home et siteurl sont affectés</li>
+									<li>Modifie les URLs dans la table wp_posts, guid et post_content sont affectés</li>
+									<li>Modifie les URLs dans la table wp_postmeta, toutes les meta_value auront la nouvelle URL</li>
+								</ul>
+							</div>
+
+							<form id="action_change_url_sql" method="post">
+								<div class="form-group">
+									<label for="old">Ancienne URL</label>
+									<input type="text" class="form-control" id="oldUrl" name="oldUrl" placeholder="Ancienne URL sans / a la fin" value="<?php echo $site_url['option_value']; ?>" required>
+								</div>
+								<div class="form-group">
+									<label for="new">Nouvelle URL</label>
+									<input type="text" class="form-control" id="newUrl" name="newUrl" placeholder="Nouvelle URL sans / a la fin" value="http://<?php echo $_SERVER['SERVER_NAME'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/'); ?>" required>
+								</div>
+								<div class="form-group">
+									<label for="new">Préfixe des tables</label>
+									<input type="text" class="form-control" id="prefix" name="prefix" placeholder="wp" value="wp" required>
+								</div>
+								
+								<div class="form-group">
+									<button type="submit" id="go_action_change_url_sql" class="btn btn-primary">Mettre a jour</button>
+								</div>
+
+								<div class="form-group">
+									<label for="sqlOutput">Requêtes SQL</label>
+									<textarea class="form-control" id="sqlOutput" rows="10" readonly></textarea>
+								</div>
+
+								<div class="form-group">
+									<button type="button" class="btn btn-primary" onclick="copyToClipboard()">Copier</button>
+								</div>
+
+							</form>
+							<script>
+								$( "#action_change_url_sql" ).submit(function( event ) {
+									event.preventDefault();
+
+									generateSQL();
+								});
+							</script>
+
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-3" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-3" aria-expanded="false" aria-controls="tools-3">Creer le fichier .htaccess</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-3">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Creer le fichier Htaccess avec la configuration de votre serveur automatiquement</li>
+									<li>Creer le fichier .htaccess avec la configuration de votre serveur automatiquement</li>
 									<li>Ajoute des regles de securité pour Wordpress</li>
 								</ul>
 							</div>
 
 							<form id="action_htaccess" method="post">
 								<div class="form-group">
-									<button id="go_action_htaccess" type="submit" class="btn btn-primary">Creer le fichier HTaccess</button>
+									<button id="go_action_htaccess" type="submit" class="btn btn-primary">Creer le fichier .htaccess</button>
 								</div>
 							</form>
 							<script>
@@ -1678,7 +2181,7 @@ if ($wp_exist == TRUE) {
 									var donnees = {
 										'action_htaccess'	: 'ok'
 									}
-									sendform('action_htaccess', donnees, 'Creer le fichier HTACCESS');
+									sendform('action_htaccess', donnees, 'Creer le fichier .htaccess');
 									event.preventDefault();
 								});
 							</script>
@@ -1689,7 +2192,7 @@ if ($wp_exist == TRUE) {
 			
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-4" aria-expanded="false" aria-controls="tools-4">Effacer toutes les revisions de votre Wordpress</button>
+					<button id="go-tools-4" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-4" aria-expanded="false" aria-controls="tools-4">Effacer toutes les revisions de votre Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-4">
@@ -1702,22 +2205,16 @@ if ($wp_exist == TRUE) {
 							</div>
 
 							<form id="action_clean_revision" method="post">
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button type="submit" id="go_action_clean_revision" class="btn btn-primary">Effacer les revisions</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
+								<?php endif; ?>
 							</form>
 							<script>
 								$( "#action_clean_revision" ).submit(function( event ) {
@@ -1735,7 +2232,7 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-5" aria-expanded="false" aria-controls="tools-5">Effacer tous les commentaires non validés ( spam )</button>
+					<button id="go-tools-5" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-5" aria-expanded="false" aria-controls="tools-5">Effacer tous les commentaires non validés (Spam)</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-5">
@@ -1748,22 +2245,16 @@ if ($wp_exist == TRUE) {
 							</div>
 
 							<form id="action_clean_spam" method="post">
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button id="go_action_clean_spam" type="submit" class="btn btn-primary">Effacer les commentaires non validés</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
+								<?php endif; ?>
 							</form>
 							<script>
 								$( "#action_clean_spam" ).submit(function( event ) {
@@ -1781,7 +2272,7 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-6" aria-expanded="false" aria-controls="tools-6">Installer les plugins de votre choix</button>
+					<button id="go-tools-6" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-6" aria-expanded="false" aria-controls="tools-6">Installer les plugins de votre choix</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-6">
@@ -1800,23 +2291,16 @@ if ($wp_exist == TRUE) {
 									<input type="text" class="form-control" id="plug_install_liste" name="plug_install_liste" placeholder="Merci de séparer les noms par une virgule" value="">
 								</div>
 
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button id="go_action_plug_install" type="submit" class="btn btn-primary">Installer les plugins</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
-	
+								<?php endif; ?>	
 							</form>
 							<script>
 								$( "#action_plug_install" ).submit(function( event ) {
@@ -1835,7 +2319,7 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les themes par defaut de Wordpress</button>
+					<button id="go-tools-7" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les themes par defaut de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7">
@@ -1843,6 +2327,7 @@ if ($wp_exist == TRUE) {
 							<div class="text-warning mb-3">
 								<ul>
 									<li>Supprime l'ensemble des themes suivant : </li>
+									<li>twentytwentyfour</li>
 									<li>twentyfourteen</li>
 									<li>twentythirteen</li>
 									<li>twentytwelve</li>
@@ -1852,23 +2337,16 @@ if ($wp_exist == TRUE) {
 							</div>
 
 							<form id="action_delete_theme" method="post">
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les themes</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
-	
+								<?php endif; ?>	
 							</form>
 							<script>
 								$( "#action_delete_theme" ).submit(function( event ) {
@@ -1886,7 +2364,7 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-8" aria-expanded="false" aria-controls="tools-8">Ajouter un administrateur a votre installation</button>
+					<button id="go-tools-8" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-8" aria-expanded="false" aria-controls="tools-8">Ajouter un administrateur a votre installation</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-8">
@@ -1906,23 +2384,16 @@ if ($wp_exist == TRUE) {
 									<label for="pass">Mot de passe</label>
 									<input type="password" class="form-control" id="pass" name="pass" placeholder="" value="" required>
 								</div>
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button id="go_action_add_user" type="submit" class="btn btn-primary">Ajouter l'utilisateur</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
-	
+								<?php endif; ?>	
 							</form>
 							<script>
 								$( "#action_add_user" ).submit(function( event ) {
@@ -1942,7 +2413,7 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-9" aria-expanded="false" aria-controls="tools-9">Modifier le prefix des tables</button>
+					<button id="go-tools-9" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-9" aria-expanded="false" aria-controls="tools-9">Modifier le prefix des tables</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-9">
@@ -1958,22 +2429,16 @@ if ($wp_exist == TRUE) {
 									<label for="prefix_edit">Prefix</label>
 									<input type="text" class="form-control" id="prefix_edit" name="prefix_edit" placeholder="wp_" value="" required>
 								</div>
-								<?php 
-if ($wp_exist == TRUE) {
-    ?>
+								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
 									<button id="go_action_prefix_edit" type="submit" class="btn btn-primary">Modifier le prefix des tables</button>
 								</div>
-								<?php 
-} else {
-    ?>
+								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Wordpress n'est pas installé sur ce serveur.
 									</div>
-								<?php 
-}
-?>
+								<?php endif; ?>
 							</form>
 							<script>
 								$( "#action_prefix_edit" ).submit(function( event ) {
@@ -1993,20 +2458,20 @@ if ($wp_exist == TRUE) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-10" aria-expanded="false" aria-controls="tools-10">Supprimer toutes les traces de fichiers de Wordpress</button>
+					<button id="go-tools-10" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-10" aria-expanded="false" aria-controls="tools-10">Supprimer toutes les fichiers de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-10">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Efface tous les fichiers correspondant a l'installation d'un Wordpress</li>
+									<li>Efface tous les fichiers correspondant à l'installation de Wordpress</li>
 								</ul>
 							</div>
 
 							<form id="action_purge" method="post">
 								<div class="form-group">
-									<button id="go_action_purge" type="submit" class="btn btn-primary">Effacer les tous fichiers wordpress</button>
+									<button id="go_action_purge" type="submit" class="btn btn-primary">Effacer les tous fichiers Wordpress</button>
 								</div>
 							</form>
 							<script>
@@ -2023,41 +2488,13 @@ if ($wp_exist == TRUE) {
 				</div>
 			</div>
 
-			<div class="row mb-3">
-				<div class="col-12 mb-2">
-					<button class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-11" aria-expanded="false" aria-controls="tools-11">Supprime toutes les tables de la base de données de Wordpress</button>
-				</div>
-				<div class="col-12">
-					<div class="collapse" id="tools-11">
-						<div class="card card-body">
-							<div class="text-warning mb-3">
-								<ul>
-									<li>Supprime toutes les tables de Wordpress de votre base de données</li>
-								</ul>
-							</div>
-
-							<form id="action_purge_sql" method="post">
-								<div class="form-group">
-									<button id="go_action_purge_sql" type="submit" class="btn btn-primary">Effacer les tables</button>
-								</div>
-							</form>
-							<script>
-								$( "#action_purge_sql" ).submit(function( event ) {
-									var donnees = {
-										action_purge_sql	: 'ok',
-									}
-									sendform('action_purge_sql', donnees, 'Purger SQL Wordpress');
-									event.preventDefault();
-								});
-							</script>
-
-						</div>
-					</div>
-				</div>
-			</div>
-
 			<footer class="row">
-				<div class="col-12 my-3">Developpé par <a href="https://emulsion.io">Fabrice Simonet</a> || <a href="https://emulsion.io">https://emulsion.io</a></div>
+				<div class="col-12 my-3 text-center">
+					<strong>ToolBox Wordpress</strong> par <a class="text-orange" href="https://emulsion.io">Fabrice Simonet</a>.
+					<a href="https://emulsion.io" title="Agence emulsion.io | Simonet Fabrice" style="text-decoration:none; margin-top:20px; display: block;">
+						<img src="https://cdn.emulsion.io/signature/fond-noir.svg" width="25px" height="23px" alt="Agence emulsion.io | Simonet Fabrice"> <span style="color:#fff; vertical-align: bottom;">Emulsion</span><span style="color:#ffa726; vertical-align: bottom;">.io</span>
+					</a>
+				</div>
 			</footer>
 		</div>
 		<script>
@@ -2070,7 +2507,19 @@ if ($wp_exist == TRUE) {
 
 				$( this ).parent().next().toggle();
 			});
+
+			$(".open-tools").on('click', function() {
+
+				$( $(this).attr('data-open') ).collapse();
+				scroll_to_anchor($(this).attr('data-go'));
+
+			});
 			
+			function scroll_to_anchor(anchor_id) {
+				var tag = $(anchor_id);
+				$('html,body').animate({scrollTop: tag.offset().top},'slow');
+			}
+
 			function sendform(id, donnees, title) {
 				$("#go_"+id).button('loading');
 
@@ -2114,7 +2563,7 @@ if ($wp_exist == TRUE) {
 								Swal.fire({
 									icon: 'error',
 									title: 'Erreur',
-									text: "Le temps d'attente est trop long, demande expiré, renter votre chance."
+									text: "Le temps d'attente est trop long, demande expiré, retenter votre chance."
 								});
 							},
 							error: function(){
@@ -2122,12 +2571,12 @@ if ($wp_exist == TRUE) {
 								Swal.fire({
 									icon: 'error',
 									title: 'Erreur',
-									text: "Une erreur est intervenu dans le traitement de la requête, renter votre chance."
+									text: "Une erreur est intervenu dans le traitement de la requête, retenter votre chance."
 								});
 							}
 						});
 					},
- 					allowOutsideClick: () => !Swal.isLoading()
+					allowOutsideClick: () => !Swal.isLoading()
 				}).then((result) => {
 					if (result.isConfirmed) {
 						Swal.fire({
@@ -2138,7 +2587,49 @@ if ($wp_exist == TRUE) {
 					}
 				})
 			}
+
+			function ensureHttps(url) {
+				if (url.startsWith('http://')) {
+				} else if (!url.startsWith('https://')) {
+					url = 'https://' + url;
+				}
+				
+				return url.endsWith('/') ? url.slice(0, -1) : url;
+			}
+
+			function generateSQL() {
+					let oldUrl = document.getElementById('oldUrl').value;
+					let newUrl = document.getElementById('newUrl').value;
+					const prefix = document.getElementById('prefix').value;
+
+					if (!oldUrl || !newUrl || !prefix) {
+						alert("Veuillez remplir tous les champs.");
+						return;
+					}
+
+					oldUrl = ensureHttps(oldUrl);
+					newUrl = ensureHttps(newUrl);
+
+					const sqlQueries = `
+UPDATE ${prefix}_options SET option_value = replace(option_value, '${oldUrl}', '${newUrl}') WHERE option_name = 'home' OR option_name = 'siteurl';
+UPDATE ${prefix}_posts SET guid = replace(guid, '${oldUrl}', '${newUrl}');
+UPDATE ${prefix}_posts SET post_content = replace(post_content, '${oldUrl}', '${newUrl}'); 
+UPDATE ${prefix}_postmeta SET meta_value = replace(meta_value, '${oldUrl}', '${newUrl}');
+
+UPDATE ${prefix}_revslider_slides SET params = replace(params, '${oldUrl}', '${newUrl}');
+UPDATE ${prefix}_revslider_slides SET layers = replace(layers, '${oldUrl}', '${newUrl}');
+UPDATE ${prefix}_revslider_sliders SET params = replace(params, '${oldUrl}', '${newUrl}');
+					`;
+
+					document.getElementById('sqlOutput').value = sqlQueries.trim();
+			}
+
+			function copyToClipboard() {
+				const textarea = document.getElementById('sqlOutput');
+				textarea.select();
+				document.execCommand('copy');
+				alert('Requêtes SQL copiées dans le presse-papiers');
+			}
 		</script>
    </body>
 </html>
-<?php 
