@@ -49,7 +49,7 @@ if(ini_get('allow_url_fopen') == FALSE) {
 $zips_wp = [];
 
 /**
- * Vos zips de themes à installer
+ * Vos zips de thèmes à installer
  * 
  * $zips_theme = [
  * 	[
@@ -454,7 +454,7 @@ if(file_exists('wp-config.php')) {
 			<article class="row">
 				<div class="col-12">
 					<div class="card border-info mb-3" >
-						<div class="card-header">Installations personnaliées - Themes</div>
+						<div class="card-header">Installations personnaliées - Thèmes</div>
 						<div class="card-body">
 							<h4 class="card-title"></h4>
 							<div class="card-text">
@@ -464,7 +464,7 @@ if(file_exists('wp-config.php')) {
 									<div class="col-12">
 										<h5>Envoyer le Zip</h5>
 										<div class="text-warning mb-3">
-											Télécharge le zip sur le serveur dans le dossier des themes de Wordpress.
+											Télécharge le zip sur le serveur dans le dossier des thèmes de Wordpress.
 										</div>
 									</div>
 
@@ -489,7 +489,7 @@ if(file_exists('wp-config.php')) {
 									<div class="col-12 mt-4">
 										<h5>Envoyer et extraire le Zip</h5>
 										<div class="text-warning mb-3">
-											Télécharge et extrait le zip sur le serveur dans le dossier des themes de Wordpress.
+											Télécharge et extrait le zip sur le serveur dans le dossier des thèmes de Wordpress.
 										</div>
 									</div>
 
@@ -1125,14 +1125,14 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-7" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les thêmes par defaut de Wordpress</button>
+					<button id="go-tools-7" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les thèmes par defaut de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Supprime l'ensemble des thêmes suivant : </li>
+									<li>Supprime l'ensemble des thèmes suivant : </li>
 									<li>twentytwentyfour</li>
 									<li>twentyfourteen</li>
 									<li>twentythirteen</li>
@@ -1145,7 +1145,7 @@ if(file_exists('wp-config.php')) {
 							<form id="action_delete_theme" method="post">
 								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
-									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thêmes</button>
+									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thèmes</button>
 								</div>
 								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
@@ -1160,7 +1160,7 @@ if(file_exists('wp-config.php')) {
 									var donnees = {
 										'action_delete_theme'	: 'ok'
 									}
-									sendform('action_delete_theme', donnees, 'Supprime les thêmes defaut de Wordpress');
+									sendform('action_delete_theme', donnees, 'Supprime les thèmes defaut de Wordpress');
 								});
 							</script>
 						</div>
@@ -1170,14 +1170,14 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des thêmes</button>
+					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des thèmes</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7-1">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Supprime les thêmes suivant : </li>
+									<li>Supprime les thèmes suivant : </li>
 								</ul>
 							</div>
 
@@ -1196,7 +1196,7 @@ if(file_exists('wp-config.php')) {
 
 								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
-									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thêmes</button>
+									<button id="go_action_delete_theme" type="submit" class="btn btn-primary">Supprime les thèmes</button>
 								</div>
 								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
@@ -1216,7 +1216,7 @@ if(file_exists('wp-config.php')) {
 									$('input[name="theme"]:checked').each(function() {
 										donnees['themes'].push($(this).val());
 									});
-									sendform('action_delete_theme_choix', donnees, 'Supprime les thêmes');
+									sendform('action_delete_theme_choix', donnees, 'Supprime les thèmes');
 								});
 							</script>
 						</div>
@@ -1226,14 +1226,14 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-7-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-2" aria-expanded="false" aria-controls="tools-7-2">Clone des themes</button>
+					<button id="go-tools-7-2" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-2" aria-expanded="false" aria-controls="tools-7-2">Clone des thèmes</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7-2">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Clone les thêmes suivant : </li>
+									<li>Clone les thèmes suivant : </li>
 								</ul>
 							</div>
 
@@ -1252,7 +1252,7 @@ if(file_exists('wp-config.php')) {
 
 								<?php if($wp_exist == TRUE) : ?>
 								<div class="form-group">
-									<button id="go_action_clone_theme_choix" type="submit" class="btn btn-primary">Clone les thêmes</button>
+									<button id="go_action_clone_theme_choix" type="submit" class="btn btn-primary">Clone les thèmes</button>
 								</div>
 								<?php else: ?>
 									<div class="alert alert-dismissible alert-danger mt-3">
@@ -1272,7 +1272,7 @@ if(file_exists('wp-config.php')) {
 									$('input[name="clone_theme"]:checked').each(function() {
 										donnees['themes'].push($(this).val());
 									});
-									sendform('action_clone_theme_choix', donnees, 'Clone les thêmes');
+									sendform('action_clone_theme_choix', donnees, 'Clone les thèmes');
 								});
 							</script>
 						</div>

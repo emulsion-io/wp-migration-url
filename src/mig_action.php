@@ -241,7 +241,7 @@ if(isset($_POST['action_dl_extract_zip_plugin'])) {
 }
 
 /**
- * ACTION : Supprime les themes WP 
+ * ACTION : Supprime les thèmes WP 
  * 
  * Status : Ok | 2024-10-08
  * 
@@ -252,15 +252,15 @@ if(isset($_POST['action_delete_theme_choix'])) {
 		$retour_delete_theme_choix = $migration->wp_delete_theme_choix($_POST['themes']);
 
 		if($retour_delete_theme_choix === TRUE) {
-			$migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
+			$migration->retour(array('message' => 'Thèmes supprimés avec succes.'), TRUE);
 		} else {
-			$migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
+			$migration->retour(array('message' => 'Impossible de supprimer les thèmes.'), FALSE);
 		}
 	}
 }
 
 /**
- * ACTION : Clone les themes WP 
+ * ACTION : Clone les thèmes WP 
  * 
  * Status : Ok | 2024-10-08
  * 
@@ -271,9 +271,9 @@ if(isset($_POST['action_clone_theme_choix'])) {
 		$retour_clone_theme_choix = $migration->wp_clone_theme_choix($_POST['themes']);
 
 		if($retour_clone_theme_choix === TRUE) {
-			$migration->retour(array('message' => 'Themes clonés avec succes.'), TRUE);
+			$migration->retour(array('message' => 'thèmes clonés avec succes.'), TRUE);
 		} else {
-			$migration->retour(array('message' => 'Impossible de cloner les themes.'), FALSE);
+			$migration->retour(array('message' => 'Impossible de cloner les thèmes.'), FALSE);
 		}
 	}
 }
@@ -396,7 +396,7 @@ if(isset($_POST['action_clean_spam'])) {
 }
 
 /**
- * ACTION : Supprime les themes WP de base ne servant pas ( si vous utilisez un d'entre eux, ne pas effectuer cette action )
+ * ACTION : Supprime les thèmes WP de base ne servant pas ( si vous utilisez un d'entre eux, ne pas effectuer cette action )
  * 
  * Status : Ok | 2024-10-08
  * 
@@ -407,9 +407,9 @@ if(isset($_POST['action_delete_theme'])) {
 		$retour_delete_theme = $migration->wp_delete_theme();
 
 		if($retour_delete_theme === TRUE) {
-			$migration->retour(array('message' => 'Themes supprimés avec succes.'), TRUE);
+			$migration->retour(array('message' => 'Thèmes supprimés avec succes.'), TRUE);
 		} else {
-			$migration->retour(array('message' => 'Impossible de supprimer les themes.'), FALSE);
+			$migration->retour(array('message' => 'Impossible de supprimer les thèmes.'), FALSE);
 		}
 	}
 }
