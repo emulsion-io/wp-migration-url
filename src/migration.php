@@ -1170,7 +1170,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des thèmes</button>
+					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des thèmes (selection)</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7-1">
@@ -1282,7 +1282,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-8" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-8" aria-expanded="false" aria-controls="tools-8">Ajouter un administrateur a votre installation</button>
+					<button id="go-tools-8" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-8" aria-expanded="false" aria-controls="tools-8">Ajouter un administrateur à votre installation</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-8">
@@ -1376,7 +1376,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-10" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-10" aria-expanded="false" aria-controls="tools-10">Supprimer toutes les fichiers de Wordpress</button>
+					<button id="go-tools-10" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-10" aria-expanded="false" aria-controls="tools-10">Supprimer tous les fichiers de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-10">

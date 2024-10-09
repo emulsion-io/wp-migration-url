@@ -81,6 +81,27 @@ Le Zip du thème doit contenir le dossier du thème.
 
 ex : `mon-theme.zip` doit contenir `mon-theme/` avec les fichiers du thème.
 
+## Mais sinon, il fait quoi ton script ?
+
+  * Le script permet de télécharger et d'extraire des fichiers ZIP depuis des URLS contenant, par exemple, des installations de Wordpress, des plugins ou des thèmes.
+  * Il permet aussi de télécharger des fichiers SQL depuis des URLS contenant des sauvegardes de bases de données.
+
+  * Télécharger et extraire un Wordpress avec possibilité de l'installer
+  * Editer wp-config.php - Base de données
+  * Editer wp-config.php - Options de développement
+  * Modifier les Urls - Dans la BDD
+  * Modifier les Urls - Génération des Rqs SQL
+  * Creer le fichier .htaccess
+  * Effacer toutes les revisions de votre Wordpress
+  * Effacer tous les commentaires non validés (Spam)
+  * Installer les plugins de votre choix
+  * Supprime les thèmes par defaut de Wordpress
+  * Supprime des thèmes (selection)
+  * Clone des thèmes
+  * Ajouter un administrateur à votre installation
+  * Modifier le prefix des tables
+  * Supprimer tous les fichiers de Wordpress
+
 ## Developpement
 
 Vous pouvez editer les fichiers dans `/src/` et les merger avec `compile.php`
