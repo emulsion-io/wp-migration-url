@@ -4,18 +4,8 @@
  * @author Fabrice Simonet
  * @link http://emulsion.io
  *
- * @version 2.7.3
-*/
-
-/**	
- * 
- * 2024-10-08
- * 
- * Reprise du script.
- * 
- */
-
-/**
+ * @version 2.7.4
+ *
  * Copyright (c) 2021 Fabrice Simonet
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -59,6 +49,40 @@ if(ini_get('allow_url_fopen') == FALSE) {
 $zips_wp = [];
 
 /**
+ * Vos zips de themes à installer
+ * 
+ * $zips_theme = [
+ * 	[
+ * 		'nom' => 'Mon Theme WP #1',
+ * 		'fichier' => 'https://site/fichier.zip'
+ * 	],
+ * 	[
+ * 		'nom' => 'Mon Theme WP #2',
+ * 		'fichier' => 'https://site/fichier.zip'
+ * 	]
+ * ];
+ * 
+ */
+$zips_theme = [];
+
+/**
+ * Vos zips de plugins à installer
+ * 
+ * $zips_plugin = [
+ * 	[
+ * 		'nom' => 'Mon Plugin WP #1',
+ * 		'fichier' => 'https://site/fichier.zip'
+ * 	],
+ * 	[
+ * 		'nom' => 'Mon Plugin WP #2',
+ * 		'fichier' => 'https://site/fichier.zip'
+ * 	]
+ * ];
+ * 
+ */
+$zips_plugin = [];
+
+/**
  * Variable de status d'execution du script
  */
 $retour_url                   = FALSE;
@@ -95,7 +119,6 @@ if(file_exists('wp-config.php')) {
 	define( 'WP_INSTALLING', true );
 
 	$wp_exist = TRUE;
-	$wp_exist_install = TRUE;
 
 	// Recupere les informations sur le WP courant
 	$site_url = $migration->wp_get_info("siteurl");
@@ -105,6 +128,10 @@ if(file_exists('wp-config.php')) {
 		$site_url['option_value'] = '';
 
 		$wp_exist_install = FALSE;
+	} else {
+		$migration->get_theme_plugin_wp();
+
+		$wp_exist_install = TRUE;
 	}
 
 } else {
@@ -112,7 +139,6 @@ if(file_exists('wp-config.php')) {
 
 	$wp_exist = FALSE;
 	$wp_exist_install = FALSE;
-
 }
 
 ?>
@@ -160,23 +186,6 @@ if(file_exists('wp-config.php')) {
 						</li>
 						<li class="nav-item">
 							<a class="nav-link" href="https://emulsion.io">Emulsion.io</a>
-						</li>
-						<li class="nav-item dropdown">
-							<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Outils</a>
-							<div class="dropdown-menu">
-								<a class="dropdown-item open-tools" data-open="#tools-1" data-go="#go-tools-1">Telecharger et extraire un Wordpress avec possibilité de l'installer</a>
-								<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2">Modifier les Urls de votre installation Wordpress</a>
-								<a class="dropdown-item open-tools" data-open="#tools-2" data-go="#go-tools-2-1">Modifier les Urls de votre installation Wordpress en SQL</a>
-								<a class="dropdown-item open-tools" data-open="#tools-3" data-go="#go-tools-3">Creer le fichier .htaccess</a>
-								<a class="dropdown-item open-tools" data-open="#tools-4" data-go="#go-tools-4">Effacer toutes les revisions de votre Wordpress</a>
-								<a class="dropdown-item open-tools" data-open="#tools-5" data-go="#go-tools-5">Effacer tous les commentaires non validés (Spam)</a>
-								<a class="dropdown-item open-tools" data-open="#tools-6" data-go="#go-tools-6">Installer les plugins de votre choix</a>
-								<a class="dropdown-item open-tools" data-open="#tools-7" data-go="#go-tools-7">Supprime les themes par defaut de Wordpress</a>
-								<a class="dropdown-item open-tools" data-open="#tools-8" data-go="#go-tools-8">Ajouter un administrateur a votre installation</a>
-								<div class="dropdown-divider"></div>
-								<a class="dropdown-item open-tools" data-open="#tools-9" data-go="#go-tools-9">Modifier le prefix des tables</a>
-								<a class="dropdown-item open-tools" data-open="#tools-10" data-go="#go-tools-10">Supprime toutes les fichiers de Wordpress</a>
-							</div>
 						</li>
 					</ul>
 				</div>
@@ -270,83 +279,6 @@ if(file_exists('wp-config.php')) {
 							<div class="card-text">
 								<?php if($wp_exist === false) : ?>
 									Wordpress n'est pas présent sur ce serveur, voulez-vous l'installer ?
-									<div class="row mt-3">
-										<div class="col-6">
-											<form id="action_dl_zip" method="post">
-												<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoie le zip de Wordpress sur le serveur</button>
-											</form>
-											<script>
-												$( "#action_dl_zip" ).submit(function( event ) {
-													event.preventDefault();
-													var donnees = {
-														action_dl_zip : 'ok'
-													}
-													sendform('action_dl_zip', donnees, 'Le zip de Wordpress est sur le serveur');
-												});
-											</script>
-										</div>
-										<div class="col-6">
-											<form id="action_dl_zip_extract" method="post">
-												<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Envoyer et extraire Wordpress sur le serveur</button>
-											</form>
-											<script>
-												$( "#action_dl_zip_extract" ).submit(function( event ) {
-													event.preventDefault();
-													var donnees = {
-														action_dl_zip_extract : 'ok',
-													}
-													sendform('action_dl_zip_extract', donnees, 'Wordpress est extrait sur le serveur');
-												});
-											</script>
-										</div>
-									</div>
-									<div class="row mt-3">
-										<?php if($zips_wp) : ?>
-											<div class="col-12">
-												<h3>Vos instances Custom Wordpress</h3>
-											</div>
-
-											<?php $i = 0; foreach($zips_wp as $zip) : ?>
-												<div class="col-6">
-													<form id="action_dl_zip_extract_<?=$i;?>" method="post">
-														<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoyer et extraire le zip de <?= $zip['nom']; ?> sur le serveur</button>
-													</form>
-													<script>
-														$( "#action_dl_zip_extract_<?=$i;?>" ).submit(function( event ) {
-															event.preventDefault();
-															var donnees = {
-																action_dl_zip_extract : 'ok',
-																url : '<?= $zip['fichier']; ?>'
-															}
-															sendform('action_dl_zip_extract', donnees, 'Le Wordpress de <?= $zip['nom']; ?> est extrait sur le serveur');
-														});
-													</script>
-												</div>
-											<?php $i++; endforeach; ?>
-										<?php endif; ?>
-									</div>
-									<div class="row mt-3">
-										<?php if($zips_wp) : ?>
-											<?php $i = 0; foreach($zips_wp as $zip) : ?>
-												<div class="col-6">
-													<form id="action_dl_zip_<?=$i;?>" method="post">
-														<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoyer le zip de <?= $zip['nom']; ?> sur le serveur</button>
-													</form>
-													<script>
-														$( "#action_dl_zip_<?=$i;?>" ).submit(function( event ) {
-															event.preventDefault();
-															var donnees = {
-																action_dl_zip : 'ok',
-																url : '<?= $zip['fichier']; ?>'
-															}
-															sendform('action_dl_zip', donnees, 'Le zip du Wordpress de <?= $zip['nom']; ?> est sur le serveur');
-														});
-													</script>
-												</div>
-											<?php $i++; endforeach; ?>
-										<?php endif; ?>
-									</div>
-
 								<?php else: ?>
 									<ul>
 										<li>Wordpress est présent sur ce serveur.</li>
@@ -355,15 +287,308 @@ if(file_exists('wp-config.php')) {
 										<?php else : ?>
 											<li>URL du site : <span class="text-danger">Wordpress non configuré</span></li>
 										<?php endif; ?>
-										<li>Version installée de WP : <? //= $wp_version; ?></li>
 									</ul>
 								<?php endif; ?>
+
+								<div class="row mt-3">
+									<div class="col-6">
+										<form id="action_dl_zip" method="post">
+											<button type="submit" id="go_action_dl_zip" class="btn btn-primary">Envoie le zip de Wordpress sur le serveur</button>
+										</form>
+										<script>
+											$( "#action_dl_zip" ).submit(function( event ) {
+												event.preventDefault();
+												var donnees = {
+													action_dl_zip : 'ok'
+												}
+												sendform('action_dl_zip', donnees, 'Le zip de Wordpress est sur le serveur');
+											});
+										</script>
+									</div>
+									<div class="col-6">
+										<form id="action_dl_zip_extract" method="post">
+											<button type="submit" id="go_action_dl_zip_extract" class="btn btn-primary">Envoyer et extraire Wordpress sur le serveur</button>
+										</form>
+										<script>
+											$( "#action_dl_zip_extract" ).submit(function( event ) {
+												event.preventDefault();
+												var donnees = {
+													action_dl_zip_extract : 'ok',
+												}
+												sendform('action_dl_zip_extract', donnees, 'Wordpress est extrait sur le serveur');
+											});
+										</script>
+									</div>
+								</div>
+
 							</div>
 						</div>
 					</div>
 				</div>
-
 			</article>
+
+			<?php if($zips_wp) : ?>
+			<article class="row">
+				<div class="col-12">
+					<div class="card border-info mb-3" >
+						<div class="card-header">Installations personnaliées - Instances</div>
+						<div class="card-body">
+							<h4 class="card-title"></h4>
+							<div class="card-text">
+
+								<div class="row">
+									
+									<div class="col-12">
+										<h5>Envoyer le Zip</h5>
+										<div class="text-warning mb-3">
+											Télécharge le zip sur le serveur dans le dossier courant.
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_wp as $zip) : ?>
+										<div class="col-3">
+											<form id="action_dl_zip_<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_zip" class="btn btn-primary"><?= $zip['nom']; ?></button>
+											</form>
+											<script>
+												$( "#action_dl_zip_<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_zip : 'ok',
+														url : '<?= $zip['fichier']; ?>'
+													}
+													sendform('action_dl_zip', donnees, 'Le zip du Wordpress de <?= $zip['nom']; ?> est sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+									<div class="col-12 mt-3">
+										<h5>Envoyer et extraire le Zip</h5>
+										<div class="text-warning mb-3">
+											Télécharge et extrait le zip sur le serveur dans le dossier courant.
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_wp as $zip) : ?>
+										<?php if(! isset($zip['fichier'])) continue; ?>
+										<div class="col-3">
+											<form id="action_dl_zip_extract_<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_zip" class="btn btn-primary"><?= $zip['nom']; ?></button>
+											</form>
+											<script>
+												$( "#action_dl_zip_extract_<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_zip_extract : 'ok',
+														url : '<?= $zip['fichier']; ?>'
+													}
+													sendform('action_dl_zip_extract', donnees, 'Le Wordpress de <?= $zip['nom']; ?> est extrait sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+									<div class="col-12 mt-4">
+										<h5>Envoyer la base de données</h5>
+										<div class="text-warning mb-3">
+											Copie la base de données sur le serveur dans le dossier /bdd_tmp/
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_wp as $zip) : ?>
+										<?php if(! isset($zip['sql'])) continue; ?>
+										<div class="col-3">
+											<form id="action_dl_bdd<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_bdd" class="btn btn-primary"><?= $zip['nom']; ?> </button>
+											</form>
+											<script>
+												$( "#action_dl_bdd<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_bdd : 'ok',
+														sql : '<?= $zip['sql']; ?>'
+													}
+													sendform('action_dl_bdd', donnees, 'La BDD de <?= $zip['nom']; ?> est copié sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+									<div class="col-12 mt-4">
+										<h5>Envoyer et installer la base de données</h5>
+										<div class="text-warning mb-3">
+											Installe la base de données sur le serveur en utilisant le fichier SQL et les infos de connexion de wp-config.php
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_wp as $zip) : ?>
+										<?php if(! isset($zip['sql'])) continue; ?>
+										<div class="col-3">
+											<form id="action_dl_install_bdd<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_install_bdd" class="btn btn-primary"><?= $zip['nom']; ?> </button>
+											</form>
+											<script>
+												$( "#action_dl_install_bdd<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_install_bdd : 'ok',
+														sql : '<?= $zip['sql']; ?>'
+													}
+													sendform('action_dl_install_bdd', donnees, 'La BDD de <?= $zip['nom']; ?> est installée sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+								</div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</article>
+			<?php endif; ?>
+
+			<?php if($zips_theme) : ?>
+			<article class="row">
+				<div class="col-12">
+					<div class="card border-info mb-3" >
+						<div class="card-header">Installations personnaliées - Themes</div>
+						<div class="card-body">
+							<h4 class="card-title"></h4>
+							<div class="card-text">
+
+								<div class="row mt-3">
+									
+									<div class="col-12">
+										<h5>Envoyer le Zip</h5>
+										<div class="text-warning mb-3">
+											Télécharge le zip sur le serveur dans le dossier des themes de Wordpress.
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_theme as $zip) : ?>
+										<div class="col-3">
+											<form id="action_dl_zip_theme_<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_zip_theme_" class="btn btn-primary"><?= $zip['nom']; ?></button>
+											</form>
+											<script>
+												$( "#action_dl_zip_theme_<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_zip_theme : 'ok',
+														url : '<?= $zip['fichier']; ?>'
+													}
+													sendform('action_dl_zip_theme', donnees, 'Le zip du theme <?= $zip['nom']; ?> est sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+									<div class="col-12 mt-4">
+										<h5>Envoyer et extraire le Zip</h5>
+										<div class="text-warning mb-3">
+											Télécharge et extrait le zip sur le serveur dans le dossier des themes de Wordpress.
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_theme as $zip) : ?>
+										<div class="col-3">
+											<form id="action_dl_extract_zip_theme_<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_extract_zip_theme" class="btn btn-primary"><?= $zip['nom']; ?></button>
+											</form>
+											<script>
+												$( "#action_dl_extract_zip_theme_<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_extract_zip_theme : 'ok',
+														url : '<?= $zip['fichier']; ?>'
+													}
+													sendform('action_dl_extract_zip_theme', donnees, 'Le theme <?= $zip['nom']; ?> est installé sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+								</div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</article>
+			<?php endif; ?>
+
+			<?php if($zips_plugin) : ?>
+			<article class="row">
+				<div class="col-12">
+					<div class="card border-info mb-3" >
+						<div class="card-header">Installations personnaliées - Plugins</div>
+						<div class="card-body">
+							<h4 class="card-title"></h4>
+							<div class="card-text">
+
+								<div class="row mt-3">
+									
+									<div class="col-12">
+										<h5>Envoyer le Zip</h5>
+										<div class="text-warning mb-3">
+											Télécharge le zip sur le serveur dans le dossier des plugins de Wordpress.
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_plugin as $zip) : ?>
+										<div class="col-3">
+											<form id="action_dl_zip_plugin_<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_zip_plugin_" class="btn btn-primary"><?= $zip['nom']; ?></button>
+											</form>
+											<script>
+												$( "#action_dl_zip_plugin_<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_zip_plugin : 'ok',
+														url : '<?= $zip['fichier']; ?>'
+													}
+													sendform('action_dl_zip_plugin', donnees, 'Le zip du plugin <?= $zip['nom']; ?> est sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+									<div class="col-12 mt-4">
+										<h5>Envoyer et extraire le Zip</h5>
+										<div class="text-warning mb-3">
+											Télécharge et extrait le zip sur le serveur dans le dossier des plugins de Wordpress.
+										</div>
+									</div>
+
+									<?php $i = 0; foreach($zips_plugin as $zip) : ?>
+										<div class="col-3">
+											<form id="action_dl_extract_zip_plugin_<?=$i;?>" method="post">
+												<button type="submit" id="go_action_dl_extract_zip_plugin" class="btn btn-primary"><?= $zip['nom']; ?></button>
+											</form>
+											<script>
+												$( "#action_dl_extract_zip_plugin_<?=$i;?>" ).submit(function( event ) {
+													event.preventDefault();
+													var donnees = {
+														action_dl_extract_zip_plugin : 'ok',
+														url : '<?= $zip['fichier']; ?>'
+													}
+													sendform('action_dl_extract_zip_plugin', donnees, 'Le plugin <?= $zip['nom']; ?> est installé sur le serveur');
+												});
+											</script>
+										</div>
+									<?php $i++; endforeach; ?>
+
+								</div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</article>
+			<?php endif; ?>
 
 			<h2>Outils</h2>
 
@@ -422,7 +647,7 @@ if(file_exists('wp-config.php')) {
 									</div>
 									<div class="form-group">
 										<label for="pwd">Mot de passe MySQL</label>
-										<input type="text" class="form-control tools-1-required" id="pwd" name="pwd" placeholder="" value="">
+										<input type="text" class="form-control" id="pwd" name="pwd" placeholder="" value="">
 									</div>
 
 									<div class="form-group">
@@ -448,23 +673,6 @@ if(file_exists('wp-config.php')) {
 										<label for="admin_password">Mot de passe</label>
 										<input type="text" class="form-control tools-1-required" id="admin_password" name="admin_password" placeholder="" value="">
 									</div>
-
-									<div class="custom-control custom-checkbox">
-										<input type="checkbox" id="debug" name="debug" class="custom-control-input" value="1"> 
-										<label class="custom-control-label" for="debug">Debug</label>
-									</div>
-									<div class="custom-control custom-checkbox">
-										<input type="checkbox" id="debug_display" name="debug_display" class="custom-control-input" value="1"> 
-										<label class="custom-control-label" for="debug_display">Debug_display</label>
-									</div>
-									<div class="custom-control custom-checkbox">
-										<input type="checkbox" id="debug_log" name="debug_log" class="custom-control-input" value="1"> 
-										<label class="custom-control-label" for="debug_log">Debug_log</label>
-									</div>					
-									<div class="custom-control custom-checkbox">
-										<input type="checkbox" id="blog_public" name="blog_public" class="custom-control-input" value="1"> 
-										<label class="custom-control-label" for="blog_public">Indexer le site</label>
-									</div>
 								</div>
 
 								<?php if($wp_exist == TRUE) : ?>
@@ -472,7 +680,7 @@ if(file_exists('wp-config.php')) {
 										<button type="button" class="close" data-dismiss="alert">&times;</button>
 										<strong>Oh Attention!</strong> Une version de Wordpress est deja installé sur le serveur
 									</div>
-								<?php endif; ?>	
+								<?php endif; ?>
 
 								<div class="form-group mt-3">
 									<button id="go_action_dl" type="submit" class="btn btn-primary">Lancer la procedure</button>
@@ -493,11 +701,7 @@ if(file_exists('wp-config.php')) {
 										weblog_title	: $('#weblog_title').val(),
 										user_login		: $('#user_login').val(),
 										admin_email		: $('#admin_email').val(),
-										admin_password	: $('#admin_password').val(),
-										debug				: $('#debug').is(':checked'),
-										debug_display	: $('#debug_display').is(':checked'),
-										debug_log		: $('#debug_log').is(':checked'),
-										blog_public		: $('#blog_public').is(':checked')
+										admin_password	: $('#admin_password').val()
 									}
 
 									sendform('action_dl', donnees, 'Telecharge, extrait et install Wordpress');
@@ -921,14 +1125,14 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-7" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les themes par defaut de Wordpress</button>
+					<button id="go-tools-7" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7" aria-expanded="false" aria-controls="tools-7">Supprime les thêmes par defaut de Wordpress</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7">
 						<div class="card card-body">
 							<div class="text-warning mb-3">
 								<ul>
-									<li>Supprime l'ensemble des themes suivant : </li>
+									<li>Supprime l'ensemble des thêmes suivant : </li>
 									<li>twentytwentyfour</li>
 									<li>twentyfourteen</li>
 									<li>twentythirteen</li>
@@ -966,7 +1170,7 @@ if(file_exists('wp-config.php')) {
 
 			<div class="row mb-3">
 				<div class="col-12 mb-2">
-					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des themes</button>
+					<button id="go-tools-7-1" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-7-1" aria-expanded="false" aria-controls="tools-7-1">Supprime des thêmes</button>
 				</div>
 				<div class="col-12">
 					<div class="collapse" id="tools-7-1">

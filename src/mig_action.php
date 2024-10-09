@@ -4,7 +4,7 @@
  * 
  * Met à jour le script de migration
  * 
- * Status : 
+ * Status : Ok | 2024-10-09 
  * 
  */
 if(isset($_POST['action_update'])) {
@@ -20,8 +20,46 @@ if(isset($_POST['action_update'])) {
 	}
 }
 
+/** 
+ * ACTION : Telecharge la base de donnée du site sur le serveur
+ * 
+ * Status : Ok | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_bdd'])) {
+	if(!empty($_POST['action_dl_bdd'])) {
+
+		$retour_dl_bdd = $migration->wp_download_bdd($_POST['sql']);
+
+		if($retour_dl_bdd === TRUE) {
+			$migration->retour(array('message' => 'La base de donnée est copiée sur votre serveur.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter votre base de données.'), FALSE);
+		}
+	}
+}
+
+/** 
+ * ACTION : Telecharge la base de donnée du site et l'injecte dans l'instance de WP sur le serveur
+ * 
+ * Status : Ok | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_install_bdd'])) {
+	if(!empty($_POST['action_dl_install_bdd'])) {
+
+		$retour_dl_bdd = $migration->wp_download_install_bdd($_POST['sql']);
+
+		if($retour_dl_bdd === TRUE) {
+			$migration->retour(array('message' => 'La base de donnée est copiée et installée sur votre serveur.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible d\'ajouter votre base de données.'), FALSE);
+		}
+	}
+}
+
 /**
- * ACTION : Telecharge Le dernier zip a jour de Wordpress
+ * ACTION : Telecharge Le zip
  * 
  * Status : OK | 2024-10-08
  * 
@@ -29,9 +67,9 @@ if(isset($_POST['action_update'])) {
 if(isset($_POST['action_dl_zip'])) {
 	if(!empty($_POST['action_dl_zip'])) {
 
-		$url = $_POST['url'];
-		if(empty($url)) {
-			$url = null;
+		$url = null;
+		if( ! empty($_POST['url'])) {
+			$url = $_POST['url'];
 		}
 
 		$retour_action_dl_zip = $migration->wp_download_zip($url);
@@ -45,26 +83,168 @@ if(isset($_POST['action_dl_zip'])) {
 }
 
 /**
- * ACTION : Permet de modifier le fichier wp-config.php
+ * ACTION : Telecharge Le dernier zip a jour de Wordpress
  * 
- * Status : Ok | 2024-10-08
+ * Status : OK | 2024-10-08
  * 
  */
-if(isset($_POST['action_change_wpconfig'])) {
-	if(!empty($_POST['action_change_wpconfig'])) {
+if(isset($_POST['action_dl_zip_wp'])) {
+	if(!empty($_POST['action_dl_zip_wp'])) {
 
-		$retour_change_wpconfig = $migration->wp_change_wpconfig($_POST['db_name'], $_POST['db_user'], $_POST['db_password'], $_POST['db_host'], );
+		$retour_action_dl_zip_wp = $migration->wp_download_wordpress();
 
-		if($retour_change_wpconfig === TRUE) {
-			$migration->retour(array('message' => 'Le fichier wp-config.php a ete modifie avec succes.'), TRUE);
+		if($retour_action_dl_zip_wp === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement de WordPress effectué.'), TRUE);
 		} else {
-			$migration->retour(array('message' => 'Impossible de modifier le fichier wp-config.php.'), FALSE);
+			$migration->retour(array('message' => 'Le Zip existe deja, ou impossible d\'ecrire sur le serveur.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel
+ * 
+ * Status : OK | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_zip_extract_wp'])) {
+	if(!empty($_POST['action_dl_zip_extract_wp'])) {
+
+		$retour_action_dl_zip_extract_wp = $migration->wp_download_extract();
+
+		if($retour_action_dl_zip_extract_wp === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel
+ * 
+ * Status : OK | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_zip_extract'])) {
+	if(!empty($_POST['action_dl_zip_extract'])) {
+
+		$url = null;
+		if( ! empty($_POST['url'])) {
+			$url = $_POST['url'];
+		}
+
+		$retour_action_dl_zip_extract = $migration->wp_download_url_extract($url);
+
+		if($retour_action_dl_zip_extract === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge le theme d'un WP
+ * 
+ * Status : OK | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_zip_theme'])) {
+	if(!empty($_POST['action_dl_zip_theme'])) {
+
+		$url = null;
+		if( ! empty($_POST['url'])) {
+			$url = $_POST['url'];
+		}
+
+		$retour_dl_zip_theme = $migration->wp_download_zip_theme($url);
+
+		if($retour_dl_zip_theme === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement du theme effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger le theme.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers du theme d'un WP
+ * 
+ * Status : OK | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_extract_zip_theme'])) {
+	if(!empty($_POST['action_dl_extract_zip_theme'])) {
+
+		$url = null;
+		if( ! empty($_POST['url'])) {
+			$url = $_POST['url'];
+		}
+
+		$retour_dl_extract_zip_theme = $migration->wp_download_extract_zip_theme($url);
+
+		if($retour_dl_extract_zip_theme === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction du theme effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger le theme.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge le plugin d'un WP
+ * 
+ * Status :  | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_zip_plugin'])) {
+	if(!empty($_POST['action_dl_zip_plugin'])) {
+
+		$url = null;
+		if( ! empty($_POST['url'])) {
+			$url = $_POST['url'];
+		}
+
+		$retour_dl_zip_plugin = $migration->wp_download_zip_plugin($url);
+
+		if($retour_dl_zip_plugin === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement du plugin effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger le plugin.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Telecharge et extrait les fichiers du plugin d'un WP
+ * 
+ * Status :  | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_dl_extract_zip_plugin'])) {
+	if(!empty($_POST['action_dl_extract_zip_plugin'])) {
+
+		$url = null;
+		if( ! empty($_POST['url'])) {
+			$url = $_POST['url'];
+		}
+
+		$retour_dl_extract_zip_plugin = $migration->wp_download_extract_zip_plugin($url);
+
+		if($retour_dl_extract_zip_plugin === TRUE) {
+			$migration->retour(array('message' => 'Téléchargement et extraction du plugin effectué.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de télécharger le plugin.'), FALSE);
 		}
 	}
 }
 
 /**
  * ACTION : Supprime les themes WP 
+ * 
+ * Status : Ok | 2024-10-08
+ * 
  */
 if(isset($_POST['action_delete_theme_choix'])) {
 	if(!empty($_POST['action_delete_theme_choix'])) {
@@ -81,6 +261,9 @@ if(isset($_POST['action_delete_theme_choix'])) {
 
 /**
  * ACTION : Clone les themes WP 
+ * 
+ * Status : Ok | 2024-10-08
+ * 
  */
 if(isset($_POST['action_clone_theme_choix'])) {
 	if(!empty($_POST['action_clone_theme_choix'])) {
@@ -115,30 +298,6 @@ if(isset($_POST['action_change_wpconfig_dev'])) {
 }
 
 /**
- * ACTION : Telecharge et extrait les fichiers d'un WP recuperé sur le site officiel
- * 
- * Status : OK | 2024-10-08
- * 
- */
-if(isset($_POST['action_dl_zip_extract'])) {
-	if(!empty($_POST['action_dl_zip_extract'])) {
-
-		$url = $_POST['url'];
-		if(empty($url)) {
-			$url = null;
-		}
-
-		$retour_action_dl_zip_extract = $migration->wp_download($url);
-
-		if($retour_action_dl_zip_extract === TRUE) {
-			$migration->retour(array('message' => 'Téléchargement et extraction de WordPress effectué.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
-		}
-	}
-}
-
-/**
  * ACTION : Creer un fichier htaccess
  * 
  * Status : OK | 2024-10-08
@@ -153,6 +312,25 @@ if(isset($_POST['action_htaccess'])) {
 			$migration->retour(array('message' => 'Fichier .htaccess crée avec succes.'), TRUE);
 		} else {
 			$migration->retour(array('message' => 'Impossible de creer le .htaccess.'), FALSE);
+		}
+	}
+}
+
+/**
+ * ACTION : Permet de modifier le fichier wp-config.php
+ * 
+ * Status : Ok | 2024-10-08
+ * 
+ */
+if(isset($_POST['action_change_wpconfig'])) {
+	if(!empty($_POST['action_change_wpconfig'])) {
+
+		$retour_change_wpconfig = $migration->wp_change_wpconfig($_POST['db_name'], $_POST['db_user'], $_POST['db_password'], $_POST['db_host'], );
+
+		if($retour_change_wpconfig === TRUE) {
+			$migration->retour(array('message' => 'Le fichier wp-config.php a ete modifie avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier le fichier wp-config.php.'), FALSE);
 		}
 	}
 }
@@ -293,6 +471,25 @@ if(isset($_POST['action_plug_install'])) {
 	}
 }
 
+/**
+ * ACTION : Permet de modifier le prefix des tables de WP
+ * 
+ * Status : Ok | 2024-10-09
+ * 
+ */
+if(isset($_POST['action_prefix_edit'])) {
+	if(!empty($_POST['action_prefix_edit'])) {
+
+		$retour_prefix_edit = $migration->wp_rename_prefix($_POST['prefix_edit']);
+
+		if($retour_prefix_edit === TRUE) {
+			$migration->retour(array('message' => 'Tables modifiées avec succes.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de modifier le prefix des tables.'), FALSE);
+		}
+	}
+}
+
 /********************************************************************************************/
 /********************************************************************************************/
 /********************************************************************************************/
@@ -342,11 +539,11 @@ if(isset($_POST['action_dl'])) {
 
 			// assignation des variables de connexion pour effectuer un test si la bdd existe
 			$options = array(
-				$opts['dbhost'],
-				$opts['dbname'],
-				$opts['uname'],
-				$opts['pwd'],
-				$opts['prefix']
+				'dbhost'       => $opts['dbhost'],
+				'dbname'       => $opts['dbname'],
+				'dbuser'       => $opts['uname'],
+				'dbpassword'   => $opts['pwd'],
+				'table_prefix' => $opts['prefix']
 			);
 			$migration->set_var_wp($options);
 
@@ -355,10 +552,25 @@ if(isset($_POST['action_dl'])) {
 				$migration->retour(array('message' => 'La base de données n\'existe pas.'), FALSE);
 			}
 
-			$migration->wp_download();
-			$migration->wp_install_config($opts);
-			$migration->wp_install_wp($opts);
-			$migration->wp_htaccess();
+			$retour = $migration->wp_download_extract();
+			if($retour === FALSE) {
+				$migration->retour(array('message' => 'Impossible de télécharger les fichiers de Wordpress.'), FALSE);
+			}
+
+			$retour = $migration->wp_install_config($options);
+			if($retour === FALSE) {
+				$migration->retour(array('message' => 'Impossible de creer le fichier de configuration.'), FALSE);
+			}
+
+			$retour = $migration->wp_install_wp($opts);
+			if($retour === FALSE) {
+				$migration->retour(array('message' => 'Impossible d\'installer Wordpress.'), FALSE);
+			}
+
+			$retour = $migration->wp_htaccess();
+			if($retour === FALSE) {
+				$migration->retour(array('message' => 'Impossible de creer le fichier .htaccess.'), FALSE);
+			}
 
 			$migration->retour(array('message' => 'Installation complete effectuée.'), TRUE);
 		} else {
@@ -418,20 +630,3 @@ if(isset($_POST['action_importer_sql'])) {
 		}
 	}
 }
-
-/**
- * ACTION : Permet de modifier le prefix des tables de WP
- */
-if(isset($_POST['action_prefix_edit'])) {
-	if(!empty($_POST['action_prefix_edit'])) {
-
-		$retour_prefix_edit = $migration->wp_rename_prefix($_POST['prefix_edit']);
-
-		if($retour_prefix_edit === TRUE) {
-			$migration->retour(array('message' => 'Tables modifiées avec succes.'), TRUE);
-		} else {
-			$migration->retour(array('message' => 'Impossible de modifier le prefix des tables.'), FALSE);
-		}	
-	}
-}
-
