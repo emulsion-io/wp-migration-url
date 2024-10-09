@@ -2,7 +2,7 @@
 
 /**
  * @author Fabrice Simonet
- * @link http://emulsion.io
+ * @link https://emulsion.io
  *
  * @version 2.7.4
  *
