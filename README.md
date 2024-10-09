@@ -102,6 +102,10 @@ ex : `mon-theme.zip` doit contenir `mon-theme/` avec les fichiers du thème.
   * Modifier le prefix des tables
   * Supprimer tous les fichiers de Wordpress
 
+### Preview
+
+![Preview](https://raw.githubusercontent.com/emulsion-io/wp-migration-url/master/preview.png)
+
 ## Developpement
 
 Vous pouvez editer les fichiers dans `/src/` et les merger avec `compile.php`
