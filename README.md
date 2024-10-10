@@ -19,9 +19,46 @@ et accedez à votre serveur via l'url suivante :
 https://votre-site.com/migration.php
 ```
 
+## Suivre les changements
+
+Tous les changements notables de ce projet sont listé ici : [CHANGELOG.md](CHANGELOG.md)
+
+
 ## Ajout de vos propres fichiers
 
-### Ajout de vos propres fichiers d'installation
+### Déclaration de vos fichiers / themes / plugins dans un json
+
+Utiliser le fichier `migration.exemple.json` pour ajouter vos propres installations de Wordpress, plugins et thèmes.
+
+Rennomer le fichier en `migration.json` et placer le à la racine de votre serveur à côté de `migration.php`.
+
+```json 
+{
+   "wp": [
+      {
+         "nom": "Mon template WP #1",
+         "fichier": "https://site/fichier.zip",
+         "sql": "https://site/fichier.zip"
+      }
+   ],
+   "plugins": [
+      {
+         "nom": "Mon plugin #1",
+         "fichier": "https://site/fichier.zip"
+      }
+   ],
+   "themes": [
+      {
+         "nom": "Mon thème #1",
+         "fichier": "https://site/fichier.zip"
+      }
+   ]
+}
+```
+
+### Déclaration de vos fichiers / themes / plugins dans le script
+
+#### Ajout de vos propres fichiers d'installation
 
 Utilisez le tableau `$zips_wp` dans `migration.php` pour ajouter vos propres installations de Wordpress.
 

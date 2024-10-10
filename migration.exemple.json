@@ -1,0 +1,34 @@
+{
+	"wp": [
+		{
+			"nom": "Mon template WP #1",
+			"fichier": "https://site/fichier1_wp.zip",
+			"sql": "https://site/fichier1_sql.zip"
+		},
+		{
+			"nom": "Mon template WP #2",
+			"fichier": "https://site/fichier2_wp.zip",
+			"sql": "https://site/fichier2_sql.zip"
+		}
+	],
+	"themes": [
+		{
+			"nom": "Mon Theme WP #1",
+			"fichier": "https://site/fichier1_theme.zip"
+		},
+		{
+			"nom": "Mon Theme WP #2",
+			"fichier": "https://site/fichier2_theme.zip"
+		}
+	],
+	"plugins": [
+		{
+			"nom": "Mon Plugin WP #1",
+			"fichier": "https://site/fichier1_plugin.zip"
+		},
+		{
+			"nom": "Mon Plugin WP #2",
+			"fichier": "https://site/fichier2_plugin.zip"
+		}
+	]
+}

@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link https://emulsion.io
  *
- * @version 2.7.4
+ * @version 2.7.5
  *
  * Copyright (c) 2021 Fabrice Simonet
  * 
@@ -51,7 +51,7 @@ $zips_wp = [];
 /**
  * Vos zips de thèmes à installer
  * 
- * $zips_theme = [
+ * $zips_themes = [
  * 	[
  * 		'nom' => 'Mon Theme WP #1',
  * 		'fichier' => 'https://site/fichier.zip'
@@ -63,12 +63,12 @@ $zips_wp = [];
  * ];
  * 
  */
-$zips_theme = [];
+$zips_themes = [];
 
 /**
  * Vos zips de plugins à installer
  * 
- * $zips_plugin = [
+ * $zips_plugins = [
  * 	[
  * 		'nom' => 'Mon Plugin WP #1',
  * 		'fichier' => 'https://site/fichier.zip'
@@ -80,7 +80,26 @@ $zips_theme = [];
  * ];
  * 
  */
-$zips_plugin = [];
+$zips_plugins = [];
+
+/**
+ * Gestion des instances custom via json
+ */
+if(file_exists('migration.json')) {
+	$instances = json_decode(file_get_contents('migration.json'), true);
+
+	if(isset($instances['wp'])) {
+		$zips_wp = $instances['wp'];
+	}
+
+	if(isset($instances['themes'])) {
+		$zips_themes = $instances['themes'];
+	}
+
+	if(isset($instances['plugins'])) {
+		$zips_plugins = $instances['plugins'];
+	}
+}
 
 /**
  * Variable de status d'execution du script
@@ -139,7 +158,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.4';
+		$this->_version          = '2.7.5';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
@@ -2656,7 +2675,7 @@ if(file_exists('wp-config.php')) {
 			</article>
 			<?php endif; ?>
 
-			<?php if($zips_theme) : ?>
+			<?php if($zips_themes) : ?>
 			<article class="row">
 				<div class="col-12">
 					<div class="card border-info mb-3" >
@@ -2674,7 +2693,7 @@ if(file_exists('wp-config.php')) {
 										</div>
 									</div>
 
-									<?php $i = 0; foreach($zips_theme as $zip) : ?>
+									<?php $i = 0; foreach($zips_themes as $zip) : ?>
 										<div class="col-3">
 											<form id="action_dl_zip_theme_<?=$i;?>" method="post">
 												<button type="submit" id="go_action_dl_zip_theme_" class="btn btn-primary"><?= $zip['nom']; ?></button>
@@ -2699,7 +2718,7 @@ if(file_exists('wp-config.php')) {
 										</div>
 									</div>
 
-									<?php $i = 0; foreach($zips_theme as $zip) : ?>
+									<?php $i = 0; foreach($zips_themes as $zip) : ?>
 										<div class="col-3">
 											<form id="action_dl_extract_zip_theme_<?=$i;?>" method="post">
 												<button type="submit" id="go_action_dl_extract_zip_theme" class="btn btn-primary"><?= $zip['nom']; ?></button>
@@ -2726,7 +2745,7 @@ if(file_exists('wp-config.php')) {
 			</article>
 			<?php endif; ?>
 
-			<?php if($zips_plugin) : ?>
+			<?php if($zips_plugins) : ?>
 			<article class="row">
 				<div class="col-12">
 					<div class="card border-info mb-3" >
@@ -2744,7 +2763,7 @@ if(file_exists('wp-config.php')) {
 										</div>
 									</div>
 
-									<?php $i = 0; foreach($zips_plugin as $zip) : ?>
+									<?php $i = 0; foreach($zips_plugins as $zip) : ?>
 										<div class="col-3">
 											<form id="action_dl_zip_plugin_<?=$i;?>" method="post">
 												<button type="submit" id="go_action_dl_zip_plugin_" class="btn btn-primary"><?= $zip['nom']; ?></button>
@@ -2769,7 +2788,7 @@ if(file_exists('wp-config.php')) {
 										</div>
 									</div>
 
-									<?php $i = 0; foreach($zips_plugin as $zip) : ?>
+									<?php $i = 0; foreach($zips_plugins as $zip) : ?>
 										<div class="col-3">
 											<form id="action_dl_extract_zip_plugin_<?=$i;?>" method="post">
 												<button type="submit" id="go_action_dl_extract_zip_plugin" class="btn btn-primary"><?= $zip['nom']; ?></button>

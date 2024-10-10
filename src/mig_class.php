@@ -33,7 +33,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.4';
+		$this->_version          = '2.7.5';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
