@@ -152,3 +152,5 @@ Pour merger les fichiers, utilisez la commande suivante :
 ```
 php compile.php
 ```
+
+Possibilité d'effectuer directement la compilation avec la tache vscode : `Ctrl + Shift + B`
