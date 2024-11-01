@@ -358,6 +358,7 @@ if(file_exists('wp-config.php')) {
 								<div class="row">
 									
 									<div class="col-12">
+										<h4 class="text-info mb-3">Fichiers</h4>
 										<h5>Envoyer le Zip</h5>
 										<div class="text-warning mb-3">
 											Télécharge le zip sur le serveur dans le dossier courant.
@@ -409,6 +410,7 @@ if(file_exists('wp-config.php')) {
 									<?php $i++; endforeach; ?>
 
 									<div class="col-12 mt-4">
+										<h4 class="text-info mb-3">Base de données</h4>
 										<h5>Envoyer la base de données</h5>
 										<div class="text-warning mb-3">
 											Copie la base de données sur le serveur dans le dossier /bdd_tmp/
