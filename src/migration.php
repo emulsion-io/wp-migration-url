@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link https://emulsion.io
  *
- * @version 2.7.5
+ * @version 2.7.6
  *
  * Copyright (c) 2024 Fabrice Simonet
  * 

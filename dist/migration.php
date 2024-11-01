@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link https://emulsion.io
  *
- * @version 2.7.5
+ * @version 2.7.6
  *
  * Copyright (c) 2024 Fabrice Simonet
  * 
@@ -158,7 +158,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.5';
+		$this->_version          = '2.7.6';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
@@ -218,6 +218,10 @@ Class Wp_Migration {
 
 			// Lire le contenu du fichier sans l'inclure
 			$config_content = file_get_contents($wp_config_file);
+
+			if($config_content === FALSE){
+				return FALSE;
+			}
 
 			// Expression régulière pour capturer les constantes
 			preg_match("/define\(\s*'DB_NAME'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_name);
@@ -330,6 +334,10 @@ Class Wp_Migration {
 		// Lire le contenu du fichier sans l'inclure
 		$config_content = file_get_contents($wp_config_file);
 
+		if($config_content === FALSE){
+			return FALSE;
+		}
+
 		// Expression régulière pour capturer les constantes
 		preg_match("/define\(\s*'DB_NAME'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_name);
 		preg_match("/define\(\s*'DB_USER'\s*,\s*'(.+?)'\s*\);/", $config_content, $db_user);
@@ -371,6 +379,10 @@ Class Wp_Migration {
 		// Lire le contenu du fichier sans l'inclure
 		$config_content = file_get_contents($wp_config_file);
 
+		if($config_content === FALSE){
+			return FALSE;
+		}
+
 		// Expression régulière pour capturer les constantes
 		preg_match("/define\(\s*'WP_DEBUG'\s*,\s*(.+?)\s*\);/", $config_content, $debug);
 		preg_match("/define\(\s*'WP_DEBUG_DISPLAY'\s*,\s*(.+?)\s*\);/", $config_content, $debug_display);
@@ -397,7 +409,13 @@ Class Wp_Migration {
 		if($url != null){
 
 			$fichierDest = 'wordpress-custom.zip';
-			file_put_contents( $fichierDest, file_get_contents( $url ) );
+			$file = file_get_contents( $url );
+
+			if($file === FALSE){
+				return FALSE;
+			}
+
+			file_put_contents( $fichierDest, $file );
 		} else {
 
 			// Get WordPress data
@@ -405,7 +423,13 @@ Class Wp_Migration {
 
 			$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
 
-			file_put_contents( $fichierDest, file_get_contents( $wp->download ) );
+			$file = file_get_contents( $wp->download );
+
+			if($file === FALSE){
+				return FALSE;
+			}
+
+			file_put_contents( $fichierDest, $file );
 		}
 
 		return TRUE;
@@ -425,7 +449,14 @@ Class Wp_Migration {
 		}
 
 		$fichierDest = $folder . '/wordpress-sql.zip';
-		$retour = file_put_contents( $fichierDest, file_get_contents( $sql ) );
+
+		$file = file_get_contents( $sql );
+
+		if($file === FALSE){
+			return FALSE;
+		}
+
+		$retour = file_put_contents( $fichierDest, $file );
 
 		if($retour === FALSE){
 			return FALSE;
@@ -449,7 +480,18 @@ Class Wp_Migration {
 		}
 
 		$fichierDest = $folder . '/wordpress-sql.zip';
-		file_put_contents( $fichierDest, file_get_contents( $sql ) );
+
+		$file = file_get_contents( $sql );
+
+		if($file === FALSE){
+			return FALSE;
+		}
+
+		$retour = file_put_contents( $fichierDest, $file );
+
+		if($retour === FALSE){
+			return FALSE;
+		}
 
 		$bdd = Bdd::getInstance();
 
@@ -503,7 +545,14 @@ Class Wp_Migration {
 
 			$folder = 'wp-content/themes';
 			$fichierDest = 'theme-custom.zip';
-			$retour = file_put_contents( $folder . '/' . $fichierDest, file_get_contents( $url ) );
+
+			$file = file_get_contents( $url );
+
+			if($file === FALSE){
+				return FALSE;
+			}
+
+			$retour = file_put_contents( $folder . '/' . $fichierDest, $file );
 
 			if($retour === FALSE){
 				return FALSE;
@@ -525,7 +574,9 @@ Class Wp_Migration {
 
 			$folder = 'wp-content/themes';
 			$fichierDest = 'theme-custom.zip';
-			$retour = file_put_contents( $folder . '/' . $fichierDest, file_get_contents( $url ) );
+			
+			$file = file_get_contents( $url );
+			$retour = file_put_contents( $folder . '/' . $fichierDest, $file );
 
 			if($retour === FALSE){
 				return FALSE;
@@ -564,7 +615,14 @@ Class Wp_Migration {
 
 			$folder = 'wp-content/plugins';
 			$fichierDest = 'plugin-custom.zip';
-			$retour = file_put_contents( $folder . '/' . $fichierDest, file_get_contents( $url ) );
+			
+			$file = file_get_contents( $url );
+
+			if($file === FALSE){
+				return FALSE;
+			}
+
+			$retour = file_put_contents( $folder . '/' . $fichierDest, $file );
 
 			if($retour === FALSE){
 				return FALSE;
@@ -586,7 +644,9 @@ Class Wp_Migration {
 
 			$folder = 'wp-content/plugins';
 			$fichierDest = 'plugin-custom.zip';
-			$retour = file_put_contents( $folder . '/' . $fichierDest, file_get_contents( $url ) );
+			
+			$file = file_get_contents( $url );
+			$retour = file_put_contents( $folder . '/' . $fichierDest, $file );
 
 			if($retour === FALSE){
 				return FALSE;
@@ -627,8 +687,13 @@ Class Wp_Migration {
 		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
 
 		$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
+		$file = file_get_contents( $wp->download );
 
-		$retour = file_put_contents( $fichierDest, file_get_contents( $wp->download ) );
+		if($file === FALSE){
+			return FALSE;
+		}
+
+		$retour = file_put_contents( $fichierDest, $file );
 
 		if($retour === FALSE){
 			return FALSE;
@@ -648,7 +713,9 @@ Class Wp_Migration {
 	public function wp_download_extract(){
 
 		// Get WordPress data
-		$wp = json_decode( file_get_contents( $this->_wp_api ) )->offers[0];
+		$file = file_get_contents( $this->_wp_api );
+
+		$wp = json_decode( $file )->offers[0];
 		$fichierDest = 'wordpress-' . $wp->version . '-' . $this->_wp_lang . '.zip';
 
 		// Chemin complet vers le fichier à télécharger
@@ -738,7 +805,14 @@ Class Wp_Migration {
 	public function wp_download_url_extract($url){
 
 		$fichierDest = 'wordpress-custom.zip';
-		file_put_contents( $fichierDest, file_get_contents( $url ) );
+
+		$file = file_get_contents( $url );
+
+		if($file === FALSE){
+			return FALSE;
+		}
+
+		file_put_contents( $fichierDest, $file );
 
 		$zip = new ZipArchive;
 
