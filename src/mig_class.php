@@ -345,6 +345,8 @@ Class Wp_Migration {
 	 */
 	public function wp_download_install_bdd($sql){
 		
+		$this->set_var_wp();
+
 		$folder = 'bdd_tmp';
 		// On crée le dossier temporaire
 		// On crée le dossier temporaire
@@ -765,6 +767,8 @@ Class Wp_Migration {
 	 * @return bool true|false
 	 */
 	public function wp_test_bdd(){
+
+		$this->set_var_wp();
 
 		try{
 			$bdd = Bdd::getInstance();

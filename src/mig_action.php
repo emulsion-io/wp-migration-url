@@ -434,6 +434,25 @@ if(isset($_POST['action_add_user'])) {
 }
 
 /**
+ * ACTION : Test de connexion a la base de donnée
+ * 
+ * Status : OK | 2024-11-01
+ * 
+ */
+if(isset($_POST['action_testconnexion'])) {
+	if(!empty($_POST['action_testconnexion'])) {
+
+		$wp_test_bdd = $migration->wp_test_bdd();
+
+		if($wp_test_bdd === TRUE) {
+			$migration->retour(array('message' => 'Connexion a la base de donnée reussie.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de se connecter a la base de donnée.'), FALSE);
+		}	
+	}
+}
+
+/**
  * ACTION : Purge l'installation courante de WP  (fichiers)
  * 
  * Status : OK | 2024-10-08

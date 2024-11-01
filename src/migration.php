@@ -1427,6 +1427,38 @@ if(file_exists('wp-config.php')) {
 				</div>
 			</div>
 
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-11" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-11" aria-expanded="false" aria-controls="tools-11">Test la connexion à la base de données avec le wp-config.php</button>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-11">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Test la connexion à la base de données avec le wp-config.php</li>
+								</ul>
+							</div>
+
+							<form id="action_testconnexion" method="post">
+								<div class="form-group">
+									<button id="go_action_testconnexion" type="submit" class="btn btn-primary">Tester la connexion</button>
+								</div>
+							</form>
+							<script>
+								$( "#action_testconnexion" ).submit(function( event ) {
+									event.preventDefault();
+									var donnees = {
+										action_testconnexion	: 'ok',
+									}
+									sendform('action_testconnexion', donnees, 'Tester la connexion à la base de données');
+								});
+							</script>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<footer class="row">
 				<div class="col-12 my-3 text-center">
 					<strong>ToolBox Wordpress</strong> par <a class="text-orange" href="https://emulsion.io">Fabrice Simonet</a>.

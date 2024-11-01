@@ -7,6 +7,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/)
 ## [2.7.6] - 2024-11-01
 ### Fixed
 - Chargement des fichiers d'installation personnalisés., verifiez que le fichier est bien présent sur le serveur distant.
+- $this->set_var_wp(); qui n'était pas appelé dans la méthode `wp_download_install_bdd()`.
 
 ## [2.7.5] - 2024-10-10
 ### Ajouté

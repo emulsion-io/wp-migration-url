@@ -470,6 +470,8 @@ Class Wp_Migration {
 	 */
 	public function wp_download_install_bdd($sql){
 		
+		$this->set_var_wp();
+
 		$folder = 'bdd_tmp';
 		// On crée le dossier temporaire
 		// On crée le dossier temporaire
@@ -890,6 +892,8 @@ Class Wp_Migration {
 	 * @return bool true|false
 	 */
 	public function wp_test_bdd(){
+
+		$this->set_var_wp();
 
 		try{
 			$bdd = Bdd::getInstance();
@@ -2209,6 +2213,25 @@ if(isset($_POST['action_add_user'])) {
 			$migration->retour(array('message' => 'Utilisateur ajouté avec succes.'), TRUE);
 		} else {
 			$migration->retour(array('message' => 'Impossible d\'ajouter un utilisateur.'), FALSE);
+		}	
+	}
+}
+
+/**
+ * ACTION : Test de connexion a la base de donnée
+ * 
+ * Status : OK | 2024-11-01
+ * 
+ */
+if(isset($_POST['action_testconnexion'])) {
+	if(!empty($_POST['action_testconnexion'])) {
+
+		$wp_test_bdd = $migration->wp_test_bdd();
+
+		if($wp_test_bdd === TRUE) {
+			$migration->retour(array('message' => 'Connexion a la base de donnée reussie.'), TRUE);
+		} else {
+			$migration->retour(array('message' => 'Impossible de se connecter a la base de donnée.'), FALSE);
 		}	
 	}
 }
@@ -3700,6 +3723,38 @@ if(file_exists('wp-config.php')) {
 										action_purge	: 'ok',
 									}
 									sendform('action_purge', donnees, 'Purger Fichiers Wordpress');
+								});
+							</script>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row mb-3">
+				<div class="col-12 mb-2">
+					<button id="go-tools-11" class="btn btn-primary btn-block text-left" type="button" data-toggle="collapse" data-target="#tools-11" aria-expanded="false" aria-controls="tools-11">Test la connexion à la base de données avec le wp-config.php</button>
+				</div>
+				<div class="col-12">
+					<div class="collapse" id="tools-11">
+						<div class="card card-body">
+							<div class="text-warning mb-3">
+								<ul>
+									<li>Test la connexion à la base de données avec le wp-config.php</li>
+								</ul>
+							</div>
+
+							<form id="action_testconnexion" method="post">
+								<div class="form-group">
+									<button id="go_action_testconnexion" type="submit" class="btn btn-primary">Tester la connexion</button>
+								</div>
+							</form>
+							<script>
+								$( "#action_testconnexion" ).submit(function( event ) {
+									event.preventDefault();
+									var donnees = {
+										action_testconnexion	: 'ok',
+									}
+									sendform('action_testconnexion', donnees, 'Tester la connexion à la base de données');
 								});
 							</script>
 						</div>
