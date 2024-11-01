@@ -1,5 +1,6 @@
 *.log
 .htaccess
+migration.json
 sitemap.xml
 sitemap.xml.gz
 wp-*.php
