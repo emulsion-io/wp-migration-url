@@ -859,9 +859,9 @@ if(file_exists('wp-config.php')) {
 
 									var donnees = {
 										'action_change_wpconfig_dev'	: 'ok',
-										'debug' 					: $('#edit_debug').is(':checked'),
-										'debug_display' 		: $('#edit_debug_display').is(':checked'),
-										'debug_log' 			: $('#edit_debug_log').is(':checked')
+										'debug' 					: $('#edit_debug').is(':checked') ? 'true' : 'false',
+										'debug_display' 		: $('#edit_debug_display').is(':checked') ? 'true' : 'false',
+										'debug_log' 			: $('#edit_debug_log').is(':checked') ? 'true' : 'false'
 									}
 									sendform('action_change_wpconfig_dev', donnees, 'Ecriture des nouvelles informations de debug');
 									
