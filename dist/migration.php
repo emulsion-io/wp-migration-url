@@ -4,7 +4,7 @@
  * @author Fabrice Simonet
  * @link https://emulsion.io
  *
- * @version 2.7.6
+ * @version 2.8.0
  *
  * Copyright (c) 2024 Fabrice Simonet
  * 
@@ -158,7 +158,7 @@ Class Wp_Migration {
 	 */
 	public function __construct() {
 
-		$this->_version          = '2.7.6';
+		$this->_version          = '2.8.0';
 		$this->_wp_lang          = 'fr_FR';
 		$this->_wp_api           = 'http://api.wordpress.org/core/version-check/1.7/?locale='.$this->_wp_lang;
 		$this->_wp_dir_core      = 'core/';
