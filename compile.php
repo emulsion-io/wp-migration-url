@@ -5,18 +5,22 @@ $input_file = 'src/migration.php';
 // Fichier de sortie qui contiendra tout fusionné
 $output_file = 'dist/migration.php';
 
-function mergeIncludes($filePath, $processedFiles = [], $isBaseFile = false) {
-    // Éviter les boucles infinies en cas d'inclusions circulaires
-    if (in_array($filePath, $processedFiles)) {
-        return '';
-    }
-    $processedFiles[] = $filePath;
-
-    if (!file_exists($filePath)) {
+function mergeIncludes($filePath, array &$processedFiles = [], $isBaseFile = false, $originalInclude = null) {
+    $resolvedPath = realpath($filePath);
+    if ($resolvedPath === false) {
+        if ($originalInclude !== null) {
+            return $originalInclude;
+        }
         throw new Exception("Le fichier {$filePath} n'existe pas.");
     }
 
-    $content = file_get_contents($filePath);
+    // Éviter les boucles infinies en cas d'inclusions circulaires
+    if (in_array($resolvedPath, $processedFiles, true)) {
+        return '';
+    }
+    $processedFiles[] = $resolvedPath;
+
+    $content = file_get_contents($resolvedPath);
 
     // Supprimer les balises PHP ouvrantes et fermantes si ce n'est pas le fichier de base
     if (!$isBaseFile) {
@@ -24,17 +28,18 @@ function mergeIncludes($filePath, $processedFiles = [], $isBaseFile = false) {
     }
 
     // Regex pour trouver les include, include_once, require, require_once
-    $pattern = '/\b(include|include_once)\s*\(?\s*[\'\"]([^\'\"]+)[\'\"]\s*\)?\s*;/';
+    $pattern = '/\b(include|include_once|require|require_once)\s*\(?\s*[\'\"]([^\'\"]+)[\'\"]\s*\)?\s*;/';
 
-    return preg_replace_callback($pattern, function ($matches) use ($processedFiles, $filePath) {
-        $includedFilePath = dirname($filePath) . '/' . $matches[2];
-        return mergeIncludes($includedFilePath, $processedFiles);
+    return preg_replace_callback($pattern, function ($matches) use (&$processedFiles, $resolvedPath) {
+        $includedFilePath = dirname($resolvedPath) . DIRECTORY_SEPARATOR . $matches[2];
+        return mergeIncludes($includedFilePath, $processedFiles, false, $matches[0]);
     }, $content);
 }
 
 try {
+    $processedFiles = [];
     // Fusionner le contenu du fichier d'entrée
-    $mergedContent = mergeIncludes($input_file, [], true);
+    $mergedContent = mergeIncludes($input_file, $processedFiles, true);
 
     // Créer le dossier de sortie s'il n'existe pas
     if (!is_dir(dirname($output_file))) {

@@ -3162,9 +3162,9 @@ if(file_exists('wp-config.php')) {
 
 									var donnees = {
 										'action_change_wpconfig_dev'	: 'ok',
-										'debug' 					: $('#edit_debug').is(':checked'),
-										'debug_display' 		: $('#edit_debug_display').is(':checked'),
-										'debug_log' 			: $('#edit_debug_log').is(':checked')
+										'debug' 					: $('#edit_debug').is(':checked') ? 'true' : 'false',
+										'debug_display' 		: $('#edit_debug_display').is(':checked') ? 'true' : 'false',
+										'debug_log' 			: $('#edit_debug_log').is(':checked') ? 'true' : 'false'
 									}
 									sendform('action_change_wpconfig_dev', donnees, 'Ecriture des nouvelles informations de debug');
 									
@@ -3893,7 +3893,14 @@ UPDATE ${prefix}_postmeta SET meta_value = replace(meta_value, '${oldUrl}', '${n
 UPDATE ${prefix}_revslider_slides SET params = replace(params, '${oldUrl}', '${newUrl}');
 UPDATE ${prefix}_revslider_slides SET layers = replace(layers, '${oldUrl}', '${newUrl}');
 UPDATE ${prefix}_revslider_sliders SET params = replace(params, '${oldUrl}', '${newUrl}');
-					`;
+
+UPDATE ${prefix}_yoast_indexable
+SET permalink = REPLACE(permalink, '${oldUrl}', '${newUrl}'),
+	 twitter_image = REPLACE(twitter_image, '${oldUrl}', '${newUrl}'),
+	 open_graph_image = REPLACE(open_graph_image, '${oldUrl}', '${newUrl}')
+WHERE permalink LIKE '${oldUrl}%'
+	OR twitter_image LIKE '${oldUrl}%'
+	OR open_graph_image LIKE '${oldUrl}%';`;
 
 					document.getElementById('sqlOutput').value = sqlQueries.trim();
 			}

@@ -1590,7 +1590,14 @@ UPDATE ${prefix}_postmeta SET meta_value = replace(meta_value, '${oldUrl}', '${n
 UPDATE ${prefix}_revslider_slides SET params = replace(params, '${oldUrl}', '${newUrl}');
 UPDATE ${prefix}_revslider_slides SET layers = replace(layers, '${oldUrl}', '${newUrl}');
 UPDATE ${prefix}_revslider_sliders SET params = replace(params, '${oldUrl}', '${newUrl}');
-					`;
+
+UPDATE ${prefix}_yoast_indexable
+SET permalink = REPLACE(permalink, '${oldUrl}', '${newUrl}'),
+	 twitter_image = REPLACE(twitter_image, '${oldUrl}', '${newUrl}'),
+	 open_graph_image = REPLACE(open_graph_image, '${oldUrl}', '${newUrl}')
+WHERE permalink LIKE '${oldUrl}%'
+	OR twitter_image LIKE '${oldUrl}%'
+	OR open_graph_image LIKE '${oldUrl}%';`;
 
 					document.getElementById('sqlOutput').value = sqlQueries.trim();
 			}
